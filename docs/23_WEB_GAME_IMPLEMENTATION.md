@@ -12,6 +12,7 @@ then publishes the resulting `game_control` payload locally.
 | `web/fitquest_game.html` | Live browser UI, automatic exercise selection, difficulty controls, lightweight 2D movement model, and feedback. |
 | `web/demo_game_control.jsonl` | Legacy regression fixture retained outside the production route. |
 | `ironquest/web_gateway.py` | Standard-library HTTP server, Server-Sent Events stream, health endpoint and annotated MJPEG preview. |
+| `tools/simulate_game_control_stream.py` | Offline dev/demo tool. Drives the real `MotionAnalyzer`/`build_body_context`/`build_game_control_payload` with a scripted synthetic pose sequence and publishes it through `WebGateway`, so the browser client can be exercised end to end (calibration, all six exercises, rep counting, sensor cards, set completion, results screen) with no camera, ESP32, or Garmin watch attached. |
 | `tests/test_web_gateway.py` | Gateway and stream smoke tests. |
 
 ## Run the live application
@@ -41,7 +42,11 @@ matching instruction, avatar motion, and repetition rule:
 - single-arm press or double-arm press when one or both arms reach overhead;
 - alternating front raise when an extended arm reaches shoulder height;
 - bilateral front hold when both extended arms reach shoulder height;
-- front hold plus opposite curl when the cross-body combination token is detected.
+- overhead press plus opposite front hold when the cross-body combination token
+  (`left_overhead_right_front_candidate` / `right_overhead_left_front_candidate`)
+  is detected. Which physical side is overhead can change session to session or
+  mid-set, so the browser reads it from the live token list rather than
+  assuming a fixed arm.
 
 For curls, a repetition moves through `extended -> bent -> extended`. For a
 press, the equivalent threshold is based on calibrated height. A repetition is
@@ -59,7 +64,18 @@ The movement stage uses a lightweight adult-neutral 2D vector model with clothin
 jointed arms, dumbbells, subtle facial details, and a floor target. It receives
 the same live normalized arm signals as the repetition controller, so the visual
 movement and the counted movement use one source of truth without adding a 3D
-rendering dependency or a continuous graphics workload.
+rendering dependency or a continuous graphics workload. A `requestAnimationFrame`
+loop continuously eases the drawn pose toward the latest signal instead of
+snapping on every Server-Sent Event, so the figure reads as fluid movement
+regardless of how evenly the backend publishes frames. An earlier unreachable
+Three.js prototype path (dead code behind an unconditional early return) was
+removed; the project intentionally stays with the 2D vector model.
+
+When a session ends, either by reaching the difficulty's time budget or by
+pressing Stop with at least a few seconds of activity, a results screen shows
+total reps, sets, active time, and average form quality before returning to
+setup, so a session has a real beginning-to-end arc instead of resetting
+silently.
 
 The browser preview intentionally excludes the developer HUD. The standalone
 OpenCV monitor still keeps that technical interface for diagnostics when it is
@@ -97,6 +113,15 @@ Run the web gateway smoke tests with the project environment:
 
 ```powershell
 .\ironquest_env\Scripts\python.exe -m pytest tests\test_web_gateway.py -q
+```
+
+To manually check the browser client itself (layout, avatar motion, rep
+counting, sensor cards, difficulty switching, the results screen) without a
+camera or hardware attached, run the offline simulator and open the printed
+URL:
+
+```powershell
+.\ironquest_env\Scripts\python.exe -m tools.simulate_game_control_stream
 ```
 
 The broader test suite still depends on the local PyTorch/Ultralytics runtime.

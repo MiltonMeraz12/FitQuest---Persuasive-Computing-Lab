@@ -36,6 +36,18 @@ The software can already test a sample wearable file:
 .\ironquest_env\Scripts\python.exe -m ironquest check-wearable --path .\docs\wearable_sample.json --seconds 2 --stale-seconds 0
 ```
 
+## If You Want To Check The Web Game Without Any Hardware
+
+Run the offline simulator instead of the live detector. It drives the same
+`MotionAnalyzer`/`build_body_context`/`build_game_control_payload` functions
+with a scripted pose sequence, so the browser client can be checked end to
+end (calibration, all six exercises, rep counting, sensor cards, set
+completion, results screen) with no camera, ESP32, or Garmin watch:
+
+```powershell
+.\ironquest_env\Scripts\python.exe -m tools.simulate_game_control_stream
+```
+
 ## If There Is No ESP32 Hardware Yet
 
 That is fine. ESP32 + IMU is a secondary extension. The program already outputs:

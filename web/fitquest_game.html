@@ -174,8 +174,11 @@
     .transition-progress { height: 5px; margin-top: 22px; overflow: hidden; border-radius: 99px; background: #1b3546; }
     .transition-progress i { display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--cyan), var(--blue)); animation: transitionCountdown 2.4s linear forwards; }
     @keyframes transitionCountdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; text-align: left; }
+    .results-stat { padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.03); }
+    .results-stat strong { display: block; font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+    .results-stat span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; }
     .avatar-stage { position: absolute; inset: 82px 12px 55px; display: grid; place-items: center; overflow: hidden; }
-    #avatar3d { display: none; }
     .avatar-svg { display: block; width: min(480px, 76%); height: 100%; max-height: 100%; overflow: visible; }
     .avatar-shadow { fill: rgba(31, 143, 255, .14); stroke: rgba(68, 177, 255, .76); stroke-width: 1.5; }
     .avatar-skin { fill: url(#skinGradient); }
@@ -202,10 +205,11 @@
     .feedback-side { color: var(--cyan); font-size: 11px; font-weight: 850; white-space: nowrap; }
 
     .metric-card { padding: 8px 10px; }
-    .session-summary { display: none; }
     .metric-card h3 { margin: 0 0 6px; color: #c9d7e4; font-size: 10px; letter-spacing: 1px; }
-    .rep-ring { width: 108px; height: 108px; margin: 0 auto 5px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--cyan) calc(var(--progress) * 1%), #263c4d 0); position: relative; }
+    .rep-ring { width: 108px; height: 108px; margin: 0 auto 5px; display: grid; place-items: center; border-radius: 50%; background: conic-gradient(var(--cyan) calc(var(--progress) * 1%), #263c4d 0); position: relative; transition: transform .12s ease; }
     .rep-ring::after { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: #0b1823; }
+    .rep-ring.pulse { animation: repPulse .38s ease; }
+    @keyframes repPulse { 0% { transform: scale(1); } 40% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(34, 230, 199, 0); } 100% { transform: scale(1); } }
     .rep-content { position: relative; z-index: 1; text-align: center; }
     .rep-number { display: block; font-size: 27px; font-weight: 950; letter-spacing: -2px; }
     .rep-number span { color: var(--muted); font-size: 20px; letter-spacing: 0; }
@@ -304,6 +308,7 @@
       .feedback-side { display: none; }
       .form-grid { grid-template-columns: 1fr; }
       .setup-header, .setup-body, .setup-footer { padding-left: 16px; padding-right: 16px; }
+      .results-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -352,8 +357,8 @@
         <div class="device-row"><div class="device-icon">◉</div><div><strong>HEART-RATE WEARABLE</strong><small id="watchDetail">Heart-rate context</small></div><span id="watchState" class="device-state value-warn">WAIT</span></div>
       </section>
 
-      <section class="card metric-card session-summary">
-        <h3>SESSION SETUP</h3>
+      <section class="card metric-card">
+        <h3>SESSION</h3>
         <div class="info-row"><span>User</span><strong id="userSummary">Not set</strong></div>
         <div class="info-row"><span>Body position</span><strong id="positionSummary">AUTO</strong></div>
         <div class="info-row"><span>Load</span><strong id="weightSummary">Not set</strong></div>
@@ -368,7 +373,6 @@
       </div>
       <div class="target-card"><strong id="coachTitle">Waiting for movement</strong><p id="coachText">The system will identify the next movement from the live signal.</p><span id="targetChip" class="target-chip">WAITING FOR LIVE SIGNAL</span></div>
       <div class="avatar-stage">
-        <div id="avatar3d" aria-hidden="true"></div>
         <svg id="avatarSvg" class="avatar-svg" viewBox="0 0 420 600" role="img" aria-label="Adult neutral movement model">
           <defs>
             <linearGradient id="skinGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0bd8e"/><stop offset="1" stop-color="#b87459"/></linearGradient>
@@ -444,6 +448,21 @@
     <div class="transition-modal"><span id="transitionEyebrow">SET COMPLETE</span><h2 id="transitionTitle">Prepare for the next movement</h2><p id="transitionText">Keep your position comfortable. The next movement will be selected from the live signal.</p><div class="transition-progress"><i id="transitionProgress"></i></div></div>
   </section>
 
+  <section id="resultsOverlay" class="session-overlay hidden" aria-live="polite">
+    <div class="transition-modal">
+      <span>SESSION RESULTS</span>
+      <h2 id="resultsTitle">Session complete</h2>
+      <div class="results-grid">
+        <div class="results-stat"><strong id="resultsReps">0</strong><span>Reps</span></div>
+        <div class="results-stat"><strong id="resultsSets">0</strong><span>Sets</span></div>
+        <div class="results-stat"><strong id="resultsDuration">0:00</strong><span>Active time</span></div>
+        <div class="results-stat"><strong id="resultsForm">—</strong><span>Avg form</span></div>
+      </div>
+      <p id="resultsNote">Nice work. Start a new session whenever you're ready.</p>
+      <button id="resultsCloseButton" class="primary-btn" style="margin-top:6px" type="button">Back to setup</button>
+    </div>
+  </section>
+
   <section id="setupOverlay" class="session-overlay">
     <div class="setup-modal">
       <div class="setup-header"><h2>Prepare FitQuest session</h2><p>Set up a local session with no account. The game receives normalized camera, dumbbell, hand-motion, and heart-rate signals when available.</p></div>
@@ -470,6 +489,7 @@
       const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number(value) || 0));
       const pct = (value) => `${Math.round(clamp(value) * 100)}%`;
       const sideKey = (side, suffix) => `${side}_${suffix}`;
+      const lerp = (a, b, t) => a + (b - a) * t;
 
       const exerciseDefinitions = {
         curl: { name: "ALTERNATING CURL", subtitle: "Move through a comfortable range while keeping the torso steady.", chip: "AUTO TARGET: CURL", mode: "extension", countMode: "alternating" },
@@ -477,7 +497,7 @@
         double_press: { name: "DOUBLE-ARM PRESS", subtitle: "Raise both dumbbells together while keeping the torso centered.", chip: "AUTO TARGET: BILATERAL PRESS", mode: "height", countMode: "bilateral" },
         front_raise: { name: "ALTERNATING FRONT RAISE", subtitle: "Lift one dumbbell to shoulder height, then lower it with control.", chip: "AUTO TARGET: FRONT RAISE", mode: "height", countMode: "alternating" },
         front_hold: { name: "BILATERAL FRONT HOLD", subtitle: "Hold both arms forward at shoulder height without shrugging.", chip: "AUTO TARGET: FRONT HOLD", mode: "hold", countMode: "hold", holdMs: 900 },
-        combo: { name: "FRONT HOLD + CURL", subtitle: "Keep one arm forward while the opposite arm performs a curl.", chip: "AUTO TARGET: COMBINATION", mode: "combo", countMode: "alternating" },
+        combo: { name: "OVERHEAD + FRONT HOLD", subtitle: "Press one arm fully overhead while the opposite arm holds steady at shoulder height, then swap.", chip: "AUTO TARGET: OVERHEAD + FRONT HOLD", mode: "combo", countMode: "alternating" },
       };
       const difficultyDefinitions = {
         beginner: { label: "BEGINNER", target: 8, duration: 60, strictness: .45 },
@@ -496,6 +516,8 @@
         target: 8,
         duration: 45,
         reps: 0,
+        totalReps: 0,
+        lastRenderedReps: 0,
         phase: { left: "extended", right: "extended" },
         activeSide: "right",
         startedAt: 0,
@@ -513,12 +535,18 @@
         sideReps: { left: 0, right: 0 },
         tempoSamples: [],
         setsCompleted: 0,
+        formSum: 0,
+        formCount: 0,
         inTransition: false,
         transitionTimer: null,
         holdStartedAt: 0,
         holdNeedsReset: false,
         bilateralDown: { left: false, right: false },
         settings: {},
+        avatarTarget: { left: null, right: null },
+        avatarCurrent: null,
+        avatarLoaded: { left: null, right: null },
+        avatarOverheadSide: "right",
       };
 
       function toast(message) {
@@ -679,8 +707,41 @@
         updateFeedback({}, 0, 0, null, null, null);
       }
 
+      // Total elapsed active time for the whole session, excluding paused
+      // time and any time before the session started. Shared by the
+      // countdown display and the end-of-session results summary so both
+      // agree on the same number.
+      function computeSessionElapsedSeconds() {
+        if (!state.startedAt) return 0;
+        const activeSpan = state.paused ? 0 : performance.now() - state.startedAt;
+        return Math.max(0, Math.floor((activeSpan + state.elapsedBeforePause) / 1000));
+      }
+
+      function formatMinutesSeconds(totalSeconds) {
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        return `${minutes}:${String(seconds).padStart(2, "0")}`;
+      }
+
+      function hasResultsToShow() {
+        return state.totalReps > 0 || state.setsCompleted > 0 || computeSessionElapsedSeconds() >= 5;
+      }
+
+      function showResults(title, note) {
+        const averageForm = state.formCount > 0 ? Math.round(state.formSum / state.formCount) : null;
+        $("resultsTitle").textContent = title;
+        $("resultsReps").textContent = state.totalReps;
+        $("resultsSets").textContent = state.setsCompleted;
+        $("resultsDuration").textContent = formatMinutesSeconds(computeSessionElapsedSeconds());
+        $("resultsForm").textContent = averageForm == null ? "—" : `${averageForm}%`;
+        $("resultsNote").textContent = note;
+        $("setupOverlay").classList.add("hidden");
+        $("resultsOverlay").classList.remove("hidden");
+      }
+
       async function startSession() {
         hideTransition();
+        $("resultsOverlay").classList.add("hidden");
         state.exercise = null;
         state.position = "auto";
         state.lastFrame = null;
@@ -690,6 +751,10 @@
           heart: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
         };
         state.setsCompleted = 0;
+        state.totalReps = 0;
+        state.formSum = 0;
+        state.formCount = 0;
+        state.avatarCurrent = null;
         state.inTransition = false;
         readSettings();
         clearStreams();
@@ -714,6 +779,7 @@
 
       function stopSession(showSetup = true) {
         hideTransition();
+        const shouldShowResults = state.running && hasResultsToShow();
         clearStreams();
         state.running = false;
         state.paused = false;
@@ -730,8 +796,12 @@
         $("imuMotionValue").textContent = "—";
         setSessionBadge("SESSION STOPPED", "waiting");
         $("startButton").textContent = "Start session";
-        if (showSetup) $("setupOverlay").classList.remove("hidden");
-        toast(`Session stopped · ${state.reps} valid repetitions`);
+        toast(`Session stopped · ${state.totalReps} valid repetitions`);
+        if (shouldShowResults) {
+          showResults("Session stopped", "You can review your session below, then start a new one whenever you're ready.");
+        } else if (showSetup) {
+          $("setupOverlay").classList.remove("hidden");
+        }
       }
 
       function togglePause() {
@@ -754,14 +824,15 @@
         clearInterval(state.timerId);
         state.timerId = setInterval(() => {
           if (!state.running || state.paused) return;
-          const elapsed = Math.floor((performance.now() - state.startedAt - state.elapsedBeforePause) / 1000);
+          const elapsed = computeSessionElapsedSeconds();
           const remaining = Math.max(0, state.duration - elapsed);
           $("durationSummary").textContent = `${remaining}s remaining`;
           if (remaining <= 0) {
             setSessionBadge("SESSION COMPLETE", "waiting");
             state.running = false;
             clearStreams();
-            toast(`Session complete · ${state.reps}/${state.target} reps`);
+            toast(`Session complete · ${state.totalReps}/${state.target} reps in the last set`);
+            showResults("Session complete", "Nice work. Start a new session whenever you're ready.");
           }
         }, 500);
       }
@@ -957,6 +1028,7 @@
             if (!state.holdStartedAt) state.holdStartedAt = performance.now();
             if (performance.now() - state.holdStartedAt >= (definition.holdMs || 900)) {
               state.reps += 1;
+              state.totalReps += 1;
               state.sideReps.left += 1;
               state.sideReps.right += 1;
               state.tempoSamples.push(performance.now());
@@ -987,6 +1059,7 @@
             state.sideReps[side] += 1;
             if (definition.countMode !== "bilateral") {
               state.reps += 1;
+              state.totalReps += 1;
               state.tempoSamples.push(performance.now());
               if (state.reps >= state.target) {
                 completeSet();
@@ -997,6 +1070,7 @@
         }
         if (definition.countMode === "bilateral" && state.bilateralDown.left && state.bilateralDown.right && state.phase.left === "extended" && state.phase.right === "extended") {
           state.reps += 1;
+          state.totalReps += 1;
           state.tempoSamples.push(performance.now());
           state.bilateralDown = { left: false, right: false };
           if (state.reps >= state.target) { completeSet(); return; }
@@ -1004,7 +1078,18 @@
         updateRepProgress();
       }
 
+      function pulseRepRing() {
+        const ring = $("repRing");
+        ring.classList.remove("pulse");
+        void ring.offsetWidth;
+        ring.classList.add("pulse");
+      }
+
       function updateRepProgress() {
+        if (state.reps !== state.lastRenderedReps) {
+          pulseRepRing();
+          state.lastRenderedReps = state.reps;
+        }
         const progress = clamp(state.reps / state.target);
         $("repNumber").innerHTML = `${state.reps} <span>/ ${state.target}</span>`;
         $("repRing").style.setProperty("--progress", String(progress * 100));
@@ -1062,6 +1147,10 @@
         $("heartZone").textContent = `ZONE ${String(zone).toUpperCase() === "UNKNOWN" ? "—" : String(zone).toUpperCase()}`;
         $("tempoValue").textContent = state.tempoSamples.length > 1 ? "CONTROLLED" : "—";
         if (Number.isFinite(hr)) drawHeartChart(hr);
+        if (state.exercise) {
+          state.formSum += form;
+          state.formCount += 1;
+        }
       }
 
       function drawHeartChart(heartRate) {
@@ -1100,7 +1189,10 @@
         $("feedbackSide").textContent = side;
       }
 
-      function pointFor(side, extension, height, mode, exerciseId) {
+      // Keep the shoulder, elbow and wrist on fixed-length segments so the
+      // avatar reads as a human arm instead of stretching two independent
+      // lines as the normalized signals change.
+      function pointFor(side, extension, height, mode, exerciseId, overheadSide) {
         const sign = side === "left" ? -1 : 1;
         const shoulder = { x: 210 + sign * 53, y: 190 };
         const upperLength = 78;
@@ -1113,10 +1205,7 @@
           };
         };
 
-        // Keep the shoulder, elbow and wrist on fixed-length segments. This
-        // makes the avatar read as a human arm instead of stretching two
-        // independent lines as the normalized signals change.
-        if (mode === "extension" || (mode === "combo" && side === "right")) {
+        if (mode === "extension") {
           const curl = clamp((.84 - extension) / .57);
           const upperAngle = 55;
           const forearmAngle = 68 - curl * 125;
@@ -1125,9 +1214,32 @@
           return { shoulder, elbow, wrist };
         }
 
+        if (mode === "combo") {
+          // The server only selects "combo" when one side is genuinely
+          // overhead and the other is at shoulder/torso height (see
+          // left_overhead_right_front_candidate / right_overhead_left_front_candidate
+          // in ironquest/motion_analysis.py). Which physical side is which
+          // can vary, so read it from the live tokens instead of assuming a
+          // fixed arm, and render the overhead side reaching up rather than
+          // curling.
+          if (side === overheadSide) {
+            const lift = clamp(.55 + height * .45);
+            const upperAngle = 62 - lift * 97;
+            const elbow = toPoint(shoulder, upperLength, upperAngle);
+            const forearmAngle = upperAngle + 9 + clamp((.84 - extension) / .57) * 16;
+            const wrist = toPoint(elbow, forearmLength, forearmAngle);
+            return { shoulder, elbow, wrist };
+          }
+          const lift = .52;
+          const upperAngle = 62 - lift * 97;
+          const elbow = toPoint(shoulder, upperLength, upperAngle);
+          const forearmAngle = upperAngle + 9;
+          const wrist = toPoint(elbow, forearmLength, forearmAngle);
+          return { shoulder, elbow, wrist };
+        }
+
         let lift = clamp(height);
         if (exerciseId === "front_raise") lift = .15 + lift * .45;
-        if (mode === "combo" && side === "left") lift = .52;
         const upperAngle = 62 - lift * 97;
         const elbow = toPoint(shoulder, upperLength, upperAngle);
         const forearmAngle = upperAngle + 9 + clamp((.84 - extension) / .57) * 16;
@@ -1144,18 +1256,46 @@
         element.style.opacity = loaded === false ? ".12" : loaded === true ? "1" : ".55";
       }
 
-      let avatar3d = null;
+      function lerpPoint(current, target, t) {
+        return { x: lerp(current.x, target.x, t), y: lerp(current.y, target.y, t) };
+      }
+
+      function lerpArm(current, target, t) {
+        return {
+          shoulder: lerpPoint(current.shoulder, target.shoulder, t),
+          elbow: lerpPoint(current.elbow, target.elbow, t),
+          wrist: lerpPoint(current.wrist, target.wrist, t),
+        };
+      }
+
+      // The backend publishes a new frame roughly every 30-100ms depending on
+      // camera FPS and transport, which is uneven enough to make the avatar
+      // visibly snap between poses. updateAvatar() only records the latest
+      // *target* pose; a separate requestAnimationFrame loop continuously
+      // eases the drawn pose toward that target at display refresh rate, so
+      // movement reads as fluid regardless of how choppy the data feed is.
+      const AVATAR_LERP_RATE = 0.22;
 
       function updateAvatar(control) {
         const mode = exerciseDefinitions[state.exercise]?.mode || "extension";
-        if (avatar3d) updateAvatar3D(control, mode);
+        if (mode === "combo") {
+          const tokens = controlTokens(control);
+          if (tokens.has("left_overhead_right_front_candidate")) state.avatarOverheadSide = "left";
+          else if (tokens.has("right_overhead_left_front_candidate")) state.avatarOverheadSide = "right";
+        }
+        const overheadSide = state.avatarOverheadSide;
         const leftData = activeSideData(control, "left");
         const rightData = activeSideData(control, "right");
-        const leftLoaded = leftData.dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded;
-        const rightLoaded = rightData.dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded;
-        const left = pointFor("left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise);
-        const right = pointFor("right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode, state.exercise);
-        if (!$(`leftArm`)) return;
+        state.avatarLoaded.left = leftData.dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded ?? null;
+        state.avatarLoaded.right = rightData.dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded ?? null;
+        state.avatarTarget.left = pointFor("left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise, overheadSide);
+        state.avatarTarget.right = pointFor("right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode, state.exercise, overheadSide);
+        if (!state.avatarCurrent) {
+          state.avatarCurrent = { left: state.avatarTarget.left, right: state.avatarTarget.right };
+        }
+      }
+
+      function drawAvatar(left, right, leftLoaded, rightLoaded) {
         $("leftArm").setAttribute("d", path(left));
         $("rightArm").setAttribute("d", path(right));
         $("leftArmBack").setAttribute("d", path(left));
@@ -1165,129 +1305,13 @@
         setDumbbell("leftDumbbell", left.wrist, leftLoaded); setDumbbell("rightDumbbell", right.wrist, rightLoaded);
       }
 
-      function placeBone(THREE, mesh, start, end) {
-        const direction = new THREE.Vector3().subVectors(end, start);
-        const length = direction.length();
-        mesh.position.copy(start).add(end).multiplyScalar(.5);
-        mesh.scale.set(1, length, 1);
-        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-      }
-
-      function makeBone(THREE, scene, material, radius) {
-        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.06, 1, 18), material);
-        mesh.castShadow = true;
-        scene.add(mesh);
-        return mesh;
-      }
-
-      function makeDumbbell(THREE, scene, material) {
-        const group = new THREE.Group();
-        const bar = new THREE.Mesh(new THREE.CylinderGeometry(.045, .045, .58, 16), material);
-        bar.rotation.z = Math.PI / 2;
-        group.add(bar);
-        for (const x of [-.32, .32]) {
-          const plate = new THREE.Mesh(new THREE.CylinderGeometry(.19, .19, .14, 18), material);
-          plate.rotation.z = Math.PI / 2;
-          plate.position.x = x;
-          group.add(plate);
+      function renderAvatarFrame() {
+        if (state.avatarCurrent && state.avatarTarget.left && state.avatarTarget.right) {
+          state.avatarCurrent.left = lerpArm(state.avatarCurrent.left, state.avatarTarget.left, AVATAR_LERP_RATE);
+          state.avatarCurrent.right = lerpArm(state.avatarCurrent.right, state.avatarTarget.right, AVATAR_LERP_RATE);
+          drawAvatar(state.avatarCurrent.left, state.avatarCurrent.right, state.avatarLoaded.left, state.avatarLoaded.right);
         }
-        group.traverse((child) => { child.castShadow = true; });
-        scene.add(group);
-        return group;
-      }
-
-      function avatarPoint3D(THREE, side, extension, height, mode) {
-        const sign = side === "left" ? -1 : 1;
-        const bent = clamp((.84 - extension) / .57);
-        const lift = clamp(height);
-        const shoulder = new THREE.Vector3(sign * .92, 2.62, .02);
-        const elbow = new THREE.Vector3(sign * (1.23 + bent * .16), 2.08 + lift * .28 + bent * .14, .02);
-        let wristY = mode === "height" ? 1.22 + lift * 2.65 : 1.24 + bent * .82;
-        if (mode === "combo" && side === "left") wristY = 2.28;
-        const wrist = new THREE.Vector3(sign * (1.36 - bent * .42), wristY, .06);
-        return { shoulder, elbow, wrist };
-      }
-
-      function updateAvatar3D(control, mode) {
-        if (!avatar3d) return;
-        const left = avatarPoint3D(avatar3d.THREE, "left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode);
-        const right = avatarPoint3D(avatar3d.THREE, "right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode);
-        for (const [side, points] of [["left", left], ["right", right]]) {
-          placeBone(avatar3d.THREE, avatar3d.bones[`${side}UpperArm`], points.shoulder, points.elbow);
-          placeBone(avatar3d.THREE, avatar3d.bones[`${side}Forearm`], points.elbow, points.wrist);
-          avatar3d.joints[`${side}Elbow`].position.copy(points.elbow);
-          avatar3d.joints[`${side}Wrist`].position.copy(points.wrist);
-          avatar3d.weights[side].position.copy(points.wrist);
-        }
-      }
-
-      async function initAvatar2D() {
-        $("avatar3d").classList.add("hidden");
-        $("avatarSvg").style.display = "block";
-        updateAvatar({ axes: {} });
-        return;
-        try {
-          const THREE = null;
-          const root = $("avatar3d");
-          const scene = new THREE.Scene();
-          const camera = new THREE.PerspectiveCamera(34, 1, .1, 30);
-          camera.position.set(0, 2.25, 10.5);
-          camera.lookAt(0, 2.05, 0);
-          const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-          renderer.outputColorSpace = THREE.SRGBColorSpace;
-          renderer.shadowMap.enabled = true;
-          root.appendChild(renderer.domElement);
-          const resize = () => { const width = root.clientWidth || 620; const height = root.clientHeight || 600; renderer.setSize(width, height, false); camera.aspect = width / height; camera.updateProjectionMatrix(); };
-          resize();
-          window.addEventListener("resize", resize);
-          scene.add(new THREE.HemisphereLight(0xcfe9ff, 0x071019, 2.1));
-          const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
-          keyLight.position.set(-3, 6, 5); keyLight.castShadow = true; scene.add(keyLight);
-          const rimLight = new THREE.DirectionalLight(0x39d6ff, 1.6); rimLight.position.set(4, 3, -3); scene.add(rimLight);
-          const floor = new THREE.Mesh(new THREE.CylinderGeometry(2.05, 2.05, .05, 64), new THREE.MeshStandardMaterial({ color: 0x0b2537, metalness: .45, roughness: .45 }));
-          floor.position.y = -.04; floor.receiveShadow = true; scene.add(floor);
-          const ring = new THREE.Mesh(new THREE.TorusGeometry(1.78, .018, 8, 64), new THREE.MeshBasicMaterial({ color: 0x35bfff, transparent: true, opacity: .75 }));
-          ring.rotation.x = Math.PI / 2; ring.position.y = .02; scene.add(ring);
-
-          const skin = new THREE.MeshStandardMaterial({ color: 0xc88f6d, roughness: .72, metalness: 0 });
-          const shirt = new THREE.MeshStandardMaterial({ color: 0x344353, roughness: .8, metalness: .05 });
-          const pants = new THREE.MeshStandardMaterial({ color: 0x101923, roughness: .88, metalness: .03 });
-          const shoe = new THREE.MeshStandardMaterial({ color: 0x080d13, roughness: .65, metalness: .15 });
-          const weight = new THREE.MeshStandardMaterial({ color: 0x252d37, roughness: .38, metalness: .75 });
-          const body = new THREE.Group(); scene.add(body);
-          const add = (mesh, position, scale) => { mesh.position.set(...position); mesh.scale.set(...scale); mesh.castShadow = true; body.add(mesh); return mesh; };
-          add(new THREE.Mesh(new THREE.SphereGeometry(.31, 32, 20), skin), [0, 3.48, 0], [1, 1.08, .92]);
-          add(new THREE.Mesh(new THREE.CylinderGeometry(.13, .16, .25, 18), skin), [0, 3.12, 0], [1, 1, 1]);
-          add(new THREE.Mesh(new THREE.CylinderGeometry(.61, .72, 1.48, 32, 3), shirt), [0, 2.42, 0], [1, 1, .52]);
-          add(new THREE.Mesh(new THREE.CylinderGeometry(.57, .66, .5, 32), pants), [0, 1.61, 0], [1, 1, .72]);
-          for (const sign of [-1, 1]) {
-            add(new THREE.Mesh(new THREE.CylinderGeometry(.23, .19, 1.22, 18), pants), [sign * .37, .9, 0], [1, 1, 1]);
-            add(new THREE.Mesh(new THREE.CylinderGeometry(.17, .15, .78, 18), skin), [sign * .37, .21, 0], [1, 1, 1]);
-            add(new THREE.Mesh(new THREE.BoxGeometry(.48, .18, .8), shoe), [sign * .37, -.04, .13], [1, 1, 1]);
-          }
-          const bones = {};
-          const joints = {};
-          const weights = {};
-          for (const side of ["left", "right"]) {
-            const sign = side === "left" ? -1 : 1;
-            joints[`${side}Shoulder`] = add(new THREE.Mesh(new THREE.SphereGeometry(.18, 20, 14), skin), [sign * .92, 2.62, .02], [1, 1, 1]);
-            joints[`${side}Elbow`] = add(new THREE.Mesh(new THREE.SphereGeometry(.15, 20, 14), skin), [sign * 1.2, 2.1, .02], [1, 1, 1]);
-            joints[`${side}Wrist`] = add(new THREE.Mesh(new THREE.SphereGeometry(.13, 20, 14), skin), [sign * 1.36, 1.24, .06], [1, 1, 1]);
-            bones[`${side}UpperArm`] = makeBone(THREE, scene, skin, .15);
-            bones[`${side}Forearm`] = makeBone(THREE, scene, skin, .13);
-            weights[side] = makeDumbbell(THREE, scene, weight);
-          }
-          avatar3d = { THREE, scene, camera, renderer, bones, joints, weights };
-          $("avatarSvg").style.display = "none";
-          updateAvatar3D({ axes: {} }, "extension");
-          const render = () => { if (!avatar3d) return; renderer.render(scene, camera); requestAnimationFrame(render); };
-          render();
-        } catch (error) {
-          $("avatar3d").classList.add("hidden");
-          $("avatarSvg").style.display = "block";
-          console.warn("3D movement model unavailable; using the local fallback", error);
-        }
+        requestAnimationFrame(renderAvatarFrame);
       }
 
       function calibrate() {
@@ -1302,11 +1326,15 @@
       $("stopButton").addEventListener("click", () => stopSession(true));
       $("pauseButton").addEventListener("click", togglePause);
       $("calibrateButton").addEventListener("click", calibrate);
+      $("resultsCloseButton").addEventListener("click", () => {
+        $("resultsOverlay").classList.add("hidden");
+        $("setupOverlay").classList.remove("hidden");
+      });
       document.querySelectorAll(".difficulty-btn").forEach((button) => button.addEventListener("click", () => setDifficulty(button.dataset.difficulty)));
 
       readSettings();
       updateAvatar({ axes: {} });
-      initAvatar2D();
+      requestAnimationFrame(renderAvatarFrame);
       setInterval(() => {
         refreshSensorDisplays();
         if (state.running && state.lastFrameAt && performance.now() - state.lastFrameAt > 3500) setSessionBadge("LIVE STREAM STALE", "stale");
