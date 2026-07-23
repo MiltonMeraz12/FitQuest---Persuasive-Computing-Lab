@@ -760,6 +760,47 @@ def classify_wearable_false_positive(
     )
 
 
+def _nearest_weight_for_side(
+    object_candidates: list[ObjectDetection],
+    wrist: np.ndarray | None,
+    elbow: np.ndarray | None,
+    exclude_indices: frozenset[int] = frozenset(),
+) -> NearestWeight | None:
+    """Return the closest object candidate to one wrist/forearm segment."""
+
+    nearest: NearestWeight | None = None
+    for index, detection in enumerate(object_candidates):
+        if index in exclude_indices:
+            continue
+        center = detection.center
+        wrist_distance = (
+            point_distance(center, wrist)
+            if wrist is not None
+            else None
+        )
+        forearm_distance = (
+            point_to_segment_distance(center, elbow, wrist)
+            if elbow is not None and wrist is not None
+            else None
+        )
+
+        distances = [value for value in (wrist_distance, forearm_distance) if value is not None]
+        if not distances:
+            continue
+        best_distance = min(distances)
+        if nearest is None or best_distance < nearest.distance:
+            nearest = NearestWeight(
+                candidate_index=index,
+                label=detection.label,
+                confidence=detection.confidence,
+                distance=best_distance,
+                wrist_distance=wrist_distance,
+                forearm_distance=forearm_distance,
+                z_distance=detection.z_distance,
+            )
+    return nearest
+
+
 def build_body_context(
     pose: PoseCandidate | None,
     object_result=None,
@@ -811,51 +852,52 @@ def build_body_context(
     if object_tracker is not None:
         object_candidates = object_tracker.update(object_candidates)
 
-    sides: dict[str, LimbSideContext] = {}
-    engaged_sides: list[str] = []
-    accepted_indices: set[int] = set()
+    joints_by_side: dict[str, LimbVisibility] = {}
+    points_by_side: dict[str, dict[str, np.ndarray | None]] = {}
+    nearest_by_side: dict[str, NearestWeight | None] = {}
 
     for side in ("left", "right"):
         shoulder = get_point(pose, "shoulder", side, min_confidence) if pose is not None else None
         elbow = get_point(pose, "elbow", side, min_confidence) if pose is not None else None
         wrist = get_point(pose, "wrist", side, min_confidence) if pose is not None else None
 
-        joints = LimbVisibility(
+        joints_by_side[side] = LimbVisibility(
             shoulder=shoulder is not None,
             elbow=elbow is not None,
             wrist=wrist is not None,
             forearm=elbow is not None and wrist is not None,
             full_arm=shoulder is not None and elbow is not None and wrist is not None,
         )
+        points_by_side[side] = {"shoulder": shoulder, "elbow": elbow, "wrist": wrist}
+        nearest_by_side[side] = _nearest_weight_for_side(object_candidates, wrist, elbow)
 
-        nearest: NearestWeight | None = None
-        for index, detection in enumerate(object_candidates):
-            center = detection.center
-            wrist_distance = (
-                point_distance(center, wrist)
-                if wrist is not None
-                else None
-            )
-            forearm_distance = (
-                point_to_segment_distance(center, elbow, wrist)
-                if elbow is not None and wrist is not None
-                else None
-            )
+    # One physical object cannot be held by both hands at once. Two hands
+    # brought close together (a press, a curl at the top, brief pose jitter)
+    # can otherwise put the same detection within range of both wrists. Keep
+    # the claim for whichever side is actually closer and let the other side
+    # fall back to its next-nearest candidate, if any.
+    left_nearest = nearest_by_side["left"]
+    right_nearest = nearest_by_side["right"]
+    if (
+        left_nearest is not None
+        and right_nearest is not None
+        and left_nearest.candidate_index == right_nearest.candidate_index
+    ):
+        contested_index = left_nearest.candidate_index
+        losing_side = "left" if left_nearest.distance > right_nearest.distance else "right"
+        nearest_by_side[losing_side] = _nearest_weight_for_side(
+            object_candidates,
+            points_by_side[losing_side]["wrist"],
+            points_by_side[losing_side]["elbow"],
+            exclude_indices=frozenset({contested_index}),
+        )
 
-            distances = [value for value in (wrist_distance, forearm_distance) if value is not None]
-            if not distances:
-                continue
-            best_distance = min(distances)
-            if nearest is None or best_distance < nearest.distance:
-                nearest = NearestWeight(
-                    candidate_index=index,
-                    label=detection.label,
-                    confidence=detection.confidence,
-                    distance=best_distance,
-                    wrist_distance=wrist_distance,
-                    forearm_distance=forearm_distance,
-                    z_distance=detection.z_distance,
-                )
+    sides: dict[str, LimbSideContext] = {}
+    engaged_sides: list[str] = []
+    accepted_indices: set[int] = set()
+
+    for side in ("left", "right"):
+        nearest = nearest_by_side[side]
 
         dumbbell_near = False
         if nearest is not None:
@@ -868,7 +910,7 @@ def build_body_context(
             accepted_indices.add(nearest.candidate_index)
 
         sides[side] = LimbSideContext(
-            joints_visible=joints,
+            joints_visible=joints_by_side[side],
             nearest_weight=nearest,
             dumbbell_near_wrist_or_forearm=dumbbell_near,
         )

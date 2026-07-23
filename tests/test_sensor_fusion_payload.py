@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from ironquest.game_controls import build_game_control_payload
+from ironquest.game_controls import EventDebouncer, build_game_control_payload
 from ironquest.sensors import ESP32AutoBridge, ESP32Telemetry, ESP32UdpBridge, WearableFileBridge, normalise_wearable_payload
 
 
@@ -479,3 +479,66 @@ def test_game_control_payload_marks_imu_motion_bursts() -> None:
     assert payload["esp32_glove"]["motion_intensity"] == 1.0
     assert payload["esp32_glove"]["motion_state"] == "burst"
     assert "IMU_MOTION_BURST" in payload["events"]
+
+
+def test_event_debouncer_holds_exercise_candidate_before_switching() -> None:
+    motion_press = {"status": "ok", "tokens": ["left_arm_overhead"], "sides": {}, "body": {}, "signal_metrics": {"bilateral": {}}}
+    motion_idle = {"status": "ok", "tokens": [], "sides": {}, "body": {}, "signal_metrics": {"bilateral": {}}}
+    movement = {"pose_confidence": 0.8, "object_detection": {}, "limbs": {"sides": {}}}
+    debouncer = EventDebouncer(hold_frames=3)
+
+    first = build_game_control_payload(motion_press, movement, debouncer=debouncer)
+    second = build_game_control_payload(motion_press, movement, debouncer=debouncer)
+    third = build_game_control_payload(motion_press, movement, debouncer=debouncer)
+
+    assert first["exercise_candidate"] is None
+    assert second["exercise_candidate"] is None
+    assert third["exercise_candidate"]["id"] == "press"
+
+    fourth = build_game_control_payload(motion_idle, movement, debouncer=debouncer)
+    fifth = build_game_control_payload(motion_idle, movement, debouncer=debouncer)
+    sixth = build_game_control_payload(motion_idle, movement, debouncer=debouncer)
+
+    assert fourth["exercise_candidate"]["id"] == "press"
+    assert fifth["exercise_candidate"]["id"] == "press"
+    assert sixth["exercise_candidate"] is None
+
+
+def test_event_debouncer_reports_imu_burst_once_per_rising_edge() -> None:
+    motion = {"status": "ok", "sides": {}, "body": {}, "signal_metrics": {"bilateral": {}}}
+    movement = {"pose_confidence": 0.8, "object_detection": {}, "limbs": {"sides": {}}}
+    burst_esp32 = {
+        "status": "connected",
+        "latest": {
+            "mount": "right_gym_glove",
+            "orientation_euler_deg": {"pitch": 0.0, "roll": 0.0, "yaw": 0.0},
+            "motion_delta_mps2": 9.5,
+            "angular_delta_dps": 240.0,
+            "orientation_delta_deg": 32.0,
+            "stability_index": 0.05,
+            "sample_interval_ms": 67.0,
+        },
+    }
+    calm_esp32 = {
+        "status": "connected",
+        "latest": {
+            "mount": "right_gym_glove",
+            "orientation_euler_deg": {"pitch": 0.0, "roll": 0.0, "yaw": 0.0},
+            "motion_delta_mps2": 0.1,
+            "angular_delta_dps": 2.0,
+            "orientation_delta_deg": 0.2,
+            "stability_index": 0.95,
+            "sample_interval_ms": 67.0,
+        },
+    }
+    debouncer = EventDebouncer()
+
+    first = build_game_control_payload(motion, movement, burst_esp32, debouncer=debouncer)
+    second = build_game_control_payload(motion, movement, burst_esp32, debouncer=debouncer)
+    third = build_game_control_payload(motion, movement, calm_esp32, debouncer=debouncer)
+    fourth = build_game_control_payload(motion, movement, burst_esp32, debouncer=debouncer)
+
+    assert "IMU_MOTION_BURST" in first["events"]
+    assert "IMU_MOTION_BURST" not in second["events"]
+    assert "IMU_MOTION_BURST" not in third["events"]
+    assert "IMU_MOTION_BURST" in fourth["events"]

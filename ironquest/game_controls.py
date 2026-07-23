@@ -7,10 +7,65 @@ without requiring code changes for different user ability levels.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import Any
 
 
 SIDES = ("left", "right")
+
+# Events that describe a discrete physical occurrence (a jump, an IMU burst)
+# rather than a continuous status (e.g. CALIBRATING). Only these are subject
+# to rising-edge debouncing in EventDebouncer.resolve_events.
+_EDGE_TRIGGERED_EVENTS = frozenset({"BODY_JUMP_CANDIDATE", "IMU_MOTION_BURST"})
+
+
+@dataclass
+class EventDebouncer:
+    """Stabilize frame-by-frame exercise-candidate and event flicker.
+
+    ``build_game_control_payload`` is otherwise a pure function evaluated
+    fresh every frame. A signal sitting near a threshold can flip the
+    reported exercise candidate frame-to-frame, and a single physical jump or
+    IMU burst can otherwise be reported on every frame the condition holds.
+    This is the one piece of state a caller keeps alive across frames for one
+    session, the same instantiate-once-per-session pattern already used for
+    ``MotionAnalyzer``/``ObjectTemporalTracker`` in ``cli.py``.
+    """
+
+    hold_frames: int = 3
+    _pending_id: str | None = field(default=None, init=False, repr=False)
+    _pending_streak: int = field(default=0, init=False, repr=False)
+    _confirmed: dict[str, Any] | None = field(default=None, init=False, repr=False)
+    _previous_edge_events: set[str] = field(default_factory=set, init=False, repr=False)
+
+    def resolve_candidate(self, candidate: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Only switch the confirmed candidate after it holds for N frames."""
+
+        candidate_id = candidate.get("id") if candidate else None
+        if candidate_id == self._pending_id:
+            self._pending_streak += 1
+        else:
+            self._pending_id = candidate_id
+            self._pending_streak = 1
+        if self._pending_streak >= self.hold_frames:
+            self._confirmed = candidate
+        return self._confirmed
+
+    def resolve_events(self, events: list[str]) -> list[str]:
+        """Report edge-triggered events once per rising edge, not every frame."""
+
+        current_edge_events = {event for event in events if event in _EDGE_TRIGGERED_EVENTS}
+        rising = current_edge_events - self._previous_edge_events
+        self._previous_edge_events = current_edge_events
+        return [event for event in events if event not in _EDGE_TRIGGERED_EVENTS or event in rising]
+
+    def reset(self) -> None:
+        """Clear session state, e.g. after a browser calibrate/reset action."""
+
+        self._pending_id = None
+        self._pending_streak = 0
+        self._confirmed = None
+        self._previous_edge_events = set()
 
 
 def build_game_control_payload(
@@ -20,12 +75,16 @@ def build_game_control_payload(
     wearable_payload: dict[str, Any] | None = None,
     esp32_side: str = "right",
     wearable_side: str = "left",
+    debouncer: EventDebouncer | None = None,
 ) -> dict[str, Any]:
     """Build one frame of normalized sensor-fusion state.
 
     The default hardware arrangement is intentionally asymmetric: an ESP32+IMU
     gym glove on one hand and a Garmin watch on the other. Both sides still get
-    camera-derived pose and dumbbell association signals.
+    camera-derived pose and dumbbell association signals. Pass the same
+    ``EventDebouncer`` instance across frames in one session to stabilize the
+    exercise candidate and edge-triggered events; omitting it keeps this
+    function's previous stateless, per-frame behavior.
     """
 
     esp32_payload = esp32_payload or {"status": "not_configured"}
@@ -38,14 +97,20 @@ def build_game_control_payload(
     arm_signals = _arm_signals(motion_analysis, movement_payload, esp32_glove, wearable_payload, esp32_side, wearable_side)
     axes = _axes(motion_analysis, movement_payload, esp32_glove, user_state, signal_metrics)
 
+    exercise_candidate = _exercise_candidate(motion_analysis)
+    events = _events(motion_analysis, esp32_glove)
+    if debouncer is not None:
+        exercise_candidate = debouncer.resolve_candidate(exercise_candidate)
+        events = debouncer.resolve_events(events)
+
     return {
         "status": _status(motion_analysis),
         "control_mode": "sensor_fusion_engine",
         "schema_version": "2026-08-fusion-v2",
         "tokens": list(dict.fromkeys(motion_analysis.get("tokens", []))),
-        "exercise_candidate": _exercise_candidate(motion_analysis),
+        "exercise_candidate": exercise_candidate,
         "axes": axes,
-        "events": _events(motion_analysis, esp32_glove),
+        "events": events,
         "body_posture": _body_posture(motion_analysis),
         "dumbbells": _dumbbell_boxes(movement_payload),
         "arm_signals": arm_signals,

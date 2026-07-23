@@ -23,7 +23,7 @@ from ultralytics import YOLO
 
 from .body_context import ObjectTemporalTracker, build_body_context
 from .capture_analysis import analyze_capture, print_capture_summary, resolve_capture_jsonl, write_capture_report
-from .game_controls import build_game_control_payload
+from .game_controls import EventDebouncer, build_game_control_payload
 from .keypoints import PoseSmoother, extract_primary_pose
 from .motion_analysis import MotionAnalyzer
 from .movement import MovementClassifier
@@ -51,6 +51,12 @@ DEFAULT_DETECT_PROJECT = RUNS_ROOT / "detect"
 DEFAULT_POSE_PROJECT = RUNS_ROOT / "pose"
 DEFAULT_VALIDATE_PROJECT = RUNS_ROOT / "validate"
 LIVE_INSTANCE_LOCK_PATH = DEFAULT_VALIDATE_PROJECT / "ironquest_live.lock"
+
+# "full", "demo", and "run" are aliases of one subparser (see build_parser)
+# and are meant to share the same live-session behavior: the one-instance
+# lock and the live ESP32/UI defaults. run_ironquest.bat always invokes
+# "run", so this only matters for someone invoking the CLI directly.
+LIVE_COMMAND_ALIASES = frozenset({"full", "demo", "run"})
 
 DEFAULT_DUMBBELL_ZIP = Path(os.getenv("IRONQUEST_DUMBBELL_ZIP", "docs/Dumbbell-detetion-new.v23i.yolo26.zip"))
 DEFAULT_DUMBBELL_ZIP_2 = Path(os.getenv("IRONQUEST_DUMBBELL_ZIP_2", "docs/Dumbbell_2.4.v8i.yolo26.zip"))
@@ -242,13 +248,14 @@ def apply_live_command_defaults(args: argparse.Namespace) -> argparse.Namespace:
     ``python -m ironquest run`` is the project-facing command for daily use. It
     keeps the advanced flags available, but defaults to the real demo stack:
     camera + pose + dumbbells + auto ESP32/IMU transport + visible telemetry UI.
+    ``full``/``demo`` are aliases of the same command and get the same defaults.
     """
 
     if getattr(args, "mode", None) is None:
         args.mode = "full"
     args.auto_object_model = True
 
-    if getattr(args, "command", None) != "run":
+    if getattr(args, "command", None) not in LIVE_COMMAND_ALIASES:
         return args
 
     explicit_args = set(getattr(args, "_explicit_detection_args", set()))
@@ -858,6 +865,7 @@ def analyze_frame(
     wearable_bridge: WearableFileBridge | None,
     args: argparse.Namespace,
     frame_index: int = 0,
+    exercise_debouncer: EventDebouncer | None = None,
 ) -> tuple[dict, object, object | None]:
     """Run all analysis layers for one frame.
 
@@ -942,6 +950,7 @@ def analyze_frame(
         wearable_payload,
         esp32_side=getattr(args, "esp32_side", DETECT_DEFAULTS["esp32_side"]),
         wearable_side=getattr(args, "wearable_side", DETECT_DEFAULTS["wearable_side"]),
+        debouncer=exercise_debouncer,
     )
     payload["signal_log"] = build_signal_log_record(payload)
     return payload, pose, object_result
@@ -973,6 +982,7 @@ class PipelineRunner:
         self.motion_analyzer: MotionAnalyzer | None = None
         self.pose_smoother: PoseSmoother | None = None
         self.object_tracker: ObjectTemporalTracker | None = None
+        self.exercise_debouncer: EventDebouncer | None = None
         self.esp32_bridge: ESP32AutoBridge | ESP32SerialBridge | ESP32UdpBridge | None = None
         self.wearable_bridge: WearableFileBridge | None = None
         self.garmin_connectiq_bridge_process: subprocess.Popen | None = None
@@ -993,7 +1003,7 @@ class PipelineRunner:
     def __enter__(self) -> "PipelineRunner":
         """Open models, camera/video, sensor bridges, optional JSONL, and window."""
 
-        if getattr(self.args, "command", None) == "run":
+        if getattr(self.args, "command", None) in LIVE_COMMAND_ALIASES:
             self.live_instance_lock = LiveInstanceLock(LIVE_INSTANCE_LOCK_PATH)
             if not self.live_instance_lock.acquire():
                 raise RuntimeError(
@@ -1018,6 +1028,7 @@ class PipelineRunner:
             min_confidence=self.args.pose_joint_conf,
             calibration_seconds=self.args.calibration_seconds,
         )
+        self.exercise_debouncer = EventDebouncer()
         self.pose_smoother = PoseSmoother(
             alpha=self.args.pose_smoothing,
             hold_frames=self.args.pose_hold_frames,
@@ -1136,6 +1147,7 @@ class PipelineRunner:
             self.wearable_bridge,
             self.args,
             frame_index=self.frame_count,
+            exercise_debouncer=self.exercise_debouncer,
         )
         now = time.perf_counter()
         instant_fps = 1.0 / max(now - self.last_frame_time, 1e-6)
@@ -1174,6 +1186,8 @@ class PipelineRunner:
 
         if self.motion_analyzer is not None:
             self.motion_analyzer.reset()
+        if self.exercise_debouncer is not None:
+            self.exercise_debouncer.reset()
         if self.pose_smoother is not None:
             self.pose_smoother.reset()
         if self.object_tracker is not None:

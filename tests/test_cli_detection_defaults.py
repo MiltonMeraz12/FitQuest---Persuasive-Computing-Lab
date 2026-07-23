@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from ironquest.cli import (
     DEFAULT_WEARABLE_LIVE_JSON,
+    LIVE_COMMAND_ALIASES,
     apply_live_command_defaults,
     build_esp32_bridge,
     build_parser,
@@ -94,6 +95,25 @@ def test_run_alias_can_disable_connectiq_bridge() -> None:
     assert configured.garmin_connectiq_bridge is False
 
 
+def test_live_command_aliases_cover_full_demo_and_run() -> None:
+    # "full", "demo", and "run" are aliases of one subparser and are meant to
+    # share the same live-session lock and defaults.
+    assert LIVE_COMMAND_ALIASES == {"full", "demo", "run"}
+
+
+def test_full_and_demo_aliases_get_the_same_live_defaults_as_run() -> None:
+    parser = build_parser()
+    for command in ("full", "demo", "run"):
+        args = parser.parse_args([command, "--source", "sample.mp4", "--no-show"])
+        configured = fill_detection_defaults(apply_live_command_defaults(args))
+
+        assert configured.command == command
+        assert configured.esp32_transport == "auto"
+        assert configured.ui_detail == "debug"
+        assert configured.wearable_stale_seconds == 5.0
+        assert configured.wearable_json == DEFAULT_WEARABLE_LIVE_JSON
+
+
 def test_esp32_transport_auto_builds_hybrid_bridge() -> None:
     parser = build_parser()
     args = parser.parse_args(["run", "--source", "sample.mp4", "--no-show"])
@@ -115,4 +135,6 @@ if __name__ == "__main__":
     test_run_alias_uses_one_command_live_defaults()
     test_esp32_transport_auto_builds_hybrid_bridge()
     test_run_alias_can_disable_connectiq_bridge()
+    test_live_command_aliases_cover_full_demo_and_run()
+    test_full_and_demo_aliases_get_the_same_live_defaults_as_run()
     print("CLI detection defaults tests passed")

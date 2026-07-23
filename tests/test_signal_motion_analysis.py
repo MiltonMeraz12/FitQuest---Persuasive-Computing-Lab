@@ -64,6 +64,32 @@ def test_motion_analyzer_auto_calibrates_normalized_signals() -> None:
     assert payload["body"]["position"] == "seated_assumed"
 
 
+def test_calibration_bounds_keep_expanding_after_tracking_starts() -> None:
+    analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
+    poses = [
+        _pose(left_wrist=(100.0, 210.0), right_wrist=(270.0, 150.0)),
+        _pose(left_wrist=(120.0, 190.0), right_wrist=(260.0, 160.0)),
+        _pose(left_wrist=(140.0, 170.0), right_wrist=(250.0, 170.0)),
+        _pose(left_wrist=(150.0, 150.0), right_wrist=(240.0, 180.0)),
+        _pose(left_wrist=(130.0, 180.0), right_wrist=(250.0, 170.0)),
+        _pose(left_wrist=(110.0, 205.0), right_wrist=(265.0, 155.0)),
+    ]
+    for pose in poses:
+        analyzer.update(pose)
+    assert analyzer.calibration_state == "tracking"
+    locked_span = analyzer.calibration_bounds["left"]["elbow_angle"].span
+
+    # A movement bigger than anything seen in the fixed calibration window
+    # should still widen the bounds instead of permanently clamping at
+    # 0.0/1.0 for the rest of the session.
+    payload = analyzer.update(_pose(left_wrist=(100.0, 100.0), right_wrist=(265.0, 155.0)))
+    expanded_span = analyzer.calibration_bounds["left"]["elbow_angle"].span
+
+    assert expanded_span > locked_span
+    assert payload["signal_metrics"]["calibration"]["state"] == "tracking"
+    assert payload["sides"]["left"]["arm_extension"] in (0.0, 1.0)
+
+
 def test_partial_pose_does_not_start_calibration() -> None:
     analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
     partial = PoseCandidate(xy=np.zeros((17, 2), dtype=float), conf=np.zeros(17, dtype=float))

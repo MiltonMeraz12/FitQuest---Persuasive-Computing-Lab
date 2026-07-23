@@ -556,8 +556,13 @@ class MotionAnalyzer:
             / self.config.max_height_score
         )
         reach_x = float((wrist[0] - shoulder[0]) / torso_scale)
-        if self.calibration_state != "tracking":
-            self._update_calibration(side, elbow_angle, height_score, reach_x)
+        # Bounds only ever widen (CalibrationFeature.update never shrinks an
+        # existing min/max), so it is safe to keep observing after the
+        # initial warm-up window locks in the "tracking" status label. This
+        # lets range-of-motion signals keep expanding instead of clamping at
+        # 0.0/1.0 for the rest of the session once a user moves beyond what
+        # they happened to demonstrate in the first few seconds.
+        self._update_calibration(side, elbow_angle, height_score, reach_x)
         direction = _direction_from_delta(delta, self.config.direction_threshold)
         tokens = self._side_tokens(side, height_zone, reach_zone, elbow_state, loaded, direction)
         if elbow_angle is not None:
