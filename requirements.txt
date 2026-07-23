@@ -1,0 +1,8 @@
+ultralytics>=8.4.51
+opencv-python>=4.13.0
+numpy>=2.4.0
+pyserial>=3.5
+bleak>=0.22.0
+lap>=0.5.13
+PyYAML>=6.0
+pytest>=8.4.0

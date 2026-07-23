@@ -1,0 +1,98 @@
+# Iron Quest 3D Ultralytics training profiles.
+#
+# This is the project-level training source of truth after the June 2026 pivot.
+# Only body-pose and dumbbell-detection profiles remain active for this scope.
+#
+# Use:
+#
+#   ironquest_env\Scripts\python.exe tools\train_ultralytics_profile.py --profile dumbbell_detection
+#   ironquest_env\Scripts\python.exe tools\train_ultralytics_profile.py --profile body_pose
+#
+# Body pose and dumbbell detection stay separate because their outputs are
+# different: COCO body pose has 17 body joints, while dumbbells are object boxes.
+
+profiles:
+  body_pose:
+    task: pose
+    mode: train
+    model: weights/yolo26n-pose.pt
+    data: coco-pose.yaml
+    project: runs/pose
+    name: body_pose_yolo26n_improved
+    epochs: 100
+    patience: 30
+    imgsz: 640
+    batch: -1
+    workers: 4
+    pretrained: true
+    optimizer: auto
+    cos_lr: true
+    amp: true
+    cache: false
+    close_mosaic: 10
+    hsv_h: 0.01
+    hsv_s: 0.30
+    hsv_v: 0.25
+    degrees: 8.0
+    translate: 0.06
+    scale: 0.35
+    shear: 1.0
+    perspective: 0.0002
+    flipud: 0.0
+    fliplr: 0.5
+    mosaic: 0.4
+    mixup: 0.0
+    copy_paste: 0.0
+    erasing: 0.10
+    auto_augment: randaugment
+    label_smoothing: 0.0
+    dropout: 0.0
+    val: true
+    plots: true
+    save_period: 10
+    ironquest_note: Uses the official COCO pose dataset until the project has local 17-keypoint body-pose annotations.
+
+  dumbbell_detection:
+    task: detect
+    mode: train
+    model: yolo26n.pt
+    data: data/datasets/dumbbell_combined_yolo26/data.local.yaml
+    project: runs/detect
+    name: dumbbell_combined_yolo26n_improved
+    epochs: 120
+    patience: 30
+    imgsz: 640
+    batch: -1
+    workers: 4
+    pretrained: true
+    optimizer: auto
+    cos_lr: true
+    amp: true
+    cache: false
+    close_mosaic: 15
+    hsv_h: 0.015
+    hsv_s: 0.45
+    hsv_v: 0.35
+    degrees: 8.0
+    translate: 0.08
+    scale: 0.45
+    shear: 2.0
+    perspective: 0.0005
+    flipud: 0.0
+    fliplr: 0.5
+    mosaic: 0.8
+    mixup: 0.05
+    copy_paste: 0.0
+    erasing: 0.2
+    auto_augment: randaugment
+    label_smoothing: 0.02
+    dropout: 0.0
+    val: true
+    plots: true
+    save_period: 10
+
+notes:
+  - Active paper scope is body pose, dumbbell boxes, ESP32/BNO08X IMU telemetry, and Garmin Venu 3 heart-rate context.
+  - Game development is out of scope for the August 7 deadline; the game-control layer is now a sensor-fusion middleware payload.
+  - Body keypoint improvement needs local body-pose annotations for real lab-domain gains. Until then, use pretrained YOLO26 pose or train/validate against COCO pose.
+  - Dumbbell reliability depends on local videos/images of the exact weights, camera angle, lighting, and occlusion cases used in the lab.

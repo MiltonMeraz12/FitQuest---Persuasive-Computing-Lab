@@ -1,0 +1,16 @@
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
+    <iq:application
+        entry="IronQuestSmokeApp"
+        id="31c7c9f6c38444f2b2e9d6a93bf57909"
+        launcherIcon="@Drawables.LauncherIcon"
+        minSdkVersion="5.2.0"
+        name="@Strings.AppName"
+        type="watch-app">
+        <iq:products>
+            <iq:product id="venu3"/>
+        </iq:products>
+        <iq:languages>
+            <iq:language>eng</iq:language>
+        </iq:languages>
+    </iq:application>
+</iq:manifest>

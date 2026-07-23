@@ -1,0 +1,106 @@
+# Iron Quest 3D - repository hygiene
+# Keep source code, documentation, and lightweight configuration in git.
+# Keep generated media, datasets, model weights, and training runs out of git.
+
+# Python bytecode and tooling
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local virtual environments
+ironquest_env/
+.venv/
+venv/
+env/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+tools/bin/
+firmware/**/wifi_config.h
+monkey_c/developer_key*
+monkey_c/**/build/
+monkey_c/**/*.prg
+monkey_c/**/*.iq
+
+# IDE and OS files
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Ultralytics / YOLO generated outputs
+runs/*
+!runs/.gitkeep
+!runs/detect/
+runs/detect/*
+!runs/detect/.gitkeep
+!runs/pose/
+runs/pose/*
+!runs/pose/.gitkeep
+!runs/validate/
+runs/validate/*
+!runs/validate/.gitkeep
+!runs/ui_review/
+runs/ui_review/*
+!runs/ui_review/.gitkeep
+wandb/
+mlruns/
+*.cache
+*.cache.npy
+labels.cache
+train.cache
+val.cache
+test.cache
+
+# Large model weights and exports
+weights/*
+!weights/.gitkeep
+*.pt
+*.pth
+*.onnx
+*.engine
+*.tflite
+*.torchscript
+*.mlmodel
+*.openvino/
+
+# Raw media and captures
+data/raw_videos/*
+!data/raw_videos/.gitkeep
+data/captures/*
+!data/captures/.gitkeep
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Datasets and archives
+data/datasets/*
+!data/datasets/.gitkeep
+data/archives/*
+!data/archives/.gitkeep
+datasets/
+*.zip
+*.tar
+*.tar.gz
+*.7z
+*.rar
+
+# Generated reports and temporary exports
+exports/
+artifacts/
+tmp/
+temp/
+
+# Keep placeholder files if a folder must exist in the repository
+!.gitkeep

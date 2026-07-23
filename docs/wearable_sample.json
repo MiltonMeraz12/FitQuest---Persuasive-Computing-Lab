@@ -1,0 +1,11 @@
+{
+  "device": "garmin_venu_3",
+  "provider": "garmin",
+  "sample_type": "ble_heart_rate",
+  "heart_rate_bpm": 92,
+  "heart_rate_confidence": "mock",
+  "stress": null,
+  "activity_state": "controlled_dumbbell_movement",
+  "timestamp": "2026-06-23T12:00:00-03:00",
+  "battery": 87
+}

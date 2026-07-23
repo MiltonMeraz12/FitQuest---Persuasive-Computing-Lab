@@ -1,0 +1,36 @@
+{"kind":"deck","id":"pr/wyyoxt","name":"Deck"}
+{"kind":"layout","layoutId":"d482fcc4-16b9-492d-a308-9abf812c8fe6","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"c3bbe2c0-ef68-41bc-b521-867f5768bf69","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/nshi4k","slide":1,"title":"PERSUASIVE COMPUTING LAB  /  DALHOUSIE UNIVERSITY","textShapes":21}
+{"kind":"textbox","id":"sh/18by5gfy","slide":1,"name":"lab-eyebrow","text":"PERSUASIVE COMPUTING LAB  /  DALHOUSIE UNIVERSITY","textPreview":"PERSUASIVE COMPUTING LAB  /  DALHOUSIE UNIVERSITY","textChars":49,"textLines":1,"bbox":[76,34,560,22]}
+{"kind":"textbox","id":"sh/e50fu1wn","slide":1,"name":"person-name","text":"MILTON ESTUARDO TORRES MERAZ","textPreview":"MILTON ESTUARDO TORRES MERAZ","textChars":28,"textLines":1,"bbox":[76,60,620,42]}
+{"kind":"textbox","id":"sh/f69g36xs","slide":1,"name":"person-role","text":"Software Developer  |  Persuasive Computing Lab","textPreview":"Software Developer  |  Persuasive Computing Lab","textChars":47,"textLines":1,"bbox":[76,104,600,24]}
+{"kind":"shape","id":"sh/ob2x0bep","slide":1,"name":"header-rule","bbox":[76,138,596,0]}
+{"kind":"textbox","id":"sh/pcby9gfa","slide":1,"name":"project-title","text":"Iron Quest 3D","textPreview":"Iron Quest 3D","textChars":13,"textLines":1,"bbox":[76,166,585,66]}
+{"kind":"textbox","id":"sh/29kfylwj","slide":1,"name":"project-takeaway","text":"Turns physical movement into research-ready signals.","textPreview":"Turns physical movement into research-ready signals.","textChars":52,"textLines":1,"bbox":[76,235,580,58]}
+{"kind":"textbox","id":"sh/natg76x4","slide":1,"name":"project-description","text":"A sensor-fusion engine that combines body movement, dumbbells, IMU telemetry and heart-rate context so future interactive applications can understand movement reliably.","textPreview":"A sensor-fusion engine that combines body movement, dumbbells, IMU telemetry and heart-rate context so future interactive applications ca...","textChars":168,"textLines":1,"bbox":[76,305,570,76]}
+{"kind":"textbox","id":"sh/czmx4vel","slide":1,"name":"how-label","text":"HOW IT WORKS","textPreview":"HOW IT WORKS","textChars":12,"textLines":1,"bbox":[76,400,170,22]}
+{"kind":"shape","id":"sh/x0vyd0f6","slide":1,"name":"dot-camera","bbox":[76,438,12,12]}
+{"kind":"textbox","id":"sh/xcze587q","slide":1,"name":"flow-camera","text":"CAMERA + YOLO\nPose + dumbbells","textPreview":"CAMERA + YOLO | Pose + dumbbells","textChars":30,"textLines":2,"bbox":[96,430,130,48]}
+{"kind":"textbox","id":"sh/wbqxw365","slide":1,"name":"arrow-one","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[228,437,28,24]}
+{"kind":"shape","id":"sh/vahw3ypk","slide":1,"name":"dot-imu","bbox":[270,438,12,12]}
+{"kind":"textbox","id":"sh/a98fudoz","slide":1,"name":"flow-imu","text":"ESP32 + IMU\nMotion + orientation","textPreview":"ESP32 + IMU | Motion + orientation","textChars":32,"textLines":2,"bbox":[290,430,140,48]}
+{"kind":"textbox","id":"sh/5gje9s7m","slide":1,"name":"arrow-two","text":"→","textPreview":"→","textChars":1,"textLines":1,"bbox":[440,437,28,24]}
+{"kind":"shape","id":"sh/kfqx0n61","slide":1,"name":"dot-watch","bbox":[484,438,12,12]}
+{"kind":"textbox","id":"sh/jehw7ipw","slide":1,"name":"flow-watch","text":"GARMIN VENU 3\nHeart-rate context","textPreview":"GARMIN VENU 3 | Heart-rate context","textChars":32,"textLines":2,"bbox":[504,430,145,48]}
+{"kind":"shape","id":"sh/id8fydob","slide":1,"name":"signal-rule","bbox":[76,501,568,0]}
+{"kind":"textbox","id":"sh/lkfexo7i","slide":1,"name":"signal-output","text":"Normalized JSON / JSONL signals: arm extension, range, symmetry, stability and exertion.","textPreview":"Normalized JSON / JSONL signals: arm extension, range, symmetry, stability and exertion.","textChars":88,"textLines":1,"bbox":[76,515,570,42]}
+{"kind":"shape","id":"sh/0j6doj6x","slide":1,"name":"focus-panel","bbox":[76,579,568,70]}
+{"kind":"textbox","id":"sh/snax4jet","slide":1,"name":"focus-label","text":"CURRENT FOCUS","textPreview":"CURRENT FOCUS","textChars":13,"textLines":1,"bbox":[96,592,150,20]}
+{"kind":"textbox","id":"sh/dojedofe","slide":1,"name":"focus-copy","text":"Prove reliable sensor fusion first; the game layer comes next.","textPreview":"Prove reliable sensor fusion first; the game layer comes next.","textChars":62,"textLines":1,"bbox":[96,614,510,24]}
+{"kind":"shape","id":"sh/q18f2twn","slide":1,"name":"hero-frame","bbox":[706,34,498,626]}
+{"kind":"shape","id":"sh/0rax83ep","slide":1,"name":"live-tag","bbox":[738,64,124,28]}
+{"kind":"textbox","id":"sh/1sjeh8fa","slide":1,"name":"live-tag-text","text":"LIVE PROTOTYPE","textPreview":"LIVE PROTOTYPE","textChars":14,"textLines":1,"bbox":[750,70,104,16]}
+{"kind":"textbox","id":"sh/epsf6twz","slide":1,"name":"visual-title","text":"One view, multiple signals","textPreview":"One view, multiple signals","textChars":26,"textLines":1,"bbox":[738,344,420,32]}
+{"kind":"textbox","id":"sh/zq1wfyxk","slide":1,"name":"visual-copy","text":"The monitor exposes what the system can already see: posture, object context, sensor status and normalized control axes.","textPreview":"The monitor exposes what the system can already see: posture, object context, sensor status and normalized control axes.","textChars":120,"textLines":1,"bbox":[738,385,416,82]}
+{"kind":"shape","id":"sh/ovuxcne1","slide":1,"name":"visual-rule","bbox":[738,493,414,0]}
+{"kind":"textbox","id":"sh/9w3el8fm","slide":1,"name":"visual-next","text":"For research analysis now.\nFor adaptive interaction next.","textPreview":"For research analysis now. | For adaptive interaction next.","textChars":57,"textLines":2,"bbox":[738,514,416,58]}
+{"kind":"textbox","id":"sh/jq50bmho","slide":1,"name":"footer","text":"ORCID 0009-0005-3217-9935  |  Mexico to Halifax, Canada","textPreview":"ORCID 0009-0005-3217-9935  |  Mexico to Halifax, Canada","textChars":55,"textLines":1,"bbox":[76,680,600,18]}
+{"kind":"textbox","id":"sh/ypwz2hg3","slide":1,"name":"footer-right","text":"MITACS PROJECT  /  2026","textPreview":"MITACS PROJECT  /  2026","textChars":23,"textLines":1,"bbox":[906,680,298,18]}
+{"kind":"image","id":"im/87ax47u5","slide":1,"name":"","geometry":"roundRect","alt":"Iron Quest 3D live sensor monitor showing pose tracking, a dumbbell detection and IMU telemetry","bbox":[720,48,470,294]}
+{"kind":"notes","id":"nt/nshi4k","slide":1,"text":"Hi, I am Milton Estuardo Torres Meraz, a software developer in the Persuasive Computing Lab at Dalhousie University. My project, Iron Quest 3D, is a sensor-fusion engine for physical interaction. It combines camera-based pose and dumbbell detection with ESP32 and IMU telemetry, plus Garmin heart-rate context, and converts them into normalized signals such as arm extension, stability and exertion. The current goal is to prove the middleware before building the final game layer."}
