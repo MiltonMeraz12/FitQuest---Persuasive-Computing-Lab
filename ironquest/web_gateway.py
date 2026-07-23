@@ -193,6 +193,16 @@ class _GatewayRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _serve_vendor_file(self, relative_name: str) -> None:
+        """Serve a vendored static asset (e.g. three.min.js) with a traversal guard."""
+
+        vendor_root = (self.server.web_root / "vendor").resolve()
+        candidate = (vendor_root / relative_name).resolve()
+        if candidate != vendor_root and vendor_root not in candidate.parents:
+            self._send_json({"error": "not_found", "path": f"/vendor/{relative_name}"}, status=404)
+            return
+        self._send_file(candidate)
+
     def do_GET(self) -> None:  # noqa: N802 - stdlib HTTP handler API
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
@@ -202,6 +212,9 @@ class _GatewayRequestHandler(BaseHTTPRequestHandler):
             return
         if path == "/demo_game_control.jsonl":
             self._send_file(self.server.web_root / "demo_game_control.jsonl")
+            return
+        if path.startswith("/vendor/"):
+            self._serve_vendor_file(path[len("/vendor/") :])
             return
         if path == "/api/health":
             latest = self.server.publisher.latest()

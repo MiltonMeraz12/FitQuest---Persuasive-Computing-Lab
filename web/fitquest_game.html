@@ -161,8 +161,7 @@
     .stage-topline { position: absolute; top: 13px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
     .exercise-name { color: #f2fbff; font-size: clamp(15px, 2vw, 22px); font-weight: 900; letter-spacing: 1px; }
     .exercise-subtitle { margin-top: 5px; color: var(--muted); font-size: 11px; }
-    .exercise-nav { display: flex; gap: 6px; }
-    .auto-tag { padding: 7px 10px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 999px; color: var(--cyan); background: rgba(34, 230, 199, .06); font-size: 10px; font-weight: 850; letter-spacing: .7px; }
+    .coach-tag { padding: 7px 10px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 999px; color: var(--cyan); background: rgba(34, 230, 199, .06); font-size: 10px; font-weight: 850; letter-spacing: .7px; }
     .target-card { position: absolute; top: 64px; left: 17px; max-width: 290px; padding: 10px 12px; border: 1px solid #2b5065; border-radius: 11px; background: rgba(5, 14, 22, .78); z-index: 2; }
     .target-card strong { display: block; font-size: 14px; }
     .target-card p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
@@ -174,29 +173,16 @@
     .transition-progress { height: 5px; margin-top: 22px; overflow: hidden; border-radius: 99px; background: #1b3546; }
     .transition-progress i { display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--cyan), var(--blue)); animation: transitionCountdown 2.4s linear forwards; }
     @keyframes transitionCountdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; text-align: left; }
+    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 10px; text-align: left; }
     .results-stat { padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.03); }
     .results-stat strong { display: block; font-size: 24px; font-weight: 900; letter-spacing: -1px; }
     .results-stat span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; }
+    .results-fusion-note { margin: 0 0 8px; color: var(--cyan); font-size: 11px; font-weight: 750; }
     .avatar-stage { position: absolute; inset: 82px 12px 55px; display: grid; place-items: center; overflow: hidden; }
-    .avatar-svg { display: block; width: min(480px, 76%); height: 100%; max-height: 100%; overflow: visible; }
-    .avatar-shadow { fill: rgba(31, 143, 255, .14); stroke: rgba(68, 177, 255, .76); stroke-width: 1.5; }
-    .avatar-skin { fill: url(#skinGradient); }
-    .avatar-hair { fill: #202a36; stroke: #101821; stroke-width: 2; }
-    .avatar-face { fill: none; stroke: rgba(53, 35, 31, .55); stroke-width: 2; stroke-linecap: round; }
-    .avatar-neck { fill: url(#skinGradient); }
-    .avatar-shirt { fill: url(#shirtGradient); stroke: rgba(143, 197, 220, .18); stroke-width: 1; }
-    .avatar-collar { fill: none; stroke: rgba(211, 235, 241, .32); stroke-width: 3; }
-    .avatar-shorts { fill: #111d28; stroke: rgba(143, 197, 220, .12); stroke-width: 1; }
-    .avatar-limb { stroke: url(#skinGradient); stroke-width: 23; stroke-linecap: round; fill: none; filter: drop-shadow(0 6px 8px rgba(0,0,0,.35)); }
-    .avatar-limb-back { stroke: #a96958; stroke-width: 23; stroke-linecap: round; fill: none; opacity: .72; }
-    .avatar-joint { fill: var(--cyan); stroke: #071019; stroke-width: 3; filter: drop-shadow(0 0 7px rgba(34,230,199,.8)); }
-    .avatar-connector { stroke: rgba(125, 239, 232, .26); stroke-width: 2; stroke-dasharray: 4 7; fill: none; }
-    .dumbbell rect { fill: #171f2a; stroke: #384b5b; stroke-width: 1; }
-    .dumbbell .bar { fill: #718394; stroke: none; }
-    .platform { fill: rgba(35, 142, 222, .13); stroke: rgba(62, 174, 255, .78); stroke-width: 2; filter: drop-shadow(0 0 16px rgba(31,145,255,.4)); }
-    .target-ring { fill: none; stroke: rgba(34, 230, 199, .25); stroke-width: 2; stroke-dasharray: 6 9; }
-    .avatar-label { fill: #b5cbd8; font-size: 10px; letter-spacing: 1px; }
+    #avatar3d { width: 100%; height: 100%; }
+    #avatar3d canvas { display: block; margin: 0 auto; }
+    .avatar-fallback { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
+    .avatar-label { position: absolute; left: 20px; bottom: 8px; color: #b5cbd8; font-size: 10px; letter-spacing: 1px; z-index: 2; }
     .stage-feedback { position: absolute; left: 52px; right: 52px; bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 12px; background: linear-gradient(90deg, rgba(14, 45, 54, .94), rgba(8, 18, 28, .94)); z-index: 3; }
     .feedback-main { display: flex; align-items: center; gap: 11px; min-width: 0; }
     .feedback-icon { width: 33px; height: 33px; display: grid; place-items: center; border: 2px solid var(--cyan); border-radius: 50%; color: var(--cyan); font-weight: 900; }
@@ -230,6 +216,7 @@
     .mini-stat strong { display: block; margin-top: 3px; font-size: 13px; }
     .mini-stat strong.good { color: var(--good); }
     .mini-stat strong.violet { color: var(--violet); }
+    .mini-stat strong.cyan { color: var(--cyan); }
     .action-card { display: flex; gap: 7px; padding: 8px; }
     .action-card .secondary-btn, .action-card .primary-btn { padding: 9px 10px; }
     .primary-btn { flex: 1; border: 0; border-radius: 10px; padding: 12px 14px; background: linear-gradient(90deg, var(--cyan), var(--blue)); color: #041219; font-weight: 900; }
@@ -303,7 +290,6 @@
     @media (max-width: 540px) {
       .topbar { padding: 10px 13px; }
       .top-actions .secondary-btn { padding: 9px; font-size: 11px; }
-      .avatar-svg { width: 95%; }
       .stage-feedback { left: 15px; right: 15px; }
       .feedback-side { display: none; }
       .form-grid { grid-template-columns: 1fr; }
@@ -368,43 +354,13 @@
 
     <section class="card stage">
       <div class="stage-topline">
-        <div><div id="exerciseName" class="exercise-name">DETECTING MOVEMENT</div><div id="exerciseSubtitle" class="exercise-subtitle">The system selects the exercise from the live movement signature.</div></div>
-        <div class="auto-tag">AUTO-DETECTED</div>
+        <div><div id="exerciseName" class="exercise-name">PRESS START TO BEGIN</div><div id="exerciseSubtitle" class="exercise-subtitle">FitQuest will walk you through a short sequence of movements.</div></div>
+        <div class="coach-tag">COACH-LED</div>
       </div>
-      <div class="target-card"><strong id="coachTitle">Waiting for movement</strong><p id="coachText">The system will identify the next movement from the live signal.</p><span id="targetChip" class="target-chip">WAITING FOR LIVE SIGNAL</span></div>
+      <div class="target-card"><strong id="coachTitle">Ready when you are</strong><p id="coachText">Start the session and FitQuest will tell you exactly what to do next.</p><span id="targetChip" class="target-chip">SETUP</span></div>
       <div class="avatar-stage">
-        <svg id="avatarSvg" class="avatar-svg" viewBox="0 0 420 600" role="img" aria-label="Adult neutral movement model">
-          <defs>
-            <linearGradient id="skinGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0bd8e"/><stop offset="1" stop-color="#b87459"/></linearGradient>
-            <linearGradient id="shirtGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3e4e60"/><stop offset="1" stop-color="#1b2634"/></linearGradient>
-            <linearGradient id="floorGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b5880" stop-opacity=".45"/><stop offset="1" stop-color="#071019" stop-opacity=".1"/></linearGradient>
-          </defs>
-          <ellipse class="target-ring" cx="210" cy="536" rx="152" ry="25" />
-          <ellipse class="platform" cx="210" cy="538" rx="118" ry="19" />
-          <path class="avatar-connector" d="M155 190 L210 211 L265 190 M210 211 L210 344" />
-          <g id="avatarBackArms"><path id="leftArmBack" class="avatar-limb-back" d="M157 190 L113 294 L91 382"/><path id="rightArmBack" class="avatar-limb-back" d="M263 190 L307 294 L329 382"/></g>
-          <g id="avatarBody">
-            <circle class="avatar-skin" cx="210" cy="105" r="37" />
-            <path class="avatar-hair" d="M175 104 Q176 65 211 64 Q246 67 247 105 Q237 91 226 87 Q207 101 178 92 Z" />
-            <path class="avatar-face" d="M193 112 L199 112 M221 112 L227 112 M205 127 Q210 130 215 127" />
-            <path class="avatar-neck" d="M194 137 L226 137 L229 159 L191 159 Z" />
-            <path class="avatar-shirt" d="M173 158 Q210 139 247 158 L274 317 Q252 337 210 337 Q168 337 146 317 Z" />
-            <path class="avatar-collar" d="M191 157 Q210 174 229 157" />
-            <path class="avatar-shorts" d="M166 326 Q210 337 254 326 L268 389 Q241 400 210 387 Q179 400 152 389 Z" />
-            <path class="avatar-skin" d="M184 362 L207 366 L201 505 L174 505 Z" />
-            <path class="avatar-skin" d="M213 366 L236 362 L246 505 L219 505 Z" />
-            <path fill="#111d28" d="M174 498 Q191 493 204 501 L199 520 L143 520 Q141 505 174 498 Z" />
-            <path fill="#111d28" d="M219 501 Q233 493 247 498 Q278 505 276 520 L221 520 Z" />
-          </g>
-          <g id="avatarArms">
-            <path id="leftArm" class="avatar-limb" d="M157 190 L113 294 L91 382" />
-            <path id="rightArm" class="avatar-limb" d="M263 190 L307 294 L329 382" />
-          </g>
-          <g id="avatarJoints"><circle id="leftShoulder" class="avatar-joint" cx="157" cy="190" r="7"/><circle id="rightShoulder" class="avatar-joint" cx="263" cy="190" r="7"/><circle id="leftElbow" class="avatar-joint" cx="113" cy="294" r="7"/><circle id="rightElbow" class="avatar-joint" cx="307" cy="294" r="7"/><circle id="leftWrist" class="avatar-joint" cx="91" cy="382" r="7"/><circle id="rightWrist" class="avatar-joint" cx="329" cy="382" r="7"/></g>
-          <g id="leftDumbbell" class="dumbbell"><rect x="0" y="0" width="38" height="12" rx="5" class="bar"/><rect x="-14" y="-13" width="16" height="38" rx="4"/><rect x="36" y="-13" width="16" height="38" rx="4"/></g>
-          <g id="rightDumbbell" class="dumbbell"><rect x="0" y="0" width="38" height="12" rx="5" class="bar"/><rect x="-14" y="-13" width="16" height="38" rx="4"/><rect x="36" y="-13" width="16" height="38" rx="4"/></g>
-          <text class="avatar-label" x="151" y="566">MOVEMENT MODEL</text>
-        </svg>
+        <div id="avatar3d"></div>
+        <span class="avatar-label">MOVEMENT MODEL</span>
       </div>
       <div class="stage-feedback"><div class="feedback-main"><div id="feedbackIcon" class="feedback-icon">✓</div><div><strong id="feedbackTitle">Waiting for movement data</strong><small id="feedbackText">Start the session to begin live tracking.</small></div></div><div id="feedbackSide" class="feedback-side">READY</div></div>
     </section>
@@ -427,7 +383,7 @@
         <h3>FORM QUALITY</h3>
         <div class="metric-big"><strong id="formQuality">0%</strong><span id="formLabel">WAITING</span></div>
         <div class="progress-row"><span>Camera form</span><strong id="cameraForm">0%</strong></div><div class="meter"><i id="formBar"></i></div>
-        <div class="progress-row"><span>Stability</span><strong id="stabilityValue">0%</strong></div><div class="meter violet-meter"><i id="stabilityBar"></i></div>
+        <div class="progress-row"><span>Stability (fused)</span><strong id="stabilityValue">0%</strong></div><div class="meter violet-meter"><i id="stabilityBar"></i></div>
       </section>
 
       <section class="card metric-card">
@@ -436,7 +392,9 @@
           <div class="mini-stat"><span>TEMPO</span><strong id="tempoValue" class="good">—</strong></div>
           <div class="mini-stat"><span>SYMMETRY</span><strong id="symmetryValue" class="violet">—</strong></div>
           <div class="mini-stat"><span>HAND MOTION</span><strong id="imuMotionValue">—</strong></div>
+          <div class="mini-stat"><span>HAND STABILITY</span><strong id="handStabilityValue" class="cyan">—</strong></div>
           <div class="mini-stat"><span>ACTIVE SIDE</span><strong id="activeSideValue">—</strong></div>
+          <div class="mini-stat"><span>IMU CONFIRMED</span><strong id="imuConfirmedValue" class="cyan">—</strong></div>
         </div>
       </section>
 
@@ -445,7 +403,7 @@
   </main>
 
   <section id="transitionOverlay" class="session-overlay hidden" aria-live="polite">
-    <div class="transition-modal"><span id="transitionEyebrow">SET COMPLETE</span><h2 id="transitionTitle">Prepare for the next movement</h2><p id="transitionText">Keep your position comfortable. The next movement will be selected from the live signal.</p><div class="transition-progress"><i id="transitionProgress"></i></div></div>
+    <div class="transition-modal"><span id="transitionEyebrow">NEXT MOVEMENT</span><h2 id="transitionTitle">Get ready</h2><p id="transitionText">FitQuest will tell you the next movement here.</p><div class="transition-progress"><i id="transitionProgress"></i></div></div>
   </section>
 
   <section id="resultsOverlay" class="session-overlay hidden" aria-live="polite">
@@ -458,6 +416,7 @@
         <div class="results-stat"><strong id="resultsDuration">0:00</strong><span>Active time</span></div>
         <div class="results-stat"><strong id="resultsForm">—</strong><span>Avg form</span></div>
       </div>
+      <p id="resultsFusionNote" class="results-fusion-note"></p>
       <p id="resultsNote">Nice work. Start a new session whenever you're ready.</p>
       <button id="resultsCloseButton" class="primary-btn" style="margin-top:6px" type="button">Back to setup</button>
     </div>
@@ -465,14 +424,14 @@
 
   <section id="setupOverlay" class="session-overlay">
     <div class="setup-modal">
-      <div class="setup-header"><h2>Prepare FitQuest session</h2><p>Set up a local session with no account. The game receives normalized camera, dumbbell, hand-motion, and heart-rate signals when available.</p></div>
+      <div class="setup-header"><h2>Prepare FitQuest session</h2><p>Set up a local session with no account. FitQuest tells you which movement to do next and reads normalized camera, dumbbell, hand-motion, and heart-rate signals when available.</p></div>
       <div class="setup-body">
         <div class="setup-section"><h3>SESSION DETAILS</h3><div class="form-grid">
           <div class="field"><label for="ageInput">Age (optional)</label><input id="ageInput" type="number" min="10" max="120" placeholder="Optional" /></div>
           <div class="field"><label for="heightInput">Height (cm)</label><input id="heightInput" type="number" min="80" max="240" placeholder="Optional" /></div>
           <div class="field"><label for="weightInput">Body weight (kg)</label><input id="weightInput" type="number" min="20" max="250" placeholder="Optional" /></div>
           <div class="field"><label for="loadInput">Dumbbell load (kg/hand)</label><input id="loadInput" type="number" min="0" max="100" step=".5" placeholder="Optional" /></div>
-        </div><div style="height:12px"></div><div class="info-row"><span>Exercise</span><strong>AUTO-DETECTED</strong></div><div class="info-row"><span>Body position</span><strong>AUTO-DETECTED</strong></div><div class="info-row"><span>Difficulty</span><strong id="setupDifficulty">BEGINNER</strong></div></div>
+        </div><div style="height:12px"></div><div class="info-row"><span>Exercise</span><strong>COACH-LED SEQUENCE</strong></div><div class="info-row"><span>Body position</span><strong>AUTO-DETECTED</strong></div><div class="info-row"><span>Difficulty</span><strong id="setupDifficulty">BEGINNER</strong></div></div>
         <div class="setup-section"><h3>AVAILABLE SOURCES</h3><div class="checklist"><div class="check-item"><span>Camera tracking</span><strong id="setupCamera">LIVE GATEWAY</strong></div><div class="check-item"><span>Dumbbell detection</span><strong id="setupDumbbell">LIVE GATEWAY</strong></div><div class="check-item"><span>Hand motion sensor</span><strong id="setupImu">OPTIONAL</strong></div><div class="check-item"><span>Heart-rate wearable</span><strong id="setupWatch">OPTIONAL</strong></div></div><div style="height:16px"></div><div class="info-row"><span>Target duration</span><strong id="setupDuration">60 sec</strong></div><div class="info-row"><span>Target repetitions</span><strong id="setupReps">8</strong></div><div class="info-row"><span>Storage</span><strong>Local session</strong></div></div>
       </div>
       <div class="setup-footer"><div class="safe-note"><strong>Safety:</strong> use a safe load, keep your visible body area inside the frame, and stop if you feel pain or discomfort. Heart rate is shown as context, not as a diagnosis or medical decision.</div><button id="setupStartButton" class="primary-btn" style="flex:0 0 auto;min-width:190px" type="button">Start live session</button></div>
@@ -481,6 +440,7 @@
 
   <div id="toast" class="toast">FitQuest</div>
 
+  <script src="vendor/three.min.js"></script>
   <script>
     (() => {
       "use strict";
@@ -489,16 +449,19 @@
       const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number(value) || 0));
       const pct = (value) => `${Math.round(clamp(value) * 100)}%`;
       const sideKey = (side, suffix) => `${side}_${suffix}`;
-      const lerp = (a, b, t) => a + (b - a) * t;
 
       const exerciseDefinitions = {
-        curl: { name: "ALTERNATING CURL", subtitle: "Move through a comfortable range while keeping the torso steady.", chip: "AUTO TARGET: CURL", mode: "extension", countMode: "alternating" },
-        press: { name: "SINGLE-ARM PRESS", subtitle: "Raise the detected dumbbell without leaning through the torso.", chip: "AUTO TARGET: PRESS", mode: "height", countMode: "alternating" },
-        double_press: { name: "DOUBLE-ARM PRESS", subtitle: "Raise both dumbbells together while keeping the torso centered.", chip: "AUTO TARGET: BILATERAL PRESS", mode: "height", countMode: "bilateral" },
-        front_raise: { name: "ALTERNATING FRONT RAISE", subtitle: "Lift one dumbbell to shoulder height, then lower it with control.", chip: "AUTO TARGET: FRONT RAISE", mode: "height", countMode: "alternating" },
-        front_hold: { name: "BILATERAL FRONT HOLD", subtitle: "Hold both arms forward at shoulder height without shrugging.", chip: "AUTO TARGET: FRONT HOLD", mode: "hold", countMode: "hold", holdMs: 900 },
-        combo: { name: "OVERHEAD + FRONT HOLD", subtitle: "Press one arm fully overhead while the opposite arm holds steady at shoulder height, then swap.", chip: "AUTO TARGET: OVERHEAD + FRONT HOLD", mode: "combo", countMode: "alternating" },
+        curl: { name: "ALTERNATING CURL", subtitle: "Move through a comfortable range while keeping the torso steady.", chip: "TARGET: CURL", mode: "extension", countMode: "alternating" },
+        front_raise: { name: "ALTERNATING FRONT RAISE", subtitle: "Lift one dumbbell to shoulder height, then lower it with control.", chip: "TARGET: FRONT RAISE", mode: "height", countMode: "alternating" },
+        press: { name: "SINGLE-ARM PRESS", subtitle: "Raise the detected dumbbell without leaning through the torso.", chip: "TARGET: PRESS", mode: "height", countMode: "alternating" },
+        front_hold: { name: "BILATERAL FRONT HOLD", subtitle: "Hold both arms forward at shoulder height without shrugging.", chip: "TARGET: FRONT HOLD", mode: "hold", countMode: "hold", holdMs: 900 },
+        double_press: { name: "DOUBLE-ARM PRESS", subtitle: "Raise both dumbbells together while keeping the torso centered.", chip: "TARGET: BILATERAL PRESS", mode: "height", countMode: "bilateral" },
+        combo: { name: "OVERHEAD + FRONT HOLD", subtitle: "Press one arm fully overhead while the opposite arm holds steady at shoulder height, then swap.", chip: "TARGET: OVERHEAD + FRONT HOLD", mode: "combo", countMode: "alternating" },
       };
+      // FitQuest prescribes this sequence itself instead of guessing the
+      // exercise from single-frame camera signatures (which flickers on real
+      // pose jitter). Simplest moves first, compound/hold moves last.
+      const exerciseOrder = ["curl", "front_raise", "press", "front_hold", "double_press", "combo"];
       const difficultyDefinitions = {
         beginner: { label: "BEGINNER", target: 8, duration: 60, strictness: .45 },
         advanced: { label: "ADVANCED", target: 12, duration: 50, strictness: .62 },
@@ -511,14 +474,18 @@
         running: false,
         paused: false,
         exercise: null,
+        exerciseQueue: [],
+        exerciseIndex: 0,
         difficulty: "beginner",
         position: "auto",
         target: 8,
         duration: 45,
         reps: 0,
         totalReps: 0,
+        imuConfirmedReps: 0,
         lastRenderedReps: 0,
         phase: { left: "extended", right: "extended" },
+        motionSeenDuringRep: { left: false, right: false },
         activeSide: "right",
         startedAt: 0,
         pausedAt: 0,
@@ -531,7 +498,6 @@
           hand: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
           heart: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
         },
-        previousAxis: { left: null, right: null },
         sideReps: { left: 0, right: 0 },
         tempoSamples: [],
         setsCompleted: 0,
@@ -541,6 +507,7 @@
         transitionTimer: null,
         holdStartedAt: 0,
         holdNeedsReset: false,
+        holdImuStable: true,
         bilateralDown: { left: false, right: false },
         settings: {},
         avatarTarget: { left: null, right: null },
@@ -597,7 +564,7 @@
           height_cm: Number($("heightInput").value) || null,
           weight_kg: Number($("weightInput").value) || null,
           dumbbell_kg_per_hand: Number($("loadInput").value) || null,
-          exercise: "auto",
+          exercise: "coach_led",
           difficulty: state.difficulty,
           position: "auto",
         };
@@ -613,11 +580,11 @@
 
       function updateExerciseUI() {
         const definition = state.exercise ? exerciseDefinitions[state.exercise] : null;
-        $("exerciseName").textContent = definition?.name || "DETECTING MOVEMENT";
-        $("exerciseSubtitle").textContent = definition?.subtitle || "The system selects the exercise from the live movement signature.";
-        $("targetChip").textContent = definition?.chip || "WAITING FOR LIVE SIGNAL";
-        $("coachTitle").textContent = definition ? "Follow the movement" : "Waiting for movement";
-        $("coachText").textContent = definition?.subtitle || "The system will identify the next movement from the live signal.";
+        $("exerciseName").textContent = definition?.name || "PRESS START TO BEGIN";
+        $("exerciseSubtitle").textContent = definition?.subtitle || "FitQuest will walk you through a short sequence of movements.";
+        $("targetChip").textContent = definition?.chip || "SETUP";
+        $("coachTitle").textContent = definition ? "Follow the movement" : "Ready when you are";
+        $("coachText").textContent = definition?.subtitle || "Start the session and FitQuest will tell you exactly what to do next.";
       }
 
       function setDifficulty(key) {
@@ -635,11 +602,12 @@
         state.reps = 0;
         state.sideReps = { left: 0, right: 0 };
         state.phase = { left: "extended", right: "extended" };
+        state.motionSeenDuringRep = { left: false, right: false };
         state.activeSide = "right";
-        state.previousAxis = { left: null, right: null };
         state.tempoSamples = [];
         state.holdStartedAt = 0;
         state.holdNeedsReset = false;
+        state.holdImuStable = true;
         state.bilateralDown = { left: false, right: false };
         if (resetClock) {
           state.elapsedBeforePause = 0;
@@ -683,19 +651,23 @@
         }, duration);
       }
 
+      function announceCurrentExercise(eyebrow, duration, done) {
+        const definition = exerciseDefinitions[state.exercise];
+        showTemporaryInstruction(eyebrow, definition.name, definition.subtitle, duration, done);
+      }
+
       function completeSet() {
         if (state.inTransition) return;
         updateRepProgress();
         state.setsCompleted += 1;
         state.inTransition = true;
-        state.exercise = null;
-        updateExerciseUI();
         setSessionBadge("SET COMPLETE", "waiting");
-        showTemporaryInstruction(
-          "SET COMPLETE",
-          `Set ${state.setsCompleted} complete`,
-          "Take a short reset. The next movement will be selected from the next live movement signature.",
-          2400,
+        state.exerciseIndex = (state.exerciseIndex + 1) % state.exerciseQueue.length;
+        state.exercise = state.exerciseQueue[state.exerciseIndex];
+        updateExerciseUI();
+        announceCurrentExercise(
+          "NEXT MOVEMENT",
+          3200,
           () => {
             if (!state.running) return;
             resetExerciseState(false);
@@ -734,6 +706,9 @@
         $("resultsSets").textContent = state.setsCompleted;
         $("resultsDuration").textContent = formatMinutesSeconds(computeSessionElapsedSeconds());
         $("resultsForm").textContent = averageForm == null ? "—" : `${averageForm}%`;
+        $("resultsFusionNote").textContent = state.totalReps > 0
+          ? `${state.imuConfirmedReps} of ${state.totalReps} reps confirmed by the hand motion sensor.`
+          : "";
         $("resultsNote").textContent = note;
         $("setupOverlay").classList.add("hidden");
         $("resultsOverlay").classList.remove("hidden");
@@ -742,7 +717,9 @@
       async function startSession() {
         hideTransition();
         $("resultsOverlay").classList.add("hidden");
-        state.exercise = null;
+        state.exerciseQueue = exerciseOrder.slice();
+        state.exerciseIndex = 0;
+        state.exercise = state.exerciseQueue[0];
         state.position = "auto";
         state.lastFrame = null;
         state.lastFrameAt = 0;
@@ -752,11 +729,13 @@
         };
         state.setsCompleted = 0;
         state.totalReps = 0;
+        state.imuConfirmedReps = 0;
         state.formSum = 0;
         state.formCount = 0;
         state.avatarCurrent = null;
         state.inTransition = false;
         readSettings();
+        updateExerciseUI();
         clearStreams();
         resetExerciseState(true);
         state.running = true;
@@ -774,6 +753,7 @@
         startCountdown();
         updateAvatar({ axes: {}, arm_signals: {} });
         updateFeedback({}, 0, 0, null, null, null);
+        announceCurrentExercise("FIRST MOVEMENT", 3200);
         toast(resetAccepted ? "Live session started" : "Live session started; waiting for detector");
       }
 
@@ -785,7 +765,6 @@
         state.paused = false;
         state.lastFrame = null;
         state.lastFrameAt = 0;
-        state.exercise = null;
         state.sensorFreshness = {
           hand: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
           heart: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
@@ -831,7 +810,7 @@
             setSessionBadge("SESSION COMPLETE", "waiting");
             state.running = false;
             clearStreams();
-            toast(`Session complete · ${state.totalReps}/${state.target} reps in the last set`);
+            toast(`Session complete · ${state.totalReps} total reps`);
             showResults("Session complete", "Nice work. Start a new session whenever you're ready.");
           }
         }, 500);
@@ -889,11 +868,8 @@
         return new Set(Array.isArray(control.tokens) ? control.tokens.map((token) => String(token).toLowerCase()) : []);
       }
 
-      function detectExercise(control) {
-        const candidate = control.exercise_candidate;
-        const candidateId = typeof candidate === "string" ? candidate : candidate?.id;
-        if (candidateId && exerciseDefinitions[candidateId]) return candidateId;
-        return null;
+      function gloveMountedSide(control) {
+        return control.esp32_glove?.mounted_side === "left" ? "left" : "right";
       }
 
       function detectPosition(control) {
@@ -908,6 +884,8 @@
       }
 
       const sensorDisplayCooldownMs = { hand: 3200, heart: 6500 };
+      // Minimum "LIVE" window when a sensor doesn't report its own cadence.
+      const sensorMinLiveGraceMs = { hand: 400, heart: 1000 };
 
       function numericValue(value) {
         const number = Number(value);
@@ -945,9 +923,21 @@
           tracker.lastSignalAt = now;
           if (marker != null) tracker.lastMarker = marker;
         }
-        const withinCooldown = tracker.lastSignalAt > 0 && now - tracker.lastSignalAt <= sensorDisplayCooldownMs[kind];
+        // A sensor that reports on its own cadence (e.g. a watch posting every
+        // ~3s) is still "LIVE" between posts, not just on the single tick a
+        // new sample arrives. Size the LIVE window off the sensor's own
+        // reported interval instead of treating every non-new-sample frame
+        // as a delay.
+        const reportedIntervalMs = numericValue(sensor.sample_interval_ms);
+        const liveGraceMs = Math.min(
+          sensorDisplayCooldownMs[kind],
+          Math.max(reportedIntervalMs ? reportedIntervalMs * 1.6 : 0, sensorMinLiveGraceMs[kind]),
+        );
+        const sinceSignalMs = now - tracker.lastSignalAt;
+        const withinCooldown = tracker.lastSignalAt > 0 && sinceSignalMs <= sensorDisplayCooldownMs[kind];
+        const withinLiveGrace = tracker.lastSignalAt > 0 && sinceSignalMs <= liveGraceMs;
         const display = currentSignal || withinCooldown;
-        const phase = display ? (currentSignal ? "LIVE" : "DELAY") : (tracker.hadSignal || status === "stale" ? "STALE" : "WAIT");
+        const phase = display ? (withinLiveGrace ? "LIVE" : "DELAY") : (tracker.hadSignal || status === "stale" ? "STALE" : "WAIT");
         return { sensor, status, age, currentSignal, display, phase };
       }
 
@@ -975,12 +965,6 @@
       function consumeFrame(event) {
         if (!state.running || state.paused) return;
         const control = normaliseControl(event);
-        const detectedExercise = detectExercise(control);
-        if (!state.exercise && detectedExercise && !state.inTransition) {
-          state.exercise = detectedExercise;
-          updateExerciseUI();
-          resetExerciseState(false);
-        }
         state.position = detectPosition(control);
         $("positionSummary").textContent = state.position;
         state.lastFrameAt = performance.now();
@@ -989,27 +973,37 @@
         const poseConfidence = clamp(axes.pose_confidence ?? control.body_posture?.confidence ?? 0);
         const symmetry = clamp(axes.symmetry_score ?? control.signal_metrics?.bilateral?.symmetry_score ?? poseConfidence);
         const rawHandStability = control.esp32_glove?.stability_index;
-        const stability = rawHandStability == null ? clamp((poseConfidence + symmetry) / 2) : clamp(rawHandStability);
-        const rawImuMotion = clamp(axes.imu_motion_intensity ?? control.esp32_glove?.motion_intensity ?? 0);
+        const cameraStabilityEstimate = clamp((poseConfidence + symmetry) / 2);
         const loadedLeft = activeSideData(control, "left").dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded;
         const loadedRight = activeSideData(control, "right").dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded;
-        const cameraForm = clamp((poseConfidence * .72) + (symmetry * .13) + (stability * .15));
+        const cameraForm = clamp((poseConfidence * .72) + (symmetry * .13) + (cameraStabilityEstimate * .15));
         const form = Math.round(cameraForm * 100);
         const heartRate = control.user_state?.heart_rate_bpm ?? control.wearable_watch?.heart_rate_bpm;
         const zone = control.user_state?.intensity_zone ?? control.wearable_watch?.intensity_zone ?? "unknown";
         const live = control.sensor_status?.vision === "ok" || control.status === "ready";
 
         const sensorUI = updateConnectionUI(control, poseConfidence, loadedLeft, loadedRight, live);
+        // Fuse rather than fully override: the camera-derived estimate still
+        // contributes even when the glove is live, and the glove still helps
+        // even when the camera view is imperfect.
+        const stability = sensorUI.hand.display && rawHandStability != null
+          ? clamp(cameraStabilityEstimate * .4 + clamp(rawHandStability) * .6)
+          : cameraStabilityEstimate;
+        const rawImuMotion = clamp(axes.imu_motion_intensity ?? control.esp32_glove?.motion_intensity ?? 0);
         const imuMotion = sensorUI.hand.display ? rawImuMotion : null;
+        const handStabilityDisplay = sensorUI.hand.display ? clamp(rawHandStability ?? 0) : null;
         const visibleHeartRate = sensorUI.heart.display ? heartRate : null;
         const visibleZone = sensorUI.heart.display ? zone : "unknown";
-        updateMetrics(control, form, cameraForm, stability, symmetry, imuMotion, visibleHeartRate, visibleZone);
+        updateMetrics(control, form, cameraForm, stability, symmetry, imuMotion, visibleHeartRate, visibleZone, handStabilityDisplay);
         updateAvatar(control);
-        processRep(control, poseConfidence, stability, loadedLeft, loadedRight);
+        processRep(control, poseConfidence, stability, loadedLeft, loadedRight, sensorUI, imuMotion);
         updateFeedback(control, form, stability, imuMotion, loadedLeft, loadedRight);
       }
 
-      function processRep(control, poseConfidence, stability, loadedLeft, loadedRight) {
+      const MIN_IMU_MOTION_CONFIRM = 0.04;
+      const MIN_IMU_HOLD_STABILITY = 0.45;
+
+      function processRep(control, poseConfidence, stability, loadedLeft, loadedRight, sensorUI, imuMotion) {
         if (state.inTransition || poseConfidence < .35 || stability < .18) return;
         const definition = exerciseDefinitions[state.exercise];
         if (!definition) return;
@@ -1018,6 +1012,9 @@
         const strictness = difficulty.strictness || .45;
         const targetDown = definition.mode === "height" ? .30 + (strictness - .45) * .08 : .46 - (strictness - .45) * .05;
         const targetUp = definition.mode === "height" ? .65 + (strictness - .45) * .08 : .72 + (strictness - .45) * .05;
+        const handLive = sensorUI?.hand?.display === true;
+        const glove = gloveMountedSide(control);
+
         if (definition.countMode === "hold") {
           const bothLoaded = loadedLeft !== false && loadedRight !== false;
           const bothAtTarget = axis(control, "left", "height_signal", 0) > targetUp && axis(control, "right", "height_signal", 0) > targetUp;
@@ -1025,13 +1022,16 @@
             state.holdStartedAt = 0;
             if (!bothAtTarget) state.holdNeedsReset = false;
           } else if (!state.holdNeedsReset) {
-            if (!state.holdStartedAt) state.holdStartedAt = performance.now();
+            if (!state.holdStartedAt) { state.holdStartedAt = performance.now(); state.holdImuStable = true; }
+            const handStability = sensorUI?.hand?.sensor?.stability_index;
+            if (handLive && numericValue(handStability) != null && handStability < MIN_IMU_HOLD_STABILITY) state.holdImuStable = false;
             if (performance.now() - state.holdStartedAt >= (definition.holdMs || 900)) {
               state.reps += 1;
               state.totalReps += 1;
               state.sideReps.left += 1;
               state.sideReps.right += 1;
               state.tempoSamples.push(performance.now());
+              if (handLive && state.holdImuStable) state.imuConfirmedReps += 1;
               state.holdStartedAt = 0;
               state.holdNeedsReset = true;
               if (state.reps >= state.target) { completeSet(); return; }
@@ -1040,6 +1040,7 @@
           updateRepProgress();
           return;
         }
+
         for (const side of sides) {
           const extension = axis(control, side, "arm_extension", .82);
           const height = axis(control, side, "height_signal", .3);
@@ -1050,13 +1051,25 @@
             const anchorSide = side === "left" ? "right" : "left";
             if (axis(control, anchorSide, "height_signal", 0) < .55) continue;
           }
+          // Cross-check with the glove IMU when it is mounted on this side and
+          // currently live: require real hand motion to have been observed
+          // during the bent/down phase before confirming the rep, catching a
+          // camera-only false positive (angle jitter with no real movement).
+          // When the glove isn't live, or is on the other hand, this never
+          // gates -- camera-only counting stays fully functional.
+          const gated = handLive && side === glove;
+          if (gated && imuMotion != null && imuMotion >= MIN_IMU_MOTION_CONFIRM) state.motionSeenDuringRep[side] = true;
+
           if (state.phase[side] === "extended" && value < targetDown) {
             state.phase[side] = "bent";
             state.activeSide = side;
             state.bilateralDown[side] = true;
+            state.motionSeenDuringRep[side] = false;
           } else if (state.phase[side] === "bent" && value > targetUp) {
+            if (gated && !state.motionSeenDuringRep[side]) continue;
             state.phase[side] = "extended";
             state.sideReps[side] += 1;
+            if (gated) state.imuConfirmedReps += 1;
             if (definition.countMode !== "bilateral") {
               state.reps += 1;
               state.totalReps += 1;
@@ -1127,9 +1140,10 @@
           $("hrChart").setAttribute("d", "M0 30 L300 30");
         }
         $("imuMotionValue").textContent = sensorUI.hand.display ? pct(sensorUI.hand.sensor.motion_intensity ?? 0) : "—";
+        $("handStabilityValue").textContent = sensorUI.hand.display ? pct(sensorUI.hand.sensor.stability_index ?? 0) : "—";
       }
 
-      function updateMetrics(control, form, cameraForm, stability, symmetry, imuMotion, heartRate, zone) {
+      function updateMetrics(control, form, cameraForm, stability, symmetry, imuMotion, heartRate, zone, handStabilityDisplay) {
         $("confidenceText").textContent = pct(control.axes?.pose_confidence ?? .0);
         $("confidenceBar").style.width = pct(control.axes?.pose_confidence ?? .0);
         $("formQuality").textContent = `${form}%`;
@@ -1139,7 +1153,9 @@
         $("stabilityBar").style.width = pct(stability);
         $("symmetryValue").textContent = pct(symmetry);
         $("imuMotionValue").textContent = imuMotion == null ? "—" : pct(imuMotion);
+        $("handStabilityValue").textContent = handStabilityDisplay == null ? "—" : pct(handStabilityDisplay);
         $("activeSideValue").textContent = state.activeSide.toUpperCase();
+        $("imuConfirmedValue").textContent = state.totalReps > 0 ? `${state.imuConfirmedReps}/${state.totalReps}` : "—";
         const qualityLabel = form >= 85 ? "EXCELLENT" : form >= 70 ? "GOOD FORM" : form >= 50 ? "ADJUST" : "WAITING";
         $("formLabel").textContent = qualityLabel;
         const hr = Number(heartRate);
@@ -1165,8 +1181,8 @@
 
       function updateFeedback(control, form, stability, imuMotion, loadedLeft, loadedRight) {
         let title = state.exercise ? "Good movement" : "Waiting for movement data";
-        let text = state.exercise ? "Keep a comfortable, consistent pace." : "Move naturally so the system can identify the next movement.";
-        let side = state.exercise ? `${state.activeSide.toUpperCase()} ARM` : "WAITING";
+        let text = state.exercise ? "Keep a comfortable, consistent pace." : "Start the session to begin live tracking.";
+        let side = state.exercise ? `${state.activeSide.toUpperCase()} ARM` : "READY";
         const definition = state.exercise ? exerciseDefinitions[state.exercise] : null;
         const bilateral = definition?.countMode === "bilateral" || definition?.countMode === "hold";
         const loadMissing = Boolean(state.exercise) && (bilateral ? loadedLeft === false || loadedRight === false : loadedLeft === false && loadedRight === false);
@@ -1189,92 +1205,215 @@
         $("feedbackSide").textContent = side;
       }
 
-      // Keep the shoulder, elbow and wrist on fixed-length segments so the
-      // avatar reads as a human arm instead of stretching two independent
-      // lines as the normalized signals change.
-      function pointFor(side, extension, height, mode, exerciseId, overheadSide) {
-        const sign = side === "left" ? -1 : 1;
-        const shoulder = { x: 210 + sign * 53, y: 190 };
-        const upperLength = 78;
-        const forearmLength = 84;
-        const toPoint = (origin, length, degrees) => {
-          const radians = degrees * Math.PI / 180;
-          return {
-            x: origin.x + sign * Math.cos(radians) * length,
-            y: origin.y + Math.sin(radians) * length,
+      // ---- 3D avatar --------------------------------------------------
+      //
+      // A low-poly, flat-shaded humanoid rendered with a locally vendored
+      // Three.js (web/vendor/three.min.js) -- no CDN, so it keeps working
+      // without internet in the lab. Bone angles reuse the exact same
+      // extension/height formulas the project already validated for the
+      // previous 2D model, just reprojected into 3D coordinates, and are fed
+      // through the same requestAnimationFrame easing loop so the figure
+      // moves fluidly instead of snapping on every server-sent frame.
+
+      const AVATAR_LERP_RATE = 0.22;
+      let avatar3d = null;
+
+      function makeSphere(THREE, parent, material, radius, x, y, z) {
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 16, 12), material);
+        mesh.position.set(x, y, z);
+        parent.add(mesh);
+        return mesh;
+      }
+
+      function makeBone3D(THREE, parent, material, radius) {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 1.08, 1, 10), material);
+        parent.add(mesh);
+        return mesh;
+      }
+
+      function makeDumbbell3D(THREE, parent, barMaterial, plateMaterial) {
+        const group = new THREE.Group();
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 10), barMaterial);
+        bar.rotation.z = Math.PI / 2;
+        group.add(bar);
+        for (const x of [-0.23, 0.23]) {
+          const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.09, 14), plateMaterial);
+          plate.rotation.z = Math.PI / 2;
+          plate.position.x = x;
+          group.add(plate);
+        }
+        parent.add(group);
+        return group;
+      }
+
+      function placeBone3D(THREE, mesh, start, end) {
+        const direction = new THREE.Vector3().subVectors(end, start);
+        const length = Math.max(0.001, direction.length());
+        mesh.position.copy(start).addScaledVector(direction, 0.5);
+        mesh.scale.set(1, length, 1);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
+      }
+
+      function initAvatar3D() {
+        const mount = $("avatar3d");
+        if (!window.THREE) {
+          mount.innerHTML = '<div class="avatar-fallback">3D preview unavailable (Three.js did not load).</div>';
+          console.warn("window.THREE is not available; the movement model will not render.");
+          return;
+        }
+        try {
+          const THREE = window.THREE;
+          const scene = new THREE.Scene();
+          const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 30);
+          camera.position.set(0, 2.35, 9.4);
+          camera.lookAt(0, 2.05, 0);
+          const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          mount.appendChild(renderer.domElement);
+
+          const resize = () => {
+            const width = mount.clientWidth || 480;
+            const height = mount.clientHeight || 560;
+            renderer.setSize(width, height, false);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
           };
+          resize();
+          window.addEventListener("resize", resize);
+
+          scene.add(new THREE.HemisphereLight(0x8fd8ff, 0x03070c, 1.6));
+          const keyLight = new THREE.DirectionalLight(0xdff3ff, 2.3);
+          keyLight.position.set(-3.5, 6, 4.5);
+          scene.add(keyLight);
+          const rimLight = new THREE.DirectionalLight(0x22e6c7, 1.7);
+          rimLight.position.set(3.5, 2.5, -4);
+          scene.add(rimLight);
+
+          const floor = new THREE.Mesh(
+            new THREE.CircleGeometry(2.05, 48),
+            new THREE.MeshBasicMaterial({ color: 0x123245, transparent: true, opacity: 0.5 }),
+          );
+          floor.rotation.x = -Math.PI / 2;
+          scene.add(floor);
+          const ring = new THREE.Mesh(
+            new THREE.RingGeometry(1.85, 1.92, 64),
+            new THREE.MeshBasicMaterial({ color: 0x22e6c7, transparent: true, opacity: 0.55, side: THREE.DoubleSide }),
+          );
+          ring.rotation.x = -Math.PI / 2;
+          ring.position.y = 0.01;
+          scene.add(ring);
+
+          const skin = new THREE.MeshStandardMaterial({ color: 0xd79a72, roughness: 0.6, metalness: 0.05, flatShading: true });
+          const shirt = new THREE.MeshStandardMaterial({ color: 0x33455a, roughness: 0.7, metalness: 0.08, flatShading: true });
+          const shorts = new THREE.MeshStandardMaterial({ color: 0x161f2b, roughness: 0.8, metalness: 0.05, flatShading: true });
+          const shoe = new THREE.MeshStandardMaterial({ color: 0x0c1219, roughness: 0.6, metalness: 0.1, flatShading: true });
+          const hairMaterial = new THREE.MeshStandardMaterial({ color: 0x232c38, roughness: 0.7, flatShading: true });
+          const weightMaterial = new THREE.MeshStandardMaterial({ color: 0x27323f, roughness: 0.35, metalness: 0.7, flatShading: true });
+          const accent = new THREE.MeshStandardMaterial({ color: 0x22e6c7, roughness: 0.4, metalness: 0.3, emissive: 0x0c463d, emissiveIntensity: 0.6 });
+
+          const body = new THREE.Group();
+          scene.add(body);
+
+          makeSphere(THREE, body, skin, 0.3, 0, 3.42, 0);
+          const hair = new THREE.Mesh(new THREE.SphereGeometry(0.31, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMaterial);
+          hair.position.set(0, 3.48, 0);
+          body.add(hair);
+          const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.18, 10), skin);
+          neck.position.set(0, 3.13, 0);
+          body.add(neck);
+          const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.62, 1.35, 8), shirt);
+          torso.position.set(0, 2.42, 0);
+          body.add(torso);
+          const hips = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.5, 0.42, 8), shorts);
+          hips.position.set(0, 1.63, 0);
+          body.add(hips);
+
+          for (const sign of [-1, 1]) {
+            const upperLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.75, 4, 8), shorts);
+            upperLeg.position.set(sign * 0.28, 1.08, 0);
+            body.add(upperLeg);
+            const lowerLeg = new THREE.Mesh(new THREE.CapsuleGeometry(0.14, 0.72, 4, 8), skin);
+            lowerLeg.position.set(sign * 0.28, 0.42, 0);
+            body.add(lowerLeg);
+            const shoeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.4), shoe);
+            shoeMesh.position.set(sign * 0.28, 0.02, 0.08);
+            body.add(shoeMesh);
+          }
+
+          const bones = {};
+          const joints = {};
+          const weights = {};
+          for (const side of ["left", "right"]) {
+            const sign = side === "left" ? -1 : 1;
+            joints[`${side}Shoulder`] = makeSphere(THREE, body, accent, 0.1, sign * 0.62, 2.98, 0);
+            joints[`${side}Elbow`] = makeSphere(THREE, body, skin, 0.09, sign * 0.9, 2.5, 0);
+            joints[`${side}Wrist`] = makeSphere(THREE, body, skin, 0.08, sign * 1.05, 2.0, 0);
+            bones[`${side}UpperArm`] = makeBone3D(THREE, body, skin, 0.11);
+            bones[`${side}Forearm`] = makeBone3D(THREE, body, skin, 0.095);
+            weights[side] = makeDumbbell3D(THREE, body, weightMaterial, accent);
+          }
+
+          avatar3d = { THREE, scene, camera, renderer, body, bones, joints, weights, clock: new THREE.Clock() };
+        } catch (error) {
+          mount.innerHTML = '<div class="avatar-fallback">3D preview unavailable in this browser.</div>';
+          console.warn("3D movement model failed to initialize", error);
+          avatar3d = null;
+        }
+      }
+
+      // Mirrors the 2D geometry this project validated previously: shoulder
+      // anchor per side, fixed-length upper-arm/forearm segments, and the
+      // same extension/height -> angle formulas, reprojected into a 3D
+      // vertical plane (world Y-up, so the sin term flips sign vs. the old
+      // image-space Y-down convention) with a small Z sway for depth.
+      function pointFor3D(THREE, side, extension, height, mode, exerciseId, overheadSide) {
+        const sign = side === "left" ? -1 : 1;
+        const shoulder = new THREE.Vector3(sign * 0.62, 2.98, 0);
+        const upperLength = 0.52;
+        const forearmLength = 0.56;
+        const toPoint3D = (origin, length, degrees) => {
+          const radians = degrees * Math.PI / 180;
+          return new THREE.Vector3(
+            origin.x + sign * Math.cos(radians) * length,
+            origin.y - Math.sin(radians) * length,
+            origin.z + Math.sin(radians * 0.6) * length * 0.18,
+          );
         };
 
         if (mode === "extension") {
           const curl = clamp((.84 - extension) / .57);
           const upperAngle = 55;
           const forearmAngle = 68 - curl * 125;
-          const elbow = toPoint(shoulder, upperLength, upperAngle);
-          const wrist = toPoint(elbow, forearmLength, forearmAngle);
+          const elbow = toPoint3D(shoulder, upperLength, upperAngle);
+          const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
           return { shoulder, elbow, wrist };
         }
 
         if (mode === "combo") {
-          // The server only selects "combo" when one side is genuinely
-          // overhead and the other is at shoulder/torso height (see
-          // left_overhead_right_front_candidate / right_overhead_left_front_candidate
-          // in ironquest/motion_analysis.py). Which physical side is which
-          // can vary, so read it from the live tokens instead of assuming a
-          // fixed arm, and render the overhead side reaching up rather than
-          // curling.
           if (side === overheadSide) {
             const lift = clamp(.55 + height * .45);
             const upperAngle = 62 - lift * 97;
-            const elbow = toPoint(shoulder, upperLength, upperAngle);
+            const elbow = toPoint3D(shoulder, upperLength, upperAngle);
             const forearmAngle = upperAngle + 9 + clamp((.84 - extension) / .57) * 16;
-            const wrist = toPoint(elbow, forearmLength, forearmAngle);
+            const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
             return { shoulder, elbow, wrist };
           }
           const lift = .52;
           const upperAngle = 62 - lift * 97;
-          const elbow = toPoint(shoulder, upperLength, upperAngle);
+          const elbow = toPoint3D(shoulder, upperLength, upperAngle);
           const forearmAngle = upperAngle + 9;
-          const wrist = toPoint(elbow, forearmLength, forearmAngle);
+          const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
           return { shoulder, elbow, wrist };
         }
 
         let lift = clamp(height);
         if (exerciseId === "front_raise") lift = .15 + lift * .45;
         const upperAngle = 62 - lift * 97;
-        const elbow = toPoint(shoulder, upperLength, upperAngle);
+        const elbow = toPoint3D(shoulder, upperLength, upperAngle);
         const forearmAngle = upperAngle + 9 + clamp((.84 - extension) / .57) * 16;
-        const wrist = toPoint(elbow, forearmLength, forearmAngle);
+        const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
         return { shoulder, elbow, wrist };
       }
-
-      function path(points) { return `M${points.shoulder.x} ${points.shoulder.y} L${points.elbow.x} ${points.elbow.y} L${points.wrist.x} ${points.wrist.y}`; }
-
-      function setCircle(id, point) { $(id).setAttribute("cx", point.x); $(id).setAttribute("cy", point.y); }
-      function setDumbbell(id, point, loaded) {
-        const element = $(id);
-        element.setAttribute("transform", `translate(${point.x - 19} ${point.y - 6}) rotate(${point.x < 210 ? -8 : 8})`);
-        element.style.opacity = loaded === false ? ".12" : loaded === true ? "1" : ".55";
-      }
-
-      function lerpPoint(current, target, t) {
-        return { x: lerp(current.x, target.x, t), y: lerp(current.y, target.y, t) };
-      }
-
-      function lerpArm(current, target, t) {
-        return {
-          shoulder: lerpPoint(current.shoulder, target.shoulder, t),
-          elbow: lerpPoint(current.elbow, target.elbow, t),
-          wrist: lerpPoint(current.wrist, target.wrist, t),
-        };
-      }
-
-      // The backend publishes a new frame roughly every 30-100ms depending on
-      // camera FPS and transport, which is uneven enough to make the avatar
-      // visibly snap between poses. updateAvatar() only records the latest
-      // *target* pose; a separate requestAnimationFrame loop continuously
-      // eases the drawn pose toward that target at display refresh rate, so
-      // movement reads as fluid regardless of how choppy the data feed is.
-      const AVATAR_LERP_RATE = 0.22;
 
       function updateAvatar(control) {
         const mode = exerciseDefinitions[state.exercise]?.mode || "extension";
@@ -1288,28 +1427,56 @@
         const rightData = activeSideData(control, "right");
         state.avatarLoaded.left = leftData.dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded ?? null;
         state.avatarLoaded.right = rightData.dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded ?? null;
-        state.avatarTarget.left = pointFor("left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise, overheadSide);
-        state.avatarTarget.right = pointFor("right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode, state.exercise, overheadSide);
+        if (!avatar3d) return;
+        const { THREE } = avatar3d;
+        state.avatarTarget.left = pointFor3D(THREE, "left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise, overheadSide);
+        state.avatarTarget.right = pointFor3D(THREE, "right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode, state.exercise, overheadSide);
         if (!state.avatarCurrent) {
-          state.avatarCurrent = { left: state.avatarTarget.left, right: state.avatarTarget.right };
+          state.avatarCurrent = {
+            left: {
+              shoulder: state.avatarTarget.left.shoulder.clone(),
+              elbow: state.avatarTarget.left.elbow.clone(),
+              wrist: state.avatarTarget.left.wrist.clone(),
+            },
+            right: {
+              shoulder: state.avatarTarget.right.shoulder.clone(),
+              elbow: state.avatarTarget.right.elbow.clone(),
+              wrist: state.avatarTarget.right.wrist.clone(),
+            },
+          };
         }
       }
 
-      function drawAvatar(left, right, leftLoaded, rightLoaded) {
-        $("leftArm").setAttribute("d", path(left));
-        $("rightArm").setAttribute("d", path(right));
-        $("leftArmBack").setAttribute("d", path(left));
-        $("rightArmBack").setAttribute("d", path(right));
-        setCircle("leftShoulder", left.shoulder); setCircle("leftElbow", left.elbow); setCircle("leftWrist", left.wrist);
-        setCircle("rightShoulder", right.shoulder); setCircle("rightElbow", right.elbow); setCircle("rightWrist", right.wrist);
-        setDumbbell("leftDumbbell", left.wrist, leftLoaded); setDumbbell("rightDumbbell", right.wrist, rightLoaded);
+      function lerpArm3D(current, target, t) {
+        current.shoulder.lerp(target.shoulder, t);
+        current.elbow.lerp(target.elbow, t);
+        current.wrist.lerp(target.wrist, t);
+        return current;
+      }
+
+      function drawAvatar3D(left, right, leftLoaded, rightLoaded) {
+        const { THREE, bones, joints, weights } = avatar3d;
+        for (const [side, points, loaded] of [["left", left, leftLoaded], ["right", right, rightLoaded]]) {
+          placeBone3D(THREE, bones[`${side}UpperArm`], points.shoulder, points.elbow);
+          placeBone3D(THREE, bones[`${side}Forearm`], points.elbow, points.wrist);
+          joints[`${side}Elbow`].position.copy(points.elbow);
+          joints[`${side}Wrist`].position.copy(points.wrist);
+          const dumbbell = weights[side];
+          dumbbell.position.copy(points.wrist);
+          dumbbell.quaternion.copy(bones[`${side}Forearm`].quaternion);
+          dumbbell.visible = loaded !== false;
+        }
       }
 
       function renderAvatarFrame() {
-        if (state.avatarCurrent && state.avatarTarget.left && state.avatarTarget.right) {
-          state.avatarCurrent.left = lerpArm(state.avatarCurrent.left, state.avatarTarget.left, AVATAR_LERP_RATE);
-          state.avatarCurrent.right = lerpArm(state.avatarCurrent.right, state.avatarTarget.right, AVATAR_LERP_RATE);
-          drawAvatar(state.avatarCurrent.left, state.avatarCurrent.right, state.avatarLoaded.left, state.avatarLoaded.right);
+        if (avatar3d && state.avatarCurrent && state.avatarTarget.left && state.avatarTarget.right) {
+          lerpArm3D(state.avatarCurrent.left, state.avatarTarget.left, AVATAR_LERP_RATE);
+          lerpArm3D(state.avatarCurrent.right, state.avatarTarget.right, AVATAR_LERP_RATE);
+          drawAvatar3D(state.avatarCurrent.left, state.avatarCurrent.right, state.avatarLoaded.left, state.avatarLoaded.right);
+          const elapsed = avatar3d.clock.getElapsedTime();
+          avatar3d.body.position.y = Math.sin(elapsed * 0.9) * 0.02;
+          avatar3d.body.rotation.y = Math.sin(elapsed * 0.35) * 0.06;
+          avatar3d.renderer.render(avatar3d.scene, avatar3d.camera);
         }
         requestAnimationFrame(renderAvatarFrame);
       }
@@ -1333,6 +1500,7 @@
       document.querySelectorAll(".difficulty-btn").forEach((button) => button.addEventListener("click", () => setDifficulty(button.dataset.difficulty)));
 
       readSettings();
+      initAvatar3D();
       updateAvatar({ axes: {} });
       requestAnimationFrame(renderAvatarFrame);
       setInterval(() => {

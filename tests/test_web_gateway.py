@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -40,6 +41,34 @@ def test_web_gateway_serves_client_and_health_endpoint() -> None:
         assert health["status"] == "ok"
         assert health["stream"] == "waiting"
         assert "SENSOR-FUSION WORKOUT" in html
+    finally:
+        gateway.close()
+
+
+def test_web_gateway_serves_vendored_three_js() -> None:
+    gateway = WebGateway(host="127.0.0.1", port=0)
+    gateway.start()
+    try:
+        with urllib.request.urlopen(f"{gateway.url}vendor/three.min.js", timeout=2.0) as response:
+            body = response.read()
+        assert response.status == 200
+        assert b"THREE" in body
+    finally:
+        gateway.close()
+
+
+def test_web_gateway_blocks_vendor_path_traversal() -> None:
+    gateway = WebGateway(host="127.0.0.1", port=0)
+    gateway.start()
+    try:
+        request = urllib.request.Request(f"{gateway.url}vendor/../../ironquest/cli.py")
+        try:
+            urllib.request.urlopen(request, timeout=2.0)
+            raised = False
+        except urllib.error.HTTPError as error:
+            raised = True
+            assert error.code == 404
+        assert raised
     finally:
         gateway.close()
 
