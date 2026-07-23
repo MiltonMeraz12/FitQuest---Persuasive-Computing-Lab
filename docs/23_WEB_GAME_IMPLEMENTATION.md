@@ -9,7 +9,8 @@ then publishes the resulting `game_control` payload locally.
 
 | File | Purpose |
 | --- | --- |
-| `web/fitquest_game.html` | Live browser UI, automatic exercise selection, difficulty controls, lightweight 2D movement model, and feedback. |
+| `web/fitquest_game.html` | Live browser UI, program-prescribed exercise sequence, difficulty controls, 3D movement model, and feedback. |
+| `web/vendor/three.min.js` | Vendored Three.js r149 (last classic global-script UMD build). Fetched once and committed so the 3D avatar keeps working without internet in the lab; served by `web_gateway.py`'s `/vendor/` route. |
 | `web/demo_game_control.jsonl` | Legacy regression fixture retained outside the production route. |
 | `ironquest/web_gateway.py` | Standard-library HTTP server, Server-Sent Events stream, health endpoint and annotated MJPEG preview. |
 | `tools/simulate_game_control_stream.py` | Offline dev/demo tool. Drives the real `MotionAnalyzer`/`build_body_context`/`build_game_control_payload` with a scripted synthetic pose sequence and publishes it through `WebGateway`, so the browser client can be exercised end to end (calibration, all six exercises, rep counting, sensor cards, set completion, results screen) with no camera, ESP32, or Garmin watch attached. |
@@ -32,44 +33,75 @@ The browser receives:
 - `GET /api/health`: gateway status and endpoint information;
 - `GET /api/latest`: latest published frame when available.
 
-## Current exercise controller
+## Exercise controller: program-prescribed, not auto-detected
 
-The Python sensor-fusion layer publishes an `exercise_candidate` from the
-calibrated movement signature. The browser only maps that identifier to the
-matching instruction, avatar motion, and repetition rule:
+Earlier versions mapped the Python sensor-fusion layer's `exercise_candidate`
+(derived from the calibrated movement signature) directly into the browser's
+active exercise. In practice this single-frame heuristic flickered on real
+pose noise -- a live test session spent most of its time on "detecting
+movement" despite good tracking, because small joint-angle jitter flips
+between token sets frame to frame. The browser now prescribes the sequence
+itself instead of guessing it: `curl -> front_raise -> press -> front_hold ->
+double_press -> combo`, announced one at a time (name, subtitle, ~3.2s "get
+ready" card) before each set starts, the same way a coach would call out the
+next movement. `exercise_candidate` still exists in the server payload/schema
+unchanged -- it remains useful as a research signal (e.g. comparing the
+camera-inferred signature against the prescribed ground truth) -- it is just
+no longer consumed to select the active exercise.
 
-- alternating curl when a loaded dumbbell is detected;
-- single-arm press or double-arm press when one or both arms reach overhead;
-- alternating front raise when an extended arm reaches shoulder height;
-- bilateral front hold when both extended arms reach shoulder height;
-- overhead press plus opposite front hold when the cross-body combination token
-  (`left_overhead_right_front_candidate` / `right_overhead_left_front_candidate`)
-  is detected. Which physical side is overhead can change session to session or
-  mid-set, so the browser reads it from the live token list rather than
-  assuming a fixed arm.
+Per exercise:
 
-For curls, a repetition moves through `extended -> bent -> extended`. For a
-press, the equivalent threshold is based on calibrated height. A repetition is
-gated by pose confidence, hand-motion stability, and dumbbell association. Heart
-rate is displayed as context and does not enter the form score or act as a
-medical stop condition. Body position is inferred from the camera; if the lower
-body is outside the frame, the system assumes a seated posture.
+- alternating curl counts `extended -> bent -> extended` on the arm-extension
+  signal;
+- single-arm press, alternating front raise, and double-arm press count the
+  equivalent height-signal threshold crossing;
+- bilateral front hold counts a sustained hold once both arms clear the
+  height threshold together;
+- the combo movement (overhead press + opposite front hold) reads
+  `left_overhead_right_front_candidate` / `right_overhead_left_front_candidate`
+  from the live token list to render whichever physical side is actually
+  overhead, since that can vary session to session or mid-set.
+
+A repetition is gated by pose confidence, fused hand-motion stability, and
+dumbbell association. On the glove-mounted side, a rep additionally requires
+real IMU motion to have been observed during the bent/down phase before it
+completes -- a soft gate that only applies when the hand sensor is live, so
+camera-only counting keeps working when the glove is unavailable. Heart rate
+is displayed as context and does not enter the form score or act as a medical
+stop condition. Body position is inferred from the camera; if the lower body
+is outside the frame, the system assumes a seated posture.
 
 Difficulty is changed from the main page, outside the setup modal. The available
 levels are `BEGINNER` (8 reps / 60 seconds), `ADVANCED` (12 / 50), `EXPERT`
 (16 / 45), and `FIT` (20 / 40). Changing the level during a session resets the
 current set with the new target and stricter form thresholds.
 
-The movement stage uses a lightweight adult-neutral 2D vector model with clothing,
-jointed arms, dumbbells, subtle facial details, and a floor target. It receives
-the same live normalized arm signals as the repetition controller, so the visual
-movement and the counted movement use one source of truth without adding a 3D
-rendering dependency or a continuous graphics workload. A `requestAnimationFrame`
-loop continuously eases the drawn pose toward the latest signal instead of
-snapping on every Server-Sent Event, so the figure reads as fluid movement
-regardless of how evenly the backend publishes frames. An earlier unreachable
-Three.js prototype path (dead code behind an unconditional early return) was
-removed; the project intentionally stays with the 2D vector model.
+## Sensor fusion beyond status display
+
+Camera and glove signals are blended rather than one overriding the other:
+fused stability is 60% hand-sensor / 40% camera-derived when the glove is
+live, shown alongside a dedicated "HAND STABILITY" tile for the raw glove
+value. Session Signals also tracks how many reps were IMU-confirmed
+(`imuConfirmedReps` vs `totalReps`), surfaced live and again on the results
+screen ("N of M reps confirmed by the hand motion sensor") as concrete
+evidence the camera, glove, and watch are working together rather than each
+just displaying its own status independently.
+
+## Movement stage: 3D avatar
+
+The movement stage renders a low-poly, flat-shaded 3D humanoid (capsule/
+cylinder limbs, sphere head, soft key + rim lighting, subtle idle sway) with
+Three.js, vendored locally at `web/vendor/three.min.js` rather than loaded
+from a CDN, so it keeps working without internet in the lab. Bone angles use
+`pointFor3D()`, which reprojects the exact same extension/height -> angle
+formulas already validated for the project's earlier 2D model into 3D
+coordinates -- the geometry logic did not change, only its output space. A
+`requestAnimationFrame` loop continuously eases the drawn pose toward the
+latest signal (`AVATAR_LERP_RATE`) instead of snapping on every Server-Sent
+Event, so the figure reads as fluid movement regardless of how evenly the
+backend publishes frames. An earlier 2D SVG model (and a still-earlier
+unreachable dead-code Three.js prototype before it) were both fully removed
+rather than kept as a fallback.
 
 When a session ends, either by reaching the difficulty's time budget or by
 pressing Stop with at least a few seconds of activity, a results screen shows
@@ -82,10 +114,15 @@ OpenCV monitor still keeps that technical interface for diagnostics when it is
 run separately with its display enabled.
 
 Sensor cards use signal freshness rather than connection metadata alone. A hand
-motion signal is held for 3.2 seconds and wearable context for 6.5 seconds. The
-card shows `DELAY` during that short cooldown, then clears the old values and
-shows `STALE` when no new sample arrives. This makes a real disconnection
-distinguishable from a brief transport delay without changing the movement
+motion signal is held for up to 3.2 seconds and wearable context for up to 6.5
+seconds after the last sample before falling back. Within that window, `LIVE`
+persists for roughly 1.6x the sensor's own reported `sample_interval_ms` (with
+a small minimum), not just the single tick a new sample arrives -- sizing the
+LIVE window off each device's real cadence instead of a fixed instant. A
+device posting every ~3 seconds (the Garmin Connect IQ app) would otherwise
+spend most of its time misreported as `DELAY` even while working normally.
+Beyond the full cooldown the card clears to `STALE`, distinguishing a real
+disconnection from a normal reporting gap without changing the movement
 signals used by the game.
 
 The hardware bridges are also late-start tolerant. The serial transport keeps
@@ -96,8 +133,8 @@ wearable pullers remain alive and retry their source independently, so starting
 the hardware after the camera pipeline does not require restarting the game.
 
 When a target is completed, the live stream stays open. A short transition card
-resets the set and waits for the next movement candidate from Python instead of
-choosing the next exercise inside the browser.
+announces the next prescribed movement and resets the set, chosen by the
+browser's fixed exercise sequence rather than a fresh guess from Python.
 
 ## Sensor failure behavior
 
