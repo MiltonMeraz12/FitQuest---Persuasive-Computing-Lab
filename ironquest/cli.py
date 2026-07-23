@@ -28,6 +28,7 @@ from .keypoints import PoseSmoother, extract_primary_pose
 from .motion_analysis import MotionAnalyzer
 from .movement import MovementClassifier
 from .sensors import (
+    DEFAULT_ESP32_DISCOVERY_TOKEN,
     ESP32AutoBridge,
     ESP32SerialBridge,
     ESP32UdpBridge,
@@ -529,6 +530,17 @@ def build_tracker(args: argparse.Namespace):
     return MovementClassifier()
 
 
+def esp32_discovery_token() -> str:
+    """Return the shared UDP-discovery token, overridable without editing source.
+
+    Must match the ``DISCOVERY_TOKEN`` fallback in the ESP32 UDP firmware so
+    discovery keeps working out of the box; set both sides to a private value
+    to stop another device on the same hotspot from redirecting telemetry.
+    """
+
+    return os.getenv("IRONQUEST_ESP32_DISCOVERY_TOKEN", DEFAULT_ESP32_DISCOVERY_TOKEN)
+
+
 def build_esp32_bridge(args: argparse.Namespace):
     """Create the configured ESP32 telemetry transport."""
 
@@ -541,11 +553,13 @@ def build_esp32_bridge(args: argparse.Namespace):
             baud=getattr(args, "esp32_baud", 115200),
             udp_host=getattr(args, "esp32_udp_host", DETECT_DEFAULTS["esp32_udp_host"]),
             udp_port=getattr(args, "esp32_udp_port", DETECT_DEFAULTS["esp32_udp_port"]),
+            discovery_token=esp32_discovery_token(),
         )
     if transport == "udp":
         return ESP32UdpBridge(
             host=getattr(args, "esp32_udp_host", DETECT_DEFAULTS["esp32_udp_host"]),
             udp_port=getattr(args, "esp32_udp_port", DETECT_DEFAULTS["esp32_udp_port"]),
+            discovery_token=esp32_discovery_token(),
         )
     return ESP32SerialBridge(getattr(args, "esp32_port", None), getattr(args, "esp32_baud", 115200))
 
@@ -1719,9 +1733,15 @@ def command_check_esp32(args: argparse.Namespace) -> int:
     if args.list_ports and args.transport in {"serial", "auto"}:
         print(json.dumps({"available_ports": list_serial_ports()}))
     if args.transport == "auto":
-        bridge = ESP32AutoBridge(args.port or "auto", args.baud, args.udp_host, args.udp_port)
+        bridge = ESP32AutoBridge(
+            args.port or "auto",
+            args.baud,
+            args.udp_host,
+            args.udp_port,
+            discovery_token=esp32_discovery_token(),
+        )
     elif args.transport == "udp":
-        bridge = ESP32UdpBridge(args.udp_host, args.udp_port)
+        bridge = ESP32UdpBridge(args.udp_host, args.udp_port, discovery_token=esp32_discovery_token())
     else:
         bridge = ESP32SerialBridge(args.port, args.baud)
     started = time.perf_counter()

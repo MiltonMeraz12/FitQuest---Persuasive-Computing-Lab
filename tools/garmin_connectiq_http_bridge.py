@@ -16,6 +16,25 @@ from typing import Any
 from urllib.parse import parse_qs
 
 
+# Plausible human resting-to-max heart rate range. Anything outside this is
+# treated as a malformed/garbage sample rather than passed through, since it
+# feeds directly into exertion_level/intensity_zone downstream.
+_MIN_PLAUSIBLE_HEART_RATE_BPM = 20
+_MAX_PLAUSIBLE_HEART_RATE_BPM = 240
+
+
+def sanitize_heart_rate_bpm(raw_value: Any) -> int | None:
+    """Return a plausible heart rate in bpm, or ``None`` to drop the field."""
+
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return None
+    if not (_MIN_PLAUSIBLE_HEART_RATE_BPM <= value <= _MAX_PLAUSIBLE_HEART_RATE_BPM):
+        return None
+    return round(value)
+
+
 def write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     """Write JSON atomically so the live runtime never reads a partial sample."""
 
@@ -91,6 +110,12 @@ def normalize_connectiq_payload(raw_payload: dict[str, Any]) -> dict[str, Any]:
         "note",
     )
     payload.update({key: raw_payload[key] for key in passthrough_keys if key in raw_payload})
+    if "heart_rate_bpm" in payload:
+        sanitized_heart_rate = sanitize_heart_rate_bpm(payload["heart_rate_bpm"])
+        if sanitized_heart_rate is None:
+            payload.pop("heart_rate_bpm")
+        else:
+            payload["heart_rate_bpm"] = sanitized_heart_rate
     return {key: value for key, value in payload.items() if value is not None}
 
 

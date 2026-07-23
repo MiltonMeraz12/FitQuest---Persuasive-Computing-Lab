@@ -17,8 +17,10 @@ from ironquest.cli import (
     apply_live_command_defaults,
     build_esp32_bridge,
     build_parser,
+    esp32_discovery_token,
     fill_detection_defaults,
 )
+from ironquest.sensors import DEFAULT_ESP32_DISCOVERY_TOKEN
 
 
 def test_full_preset_enables_dumbbell_tracking_without_abandoned_model() -> None:
@@ -114,6 +116,14 @@ def test_full_and_demo_aliases_get_the_same_live_defaults_as_run() -> None:
         assert configured.wearable_json == DEFAULT_WEARABLE_LIVE_JSON
 
 
+def test_esp32_discovery_token_defaults_and_env_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("IRONQUEST_ESP32_DISCOVERY_TOKEN", raising=False)
+    assert esp32_discovery_token() == DEFAULT_ESP32_DISCOVERY_TOKEN
+
+    monkeypatch.setenv("IRONQUEST_ESP32_DISCOVERY_TOKEN", "lab-desk-secret")
+    assert esp32_discovery_token() == "lab-desk-secret"
+
+
 def test_esp32_transport_auto_builds_hybrid_bridge() -> None:
     parser = build_parser()
     args = parser.parse_args(["run", "--source", "sample.mp4", "--no-show"])
@@ -137,4 +147,4 @@ if __name__ == "__main__":
     test_run_alias_can_disable_connectiq_bridge()
     test_live_command_aliases_cover_full_demo_and_run()
     test_full_and_demo_aliases_get_the_same_live_defaults_as_run()
-    print("CLI detection defaults tests passed")
+    print("CLI detection defaults tests passed (run test_esp32_discovery_token_defaults_and_env_override via pytest; it needs monkeypatch)")

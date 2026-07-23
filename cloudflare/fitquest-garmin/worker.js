@@ -8,6 +8,72 @@ const SCHEMA_SQL = `
 
 let schemaReady = false;
 
+// Mirrors the passthrough field list in
+// tools/garmin_connectiq_http_bridge.py's normalize_connectiq_payload, so
+// both bridges accept the same shape and this endpoint stops blindly
+// spreading the whole client-supplied payload into storage.
+const BASE_FIELDS = ["device_name", "provider", "sample_type", "source", "timestamp", "activity_state"];
+const PASSTHROUGH_FIELDS = [
+  "heart_rate_bpm",
+  "heart_rate_contact",
+  "heart_rate_confidence",
+  "rr_intervals_ms",
+  "hrv_ms",
+  "battery",
+  "stress",
+  "body_battery",
+  "respiration_rate",
+  "pulse_ox",
+  "steps",
+  "calories",
+  "acceleration",
+  "acceleration_unit",
+  "acceleration_magnitude_mg",
+  "watch_motion_delta_mg",
+  "watch_motion_state",
+  "gyroscope",
+  "gyroscope_unit",
+  "location",
+  "latitude",
+  "longitude",
+  "altitude_m",
+  "speed_mps",
+  "distance_m",
+  "heading_deg",
+  "sequence",
+  "sent_count",
+  "sample_interval_ms",
+  "endpoint_mode",
+  "last_http_code",
+  "battery_unit",
+  "note",
+];
+const MIN_PLAUSIBLE_HEART_RATE_BPM = 20;
+const MAX_PLAUSIBLE_HEART_RATE_BPM = 240;
+
+function sanitizeHeartRateBpm(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return null;
+  if (numeric < MIN_PLAUSIBLE_HEART_RATE_BPM || numeric > MAX_PLAUSIBLE_HEART_RATE_BPM) return null;
+  return Math.round(numeric);
+}
+
+function normalizePayload(raw) {
+  const payload = { status: "connected", device: "garmin_venu_3" };
+  for (const key of BASE_FIELDS) {
+    if (raw[key] !== undefined && raw[key] !== null) payload[key] = raw[key];
+  }
+  for (const key of PASSTHROUGH_FIELDS) {
+    if (raw[key] !== undefined && raw[key] !== null) payload[key] = raw[key];
+  }
+  if ("heart_rate_bpm" in payload) {
+    const sanitized = sanitizeHeartRateBpm(payload.heart_rate_bpm);
+    if (sanitized === null) delete payload.heart_rate_bpm;
+    else payload.heart_rate_bpm = sanitized;
+  }
+  return payload;
+}
+
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -51,6 +117,15 @@ export default {
     if (!env.FITQUEST_DB) return dbMissingResponse();
 
     if (url.pathname === "/garmin" && request.method === "POST") {
+      // Opt-in auth: only enforced once FITQUEST_SHARED_TOKEN is configured
+      // as a Worker secret (`wrangler secret put FITQUEST_SHARED_TOKEN`), so
+      // an unconfigured deploy keeps accepting telemetry exactly as before
+      // instead of silently locking it out. Send the same value from the
+      // Connect IQ app as an `X-FitQuest-Token` header once configured.
+      if (env.FITQUEST_SHARED_TOKEN && request.headers.get("x-fitquest-token") !== env.FITQUEST_SHARED_TOKEN) {
+        return jsonResponse({ status: "error", message: "Missing or invalid X-FitQuest-Token header." }, 401);
+      }
+
       let payload;
       try {
         payload = await request.json();
@@ -64,7 +139,7 @@ export default {
 
       await ensureSchema(env);
       const stored = {
-        ...payload,
+        ...normalizePayload(payload),
         project: "fitquest",
         bridge_received_at: new Date().toISOString(),
       };

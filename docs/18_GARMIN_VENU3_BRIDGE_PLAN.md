@@ -52,13 +52,31 @@ monkey_c/ironquest_safe_telemetry/source/IronQuestSafeView.mc
 
 The watch app posts heart rate, optional RR intervals, accelerometer, gyroscope, and location fields when the device exposes them. The local bridge writes normalized data to `runs/validate/wearable_live.json`, which the UI and JSONL capture already read.
 
-The built sideload app is:
+**`monkey_c/ironquest_safe_telemetry` is the canonical watch app.** It starts
+its Timer from the View's `onShow()` (the correct lifecycle hook) and posts
+to the permanent Cloudflare Worker endpoint, so it does not need rebuilding
+every time a tunnel restarts. The built sideload app is:
 
 ```text
-monkey_c/ironquest_telemetry/build/IronQuestTelemetry.prg
+monkey_c/ironquest_safe_telemetry/build/IronQuestSafe.prg
 ```
 
-The watch app uses the active HTTPS tunnel endpoint configured in that source file. If the tunnel endpoint changes, rebuild and sideload the `.prg` again.
+`monkey_c/ironquest_telemetry` is now marked deprecated in its source file.
+It starts its Timer from `Application.onStart()`, the exact pattern that
+caused the on-device crash documented in
+[docs/20_GARMIN_CONNECTIQ_TROUBLESHOOTING.md](20_GARMIN_CONNECTIQ_TROUBLESHOOTING.md#when-the-watch-shows-iq),
+and it points at an ephemeral `trycloudflare.com` tunnel URL that changes on
+every tunnel restart. Do not sideload it; keep it only for reference.
+
+The Cloudflare Worker (`cloudflare/fitquest-garmin/worker.js`) now allowlists
+the same fields as the local Python bridge instead of storing whatever the
+client sends, and clamps `heart_rate_bpm` to a plausible 20-240 range. It
+also supports an opt-in shared-secret header: if the `FITQUEST_SHARED_TOKEN`
+Worker secret is set (`wrangler secret put FITQUEST_SHARED_TOKEN`), `POST
+/garmin` requires a matching `X-FitQuest-Token` header. Leaving the secret
+unset keeps the endpoint open exactly as before, so this is safe to leave
+unconfigured; to actually enable it, also add the same header to the
+`:headers` options in `IronQuestSafeView.mc`, rebuild, and re-sideload.
 
 ## Implemented BLE Bridge
 

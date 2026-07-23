@@ -45,7 +45,7 @@ For normal use, the ESP32/IMU path is started through the main launcher:
 
 That command opens the camera UI and listens to USB serial and Wi-Fi UDP together. If USB is available, it can read serial data. If the ESP32 is powered by a powerbank, it can read Wi-Fi telemetry on port `4210`.
 
-The Wi-Fi path now includes automatic laptop discovery: Python broadcasts a small discovery packet from port `4210`, and the ESP32 listens on port `4211` so it can learn the laptop address after hotspot or network changes.
+The Wi-Fi path now includes automatic laptop discovery: Python broadcasts a small discovery packet from port `4210`, and the ESP32 listens on port `4211` so it can learn the laptop address after hotspot or network changes. The discovery packet must include a shared token (`ironquest_discover:<token>`) that matches `DISCOVERY_TOKEN` in the board's `wifi_config.h`, so another device on the same hotspot cannot redirect the telemetry stream by sending its own discovery packet. Both sides fall back to the same placeholder token by default, so this keeps working out of the box; set a private value in `wifi_config.h` and the `IRONQUEST_ESP32_DISCOVERY_TOKEN` environment variable to actually lock it down.
 
 The project still supports serial and UDP checks for debugging, but those are not the daily workflow.
 
@@ -108,7 +108,7 @@ Before flashing the UDP sketch:
 4. Keep `TELEMETRY_USE_BROADCAST = 1` as a fallback; the runtime also supports automatic UDP discovery from the laptop.
 5. Keep `TELEMETRY_DESTINATION_PORT = 4210` unless you change the Python command.
 
-The UDP sketch still prints serial logs, but the Python runtime receives telemetry over Wi-Fi.
+The UDP sketch still prints serial logs, but the Python runtime receives telemetry over Wi-Fi. It also calls `WiFi.disconnect(true)` before each reconnect attempt, which avoids a known ESP32 Wi-Fi library flakiness pattern after a dropped connection.
 
 ## UI Improvements
 

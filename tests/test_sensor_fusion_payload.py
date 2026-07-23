@@ -173,6 +173,40 @@ def test_esp32_udp_bridge_marks_old_samples_stale_and_recovers() -> None:
     assert reconnected["latest"]["timestamp_ms"] == 2200
 
 
+class _RecordingSocket:
+    """Stand-in for a UDP socket that records outgoing discovery packets."""
+
+    def __init__(self) -> None:
+        self.sent: list[bytes] = []
+
+    def recvfrom(self, bufsize: int):
+        raise BlockingIOError()
+
+    def sendto(self, data: bytes, addr) -> None:
+        self.sent.append(data)
+
+    def close(self) -> None:
+        pass
+
+
+def test_esp32_udp_bridge_discovery_message_includes_shared_token() -> None:
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    probe.bind(("127.0.0.1", 0))
+    udp_port = probe.getsockname()[1]
+    probe.close()
+
+    bridge = ESP32UdpBridge(host="127.0.0.1", udp_port=udp_port, discovery_token="test-token-123")
+    bridge.socket.close()
+    recorder = _RecordingSocket()
+    bridge.socket = recorder
+    try:
+        bridge.poll()  # no packets waiting, so this should trigger a discovery send
+    finally:
+        bridge.close()
+
+    assert recorder.sent == [b"ironquest_discover:test-token-123\n"]
+
+
 def test_esp32_auto_bridge_accepts_udp_without_serial() -> None:
     probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     probe.bind(("127.0.0.1", 0))

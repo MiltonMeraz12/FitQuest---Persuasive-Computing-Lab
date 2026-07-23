@@ -19,6 +19,13 @@ IPAddress TELEMETRY_DESTINATION_IP(192, 168, 1, 100);
 #define TELEMETRY_USE_BROADCAST 1
 #endif
 
+// Falls back to a placeholder if an older wifi_config.h does not define one
+// yet. Set a real private value in wifi_config.h (gitignored) before relying
+// on this for anything beyond a desk test.
+#ifndef DISCOVERY_TOKEN
+constexpr char DISCOVERY_TOKEN[] = "CHANGE_ME_SHARED_SECRET";
+#endif
+
 constexpr uint16_t TELEMETRY_DESTINATION_PORT = 4210;
 constexpr uint16_t LOCAL_UDP_PORT = 4211;
 
@@ -83,6 +90,10 @@ void formatFloat(char *buffer, size_t bufferSize, float value) {
   snprintf(buffer, bufferSize, "%.4f", value);
 }
 
+// SH2_GAME_ROTATION_VECTOR fuses accelerometer + gyroscope only (no
+// magnetometer), so it has no compass reference: yaw is relative to wherever
+// the sensor was pointed at power-on/reset and will drift slowly over a
+// session. pitch/roll are gravity-referenced and stay accurate.
 EulerAngles quaternionToEuler(float qr, float qi, float qj, float qk) {
   const float sqr = qr * qr;
   const float sqi = qi * qi;
@@ -133,6 +144,10 @@ bool beginBno08x() {
 
 void beginWiFiAttempt() {
   WiFi.mode(WIFI_STA);
+  // Clear any stale connection state before retrying; reusing begin() alone
+  // after a failed/dropped connection is a known source of ESP32 Wi-Fi
+  // reconnect flakiness.
+  WiFi.disconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   lastWifiAttemptMs = millis();
   Serial.printf("{\"status\":\"wifi_connecting\",\"ssid\":\"%s\"}\n", WIFI_SSID);
@@ -179,7 +194,17 @@ void handleUdpDiscovery() {
     const int bytesRead = telemetryUdp.read(packet, sizeof(packet) - 1);
     packet[max(0, bytesRead)] = '\0';
 
-    if (strstr(packet, "ironquest_discover") != nullptr) {
+    // Trim a trailing newline/carriage return so the token compares exactly.
+    size_t packetLen = strlen(packet);
+    while (packetLen > 0 && (packet[packetLen - 1] == '\n' || packet[packetLen - 1] == '\r')) {
+      packet[--packetLen] = '\0';
+    }
+
+    // Require the shared token so a stray device on the same hotspot cannot
+    // silently redirect the telemetry stream by sending its own discovery
+    // packet. Expected format: "ironquest_discover:<DISCOVERY_TOKEN>".
+    const char *marker = strstr(packet, "ironquest_discover:");
+    if (marker != nullptr && strcmp(marker + strlen("ironquest_discover:"), DISCOVERY_TOKEN) == 0) {
       dynamicTelemetryDestinationIp = telemetryUdp.remoteIP();
       dynamicTelemetryDestinationPort = telemetryUdp.remotePort();
       dynamicDestinationReady = true;
@@ -187,6 +212,8 @@ void handleUdpDiscovery() {
           "{\"status\":\"udp_peer_discovered\",\"ip\":\"%s\",\"port\":%u}\n",
           dynamicTelemetryDestinationIp.toString().c_str(),
           dynamicTelemetryDestinationPort);
+    } else if (strstr(packet, "ironquest_discover") != nullptr) {
+      Serial.println("{\"status\":\"udp_discovery_rejected\",\"message\":\"token_mismatch\"}");
     }
 
     packetSize = telemetryUdp.parsePacket();

@@ -2,6 +2,14 @@
 
 Use this when the Garmin Venu 3 app does not appear on the watch or the UI does not update.
 
+**`ironquest_telemetry` is now deprecated** (see
+[docs/18_GARMIN_VENU3_BRIDGE_PLAN.md](18_GARMIN_VENU3_BRIDGE_PLAN.md)) in
+favor of `ironquest_safe_telemetry`, which has the actual fix for the
+`onStart`-Timer crash described below and points at the permanent Cloudflare
+Worker endpoint instead of a tunnel URL that changes on every restart. The
+history below is kept as-is for context; for new sideloads, go straight to
+`monkey_c/ironquest_safe_telemetry`.
+
 ## Current Known Good Laptop State
 
 The laptop bridge is healthy when this URL returns JSON:

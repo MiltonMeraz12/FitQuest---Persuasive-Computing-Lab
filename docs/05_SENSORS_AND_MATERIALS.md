@@ -53,6 +53,7 @@ Expected telemetry line over USB serial or Wi-Fi UDP:
 {
   "device_id": "esp32_0",
   "timestamp_ms": 123456,
+  "sequence": 42,
   "mount": "right_gym_glove",
   "orientation_euler_deg": {
     "pitch": 4.1,
@@ -71,6 +72,13 @@ Expected telemetry line over USB serial or Wi-Fi UDP:
   }
 }
 ```
+
+`sequence` is emitted by both the serial and UDP firmware sketches. `yaw` has
+no compass reference (the firmware uses `SH2_GAME_ROTATION_VECTOR`, which
+fuses only accelerometer + gyroscope), so treat it as relative to the
+sensor's heading at power-on/reset, not an absolute compass bearing; it can
+drift slowly over a session. `pitch`/`roll` are gravity-referenced and do not
+have this limitation.
 
 The Python bridge now derives additional signal fields from consecutive samples:
 

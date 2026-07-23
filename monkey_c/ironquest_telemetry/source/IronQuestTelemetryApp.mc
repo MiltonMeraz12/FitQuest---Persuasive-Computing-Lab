@@ -1,3 +1,14 @@
+// DEPRECATED: kept only for reference. Do not sideload this app.
+//
+// This app starts its Timer from Application.onStart(), which is the exact
+// pattern documented in docs/20_GARMIN_CONNECTIQ_TROUBLESHOOTING.md as the
+// cause of an on-device crash ("Invalid Value" in IronQuestSafeApp.onStart
+// before the fix). It also points at an ephemeral trycloudflare.com quick
+// tunnel URL that changes every time the tunnel restarts.
+//
+// Use monkey_c/ironquest_safe_telemetry instead: it starts its Timer from
+// the View's onShow() (the correct lifecycle hook) and posts to the
+// permanent Cloudflare Worker endpoint.
 import Toybox.Application;
 import Toybox.Communications;
 import Toybox.Lang;

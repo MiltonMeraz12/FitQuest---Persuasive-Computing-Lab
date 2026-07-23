@@ -31,6 +31,7 @@ float gyroY = NAN;
 float gyroZ = NAN;
 EulerAngles euler = {NAN, NAN, NAN};
 unsigned long lastTelemetryMs = 0;
+uint32_t sequence = 0;
 
 void formatFloat(char *buffer, size_t bufferSize, float value) {
   if (isnan(value) || isinf(value)) {
@@ -40,6 +41,10 @@ void formatFloat(char *buffer, size_t bufferSize, float value) {
   snprintf(buffer, bufferSize, "%.4f", value);
 }
 
+// SH2_GAME_ROTATION_VECTOR fuses accelerometer + gyroscope only (no
+// magnetometer), so it has no compass reference: yaw is relative to wherever
+// the sensor was pointed at power-on/reset and will drift slowly over a
+// session. pitch/roll are gravity-referenced and stay accurate.
 EulerAngles quaternionToEuler(float qr, float qi, float qj, float qk) {
   const float sqr = qr * qr;
   const float sqi = qi * qi;
@@ -101,12 +106,13 @@ void publishTelemetry() {
   formatFloat(yaw, sizeof(yaw), euler.yaw);
 
   Serial.printf(
-      "{\"device_id\":\"%s\",\"timestamp_ms\":%lu,\"mount\":\"%s\","
+      "{\"device_id\":\"%s\",\"timestamp_ms\":%lu,\"sequence\":%lu,\"mount\":\"%s\","
       "\"orientation_euler_deg\":{\"pitch\":%s,\"roll\":%s,\"yaw\":%s},"
       "\"accel_mps2\":{\"x\":%s,\"y\":%s,\"z\":%s},"
       "\"gyro_dps\":{\"x\":%s,\"y\":%s,\"z\":%s}}\n",
       DEVICE_ID,
       millis(),
+      static_cast<unsigned long>(sequence++),
       MOUNT,
       pitch,
       roll,

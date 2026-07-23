@@ -29,6 +29,13 @@ ESP32_PORT_HINTS = (
 
 ESP32_DEFAULT_STALE_SECONDS = 2.0
 
+# Must match the DISCOVERY_TOKEN fallback in the ESP32 UDP firmware
+# (firmware/esp32_s3_bno08x_udp/esp32_s3_bno08x_udp.ino) so discovery keeps
+# working out of the box. Override both sides with a private value (env var
+# IRONQUEST_ESP32_DISCOVERY_TOKEN here, wifi_config.h on the board) to stop a
+# stray device on the same hotspot from redirecting the telemetry stream.
+DEFAULT_ESP32_DISCOVERY_TOKEN = "CHANGE_ME_SHARED_SECRET"
+
 
 def _sample_age_seconds(sample: "ESP32Telemetry | None") -> float | None:
     """Return the age of a sample using the host receive timestamp."""
@@ -826,6 +833,7 @@ class ESP32UdpBridge:
         udp_port: int = 4210,
         discovery_port: int = 4211,
         discovery_interval_seconds: float = 2.0,
+        discovery_token: str = DEFAULT_ESP32_DISCOVERY_TOKEN,
         max_packets_per_poll: int = 32,
         stale_seconds: float = ESP32_DEFAULT_STALE_SECONDS,
     ):
@@ -835,6 +843,7 @@ class ESP32UdpBridge:
         self.udp_port = int(udp_port)
         self.discovery_port = int(discovery_port)
         self.discovery_interval_seconds = max(0.5, float(discovery_interval_seconds))
+        self.discovery_token = discovery_token
         self.max_packets_per_poll = max(1, int(max_packets_per_poll))
         self.stale_seconds = max(0.1, float(stale_seconds))
         self.socket: socket.socket | None = None
@@ -956,7 +965,11 @@ class ESP32UdpBridge:
         if now - self.last_discovery_sent < self.discovery_interval_seconds:
             return
         self.last_discovery_sent = now
-        message = f"ironquest_discover:{self.udp_port}\n".encode("ascii")
+        # The firmware only trusts a discovery packet ending in the shared
+        # token; it never reads a port number from this message (it uses the
+        # UDP source port of the packet itself), so the token is the only
+        # payload that needs to be here.
+        message = f"ironquest_discover:{self.discovery_token}\n".encode("ascii")
         try:
             self.socket.sendto(message, ("255.255.255.255", self.discovery_port))
         except OSError as exc:
@@ -983,6 +996,7 @@ class ESP32AutoBridge:
         udp_host: str = "0.0.0.0",
         udp_port: int = 4210,
         stale_seconds: float = ESP32_DEFAULT_STALE_SECONDS,
+        discovery_token: str = DEFAULT_ESP32_DISCOVERY_TOKEN,
     ):
         """Open both available transports so the UI can use whichever works."""
 
@@ -992,7 +1006,12 @@ class ESP32AutoBridge:
             serial_startup_delay=0.25,
             stale_seconds=stale_seconds,
         )
-        self.udp_bridge = ESP32UdpBridge(udp_host, udp_port, stale_seconds=stale_seconds)
+        self.udp_bridge = ESP32UdpBridge(
+            udp_host,
+            udp_port,
+            stale_seconds=stale_seconds,
+            discovery_token=discovery_token,
+        )
         self.last_payload: dict[str, Any] | None = None
 
     def poll(self) -> dict[str, Any]:
