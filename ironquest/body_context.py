@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from math import sqrt
+from time import time as _wall_clock
 from typing import Any
 
 import numpy as np
@@ -95,6 +96,7 @@ class ObjectTrackState:
     z_distance: float | None = None
     velocity: tuple[float, float] = (0.0, 0.0)
     missed_frames: int = 0
+    last_seen_at: float = field(default_factory=_wall_clock)
 
 
 @dataclass(frozen=True)
@@ -166,6 +168,16 @@ class ObjectTemporalTracker:
     unless YOLO has already produced a valid dumbbell/weight candidate. During
     short misses it publishes a decayed, predicted box marked as ``tracked`` so
     downstream code can distinguish continuity from a fresh model detection.
+
+    A track expires only once *both* ``max_stale_frames`` and
+    ``max_stale_seconds`` are exceeded. The frame count alone was too tight
+    in practice: a real webcam frame occludes/loses a held dumbbell (hands
+    crossing, arms lowered near the body, blending into the background) far
+    more often than a few frames, and a fixed frame budget also means the
+    real hold duration silently shrinks on a faster machine. The wall-clock
+    floor keeps a consistent grace period regardless of achieved FPS, while
+    the frame count still bounds a track's lifetime on a very slow machine
+    where "a few seconds" would otherwise mean very few real observations.
     """
 
     def __init__(
@@ -175,12 +187,14 @@ class ObjectTemporalTracker:
         max_center_distance: float = 160.0,
         min_iou: float = 0.05,
         confidence_decay: float = 0.82,
+        max_stale_seconds: float = 1.4,
     ):
         self.max_stale_frames = max(0, int(max_stale_frames))
         self.smoothing = float(np.clip(smoothing, 0.0, 1.0))
         self.max_center_distance = max(1.0, float(max_center_distance))
         self.min_iou = float(np.clip(min_iou, 0.0, 1.0))
         self.confidence_decay = float(np.clip(confidence_decay, 0.0, 1.0))
+        self.max_stale_seconds = max(0.0, float(max_stale_seconds))
         self._tracks: dict[int, ObjectTrackState] = {}
         self._next_track_id = 1
 
@@ -190,7 +204,7 @@ class ObjectTemporalTracker:
         self._tracks.clear()
         self._next_track_id = 1
 
-    def update(self, detections: list[ObjectDetection]) -> list[ObjectDetection]:
+    def update(self, detections: list[ObjectDetection], now: float | None = None) -> list[ObjectDetection]:
         """Return current detections plus short-lived tracked predictions."""
 
         if self.max_stale_frames <= 0:
@@ -199,6 +213,7 @@ class ObjectTemporalTracker:
                 for detection in detections
             ]
 
+        current_time = _wall_clock() if now is None else float(now)
         matches, unmatched_detection_indices, unmatched_track_ids = self._match_detections(detections)
         output: list[ObjectDetection] = []
 
@@ -218,6 +233,7 @@ class ObjectTemporalTracker:
             track.confidence = max(float(detection.confidence), track.confidence * self.confidence_decay)
             track.z_distance = detection.z_distance
             track.missed_frames = 0
+            track.last_seen_at = current_time
             output.append(
                 _with_tracking(
                     detection,
@@ -239,6 +255,7 @@ class ObjectTemporalTracker:
                 confidence=float(detection.confidence),
                 xyxy=detection.xyxy,
                 z_distance=detection.z_distance,
+                last_seen_at=current_time,
             )
             output.append(
                 _with_tracking(
@@ -255,7 +272,9 @@ class ObjectTemporalTracker:
             if track is None:
                 continue
             track.missed_frames += 1
-            if track.missed_frames > self.max_stale_frames:
+            frame_budget_exceeded = track.missed_frames > self.max_stale_frames
+            time_budget_exceeded = self.max_stale_seconds <= 0 or (current_time - track.last_seen_at) > self.max_stale_seconds
+            if frame_budget_exceeded and time_budget_exceeded:
                 expired.append(track_id)
                 continue
             track.xyxy = _translate_box(track.xyxy, track.velocity)

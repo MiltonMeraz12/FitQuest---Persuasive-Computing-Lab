@@ -158,11 +158,16 @@
         radial-gradient(circle at 50% 78%, rgba(34, 145, 215, .2), transparent 34%),
         linear-gradient(180deg, rgba(15, 34, 50, .9), rgba(5, 13, 20, .97));
     }
-    .stage-topline { position: absolute; top: 13px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; z-index: 2; }
+    /* One flowing header block instead of two independently absolutely
+       positioned pieces: the target-card now sits in normal flow below the
+       topline, so a longer subtitle (or a narrower stage) that makes the
+       topline taller pushes the card down with it instead of overlapping it. */
+    .stage-header { position: absolute; top: 13px; left: 16px; right: 16px; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+    .stage-topline { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .exercise-name { color: #f2fbff; font-size: clamp(15px, 2vw, 22px); font-weight: 900; letter-spacing: 1px; }
     .exercise-subtitle { margin-top: 5px; color: var(--muted); font-size: 11px; }
-    .coach-tag { padding: 7px 10px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 999px; color: var(--cyan); background: rgba(34, 230, 199, .06); font-size: 10px; font-weight: 850; letter-spacing: .7px; }
-    .target-card { position: absolute; top: 64px; left: 17px; max-width: 290px; padding: 10px 12px; border: 1px solid #2b5065; border-radius: 11px; background: rgba(5, 14, 22, .78); z-index: 2; }
+    .coach-tag { flex: 0 0 auto; padding: 7px 10px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 999px; color: var(--cyan); background: rgba(34, 230, 199, .06); font-size: 10px; font-weight: 850; letter-spacing: .7px; white-space: nowrap; }
+    .target-card { max-width: 290px; padding: 10px 12px; border: 1px solid #2b5065; border-radius: 11px; background: rgba(5, 14, 22, .78); }
     .target-card strong { display: block; font-size: 14px; }
     .target-card p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
     .target-chip { display: inline-block; margin-top: 8px; padding: 5px 8px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 99px; color: var(--cyan); font-size: 10px; font-weight: 850; }
@@ -182,7 +187,6 @@
     #avatar3d { width: 100%; height: 100%; }
     #avatar3d canvas { display: block; margin: 0 auto; }
     .avatar-fallback { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
-    .avatar-label { position: absolute; left: 20px; bottom: 8px; color: #b5cbd8; font-size: 10px; letter-spacing: 1px; z-index: 2; }
     .stage-feedback { position: absolute; left: 52px; right: 52px; bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 12px; background: linear-gradient(90deg, rgba(14, 45, 54, .94), rgba(8, 18, 28, .94)); z-index: 3; }
     .feedback-main { display: flex; align-items: center; gap: 11px; min-width: 0; }
     .feedback-icon { width: 33px; height: 33px; display: grid; place-items: center; border: 2px solid var(--cyan); border-radius: 50%; color: var(--cyan); font-weight: 900; }
@@ -237,6 +241,7 @@
     .setup-header p { max-width: 720px; margin: 0; color: #b8cbd8; line-height: 1.5; font-size: 13px; }
     .setup-body { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 22px 28px; }
     .setup-section { padding: 15px; border: 1px solid rgba(68, 118, 146, .34); border-radius: 13px; background: rgba(5, 16, 25, .4); }
+    .setup-section.full-width { grid-column: 1 / -1; }
     .setup-section h3 { margin: 0 0 13px; font-size: 12px; color: var(--cyan); letter-spacing: 1px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
     .field label { display: block; margin-bottom: 5px; color: var(--muted); font-size: 10px; }
@@ -247,6 +252,7 @@
     .choice input { position: absolute; opacity: 0; pointer-events: none; }
     .choice label { display: block; padding: 9px 11px; border: 1px solid #2a485c; border-radius: 8px; color: var(--muted); font-size: 11px; cursor: pointer; }
     .choice input:checked + label { border-color: var(--cyan); background: rgba(34, 230, 199, .1); color: var(--text); }
+    .exercise-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
     .checklist { display: grid; gap: 9px; }
     .check-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid rgba(255,255,255,.07); border-radius: 8px; background: rgba(255,255,255,.025); font-size: 11px; }
     .check-item span { color: var(--muted); }
@@ -272,8 +278,7 @@
       .metric-card { padding: 8px 10px; }
       .rep-ring { width: 96px; height: 96px; }
       .rep-number { font-size: 28px; }
-      .target-card { top: 58px; }
-      .avatar-stage { inset: 73px 10px 48px; }
+      .avatar-stage { inset: 96px 10px 48px; }
     }
     @media (max-width: 900px) {
       html, body { height: auto; min-height: 100%; overflow: auto; }
@@ -283,9 +288,10 @@
       .app-shell { height: auto; grid-template-columns: 1fr; padding: 10px; overflow: visible; }
       .column { overflow: visible; }
       .right-column { display: flex; }
-      .stage { min-height: 620px; height: 620px; }
+      .stage { min-height: 660px; height: 660px; }
       .setup-body { grid-template-columns: 1fr; }
       .setup-footer { align-items: flex-start; flex-direction: column; }
+      .exercise-picker { grid-template-columns: 1fr; }
     }
     @media (max-width: 540px) {
       .topbar { padding: 10px 13px; }
@@ -330,10 +336,10 @@
       <section class="card difficulty-card">
         <h3>DIFFICULTY</h3>
         <div class="difficulty-grid">
-          <button class="difficulty-btn active" data-difficulty="beginner" type="button"><strong>BEGINNER</strong><small>8 reps · 60 sec</small></button>
-          <button class="difficulty-btn" data-difficulty="advanced" type="button"><strong>ADVANCED</strong><small>12 reps · 50 sec</small></button>
-          <button class="difficulty-btn" data-difficulty="expert" type="button"><strong>EXPERT</strong><small>16 reps · 45 sec</small></button>
-          <button class="difficulty-btn" data-difficulty="fit" type="button"><strong>FIT</strong><small>20 reps · 40 sec</small></button>
+          <button class="difficulty-btn active" data-difficulty="beginner" type="button"><strong>BEGINNER</strong><small>8 reps/exercise</small></button>
+          <button class="difficulty-btn" data-difficulty="advanced" type="button"><strong>ADVANCED</strong><small>12 reps/exercise</small></button>
+          <button class="difficulty-btn" data-difficulty="expert" type="button"><strong>EXPERT</strong><small>16 reps/exercise</small></button>
+          <button class="difficulty-btn" data-difficulty="fit" type="button"><strong>FIT</strong><small>20 reps/exercise</small></button>
         </div>
       </section>
 
@@ -348,19 +354,20 @@
         <div class="info-row"><span>User</span><strong id="userSummary">Not set</strong></div>
         <div class="info-row"><span>Body position</span><strong id="positionSummary">AUTO</strong></div>
         <div class="info-row"><span>Load</span><strong id="weightSummary">Not set</strong></div>
-        <div class="info-row"><span>Duration</span><strong id="durationSummary">60 sec</strong></div>
+        <div class="info-row"><span>Progress</span><strong id="progressSummary">—</strong></div>
       </section>
     </aside>
 
     <section class="card stage">
-      <div class="stage-topline">
-        <div><div id="exerciseName" class="exercise-name">PRESS START TO BEGIN</div><div id="exerciseSubtitle" class="exercise-subtitle">FitQuest will walk you through a short sequence of movements.</div></div>
-        <div class="coach-tag">COACH-LED</div>
+      <div class="stage-header">
+        <div class="stage-topline">
+          <div><div id="exerciseName" class="exercise-name">PRESS START TO BEGIN</div><div id="exerciseSubtitle" class="exercise-subtitle">FitQuest will walk you through a short sequence of movements.</div></div>
+          <div class="coach-tag" id="coachTag">COACH-LED</div>
+        </div>
+        <div class="target-card"><strong id="coachTitle">Ready when you are</strong><p id="coachText">Start the session and FitQuest will tell you exactly what to do next.</p><span id="targetChip" class="target-chip">SETUP</span></div>
       </div>
-      <div class="target-card"><strong id="coachTitle">Ready when you are</strong><p id="coachText">Start the session and FitQuest will tell you exactly what to do next.</p><span id="targetChip" class="target-chip">SETUP</span></div>
       <div class="avatar-stage">
         <div id="avatar3d"></div>
-        <span class="avatar-label">MOVEMENT MODEL</span>
       </div>
       <div class="stage-feedback"><div class="feedback-main"><div id="feedbackIcon" class="feedback-icon">✓</div><div><strong id="feedbackTitle">Waiting for movement data</strong><small id="feedbackText">Start the session to begin live tracking.</small></div></div><div id="feedbackSide" class="feedback-side">READY</div></div>
     </section>
@@ -424,15 +431,23 @@
 
   <section id="setupOverlay" class="session-overlay">
     <div class="setup-modal">
-      <div class="setup-header"><h2>Prepare FitQuest session</h2><p>Set up a local session with no account. FitQuest tells you which movement to do next and reads normalized camera, dumbbell, hand-motion, and heart-rate signals when available.</p></div>
+      <div class="setup-header"><h2>Prepare FitQuest session</h2><p>Set up a local session with no account. FitQuest tells you which movement to do next and reads normalized camera, dumbbell, hand-motion, and heart-rate signals when available. There is no time limit -- a session ends when the exercises are done, or whenever you press Stop.</p></div>
       <div class="setup-body">
         <div class="setup-section"><h3>SESSION DETAILS</h3><div class="form-grid">
           <div class="field"><label for="ageInput">Age (optional)</label><input id="ageInput" type="number" min="10" max="120" placeholder="Optional" /></div>
           <div class="field"><label for="heightInput">Height (cm)</label><input id="heightInput" type="number" min="80" max="240" placeholder="Optional" /></div>
           <div class="field"><label for="weightInput">Body weight (kg)</label><input id="weightInput" type="number" min="20" max="250" placeholder="Optional" /></div>
           <div class="field"><label for="loadInput">Dumbbell load (kg/hand)</label><input id="loadInput" type="number" min="0" max="100" step=".5" placeholder="Optional" /></div>
-        </div><div style="height:12px"></div><div class="info-row"><span>Exercise</span><strong>COACH-LED SEQUENCE</strong></div><div class="info-row"><span>Body position</span><strong>AUTO-DETECTED</strong></div><div class="info-row"><span>Difficulty</span><strong id="setupDifficulty">BEGINNER</strong></div></div>
-        <div class="setup-section"><h3>AVAILABLE SOURCES</h3><div class="checklist"><div class="check-item"><span>Camera tracking</span><strong id="setupCamera">LIVE GATEWAY</strong></div><div class="check-item"><span>Dumbbell detection</span><strong id="setupDumbbell">LIVE GATEWAY</strong></div><div class="check-item"><span>Hand motion sensor</span><strong id="setupImu">OPTIONAL</strong></div><div class="check-item"><span>Heart-rate wearable</span><strong id="setupWatch">OPTIONAL</strong></div></div><div style="height:16px"></div><div class="info-row"><span>Target duration</span><strong id="setupDuration">60 sec</strong></div><div class="info-row"><span>Target repetitions</span><strong id="setupReps">8</strong></div><div class="info-row"><span>Storage</span><strong>Local session</strong></div></div>
+        </div><div style="height:12px"></div><div class="info-row"><span>Body position</span><strong>AUTO-DETECTED</strong></div><div class="info-row"><span>Difficulty</span><strong id="setupDifficulty">BEGINNER</strong></div></div>
+        <div class="setup-section"><h3>AVAILABLE SOURCES</h3><div class="checklist"><div class="check-item"><span>Camera tracking</span><strong id="setupCamera">LIVE GATEWAY</strong></div><div class="check-item"><span>Dumbbell detection</span><strong id="setupDumbbell">LIVE GATEWAY</strong></div><div class="check-item"><span>Hand motion sensor</span><strong id="setupImu">OPTIONAL</strong></div><div class="check-item"><span>Heart-rate wearable</span><strong id="setupWatch">OPTIONAL</strong></div></div><div style="height:16px"></div><div class="info-row"><span>Target repetitions</span><strong id="setupReps">8</strong></div><div class="info-row"><span>Exercises this session</span><strong id="setupExerciseCount">6</strong></div><div class="info-row"><span>Storage</span><strong>Local session</strong></div></div>
+        <div class="setup-section full-width"><h3>SESSION MODE</h3>
+          <div class="choice-row">
+            <div class="choice"><input type="radio" name="sessionMode" id="modeCoach" value="coach" checked /><label for="modeCoach">Coach-led sequence</label></div>
+            <div class="choice"><input type="radio" name="sessionMode" id="modeRandom" value="random" /><label for="modeRandom">Random mix</label></div>
+            <div class="choice"><input type="radio" name="sessionMode" id="modeChoose" value="choose" /><label for="modeChoose">Choose exercises</label></div>
+          </div>
+          <div id="exercisePicker" class="exercise-picker hidden"></div>
+        </div>
       </div>
       <div class="setup-footer"><div class="safe-note"><strong>Safety:</strong> use a safe load, keep your visible body area inside the frame, and stop if you feel pain or discomfort. Heart rate is shown as context, not as a diagnosis or medical decision.</div><button id="setupStartButton" class="primary-btn" style="flex:0 0 auto;min-width:190px" type="button">Start live session</button></div>
     </div>
@@ -450,23 +465,33 @@
       const pct = (value) => `${Math.round(clamp(value) * 100)}%`;
       const sideKey = (side, suffix) => `${side}_${suffix}`;
 
+      // Each definition reuses one of the signals the sensor-fusion layer
+      // already computes (arm_extension = elbow bend, height_signal = wrist
+      // height, reach_signal = lateral distance from the torso) rather than
+      // inventing a new detection category per exercise. Where a movement
+      // needs a distinct look but the same underlying signal as another one
+      // (hammer curl vs curl, bent-over row vs curl), that is called out below.
       const exerciseDefinitions = {
         curl: { name: "ALTERNATING CURL", subtitle: "Move through a comfortable range while keeping the torso steady.", chip: "TARGET: CURL", mode: "extension", countMode: "alternating" },
+        hammer_curl: { name: "ALTERNATING HAMMER CURL", subtitle: "Curl with palms facing each other, keeping the wrist neutral throughout.", chip: "TARGET: HAMMER CURL", mode: "extension", countMode: "alternating" },
         front_raise: { name: "ALTERNATING FRONT RAISE", subtitle: "Lift one dumbbell to shoulder height, then lower it with control.", chip: "TARGET: FRONT RAISE", mode: "height", countMode: "alternating" },
+        lateral_raise: { name: "ALTERNATING LATERAL RAISE", subtitle: "Raise one dumbbell out to the side to shoulder height, then lower it with control.", chip: "TARGET: LATERAL RAISE", mode: "lateral", countMode: "alternating" },
         press: { name: "SINGLE-ARM PRESS", subtitle: "Raise the detected dumbbell without leaning through the torso.", chip: "TARGET: PRESS", mode: "height", countMode: "alternating" },
+        overhead_triceps_extension: { name: "OVERHEAD TRICEPS EXTENSION", subtitle: "From an overhead position, lower the dumbbell behind your head, then extend back up.", chip: "TARGET: TRICEPS EXTENSION", mode: "triceps", countMode: "alternating" },
+        bent_over_row: { name: "BENT-OVER ROW", subtitle: "Hinge forward slightly and row the dumbbell toward your ribs, then lower with control.", chip: "TARGET: BENT-OVER ROW", mode: "extension", countMode: "alternating" },
         front_hold: { name: "BILATERAL FRONT HOLD", subtitle: "Hold both arms forward at shoulder height without shrugging.", chip: "TARGET: FRONT HOLD", mode: "hold", countMode: "hold", holdMs: 900 },
         double_press: { name: "DOUBLE-ARM PRESS", subtitle: "Raise both dumbbells together while keeping the torso centered.", chip: "TARGET: BILATERAL PRESS", mode: "height", countMode: "bilateral" },
         combo: { name: "OVERHEAD + FRONT HOLD", subtitle: "Press one arm fully overhead while the opposite arm holds steady at shoulder height, then swap.", chip: "TARGET: OVERHEAD + FRONT HOLD", mode: "combo", countMode: "alternating" },
       };
-      // FitQuest prescribes this sequence itself instead of guessing the
-      // exercise from single-frame camera signatures (which flickers on real
-      // pose jitter). Simplest moves first, compound/hold moves last.
-      const exerciseOrder = ["curl", "front_raise", "press", "front_hold", "double_press", "combo"];
+      // Default coach-led order: simplest single-arm moves first, compound/
+      // hold moves last. "Random mix" shuffles this; "Choose exercises" runs
+      // only the picked subset in this same relative order.
+      const exerciseOrder = ["curl", "hammer_curl", "front_raise", "lateral_raise", "press", "overhead_triceps_extension", "bent_over_row", "front_hold", "double_press", "combo"];
       const difficultyDefinitions = {
-        beginner: { label: "BEGINNER", target: 8, duration: 60, strictness: .45 },
-        advanced: { label: "ADVANCED", target: 12, duration: 50, strictness: .62 },
-        expert: { label: "EXPERT", target: 16, duration: 45, strictness: .75 },
-        fit: { label: "FIT", target: 20, duration: 40, strictness: .86 },
+        beginner: { label: "BEGINNER", target: 8, strictness: .45 },
+        advanced: { label: "ADVANCED", target: 12, strictness: .62 },
+        expert: { label: "EXPERT", target: 16, strictness: .75 },
+        fit: { label: "FIT", target: 20, strictness: .86 },
       };
 
       const state = {
@@ -479,7 +504,6 @@
         difficulty: "beginner",
         position: "auto",
         target: 8,
-        duration: 45,
         reps: 0,
         totalReps: 0,
         imuConfirmedReps: 0,
@@ -490,13 +514,16 @@
         startedAt: 0,
         pausedAt: 0,
         elapsedBeforePause: 0,
-        timerId: null,
         eventSource: null,
         lastFrameAt: 0,
         lastFrame: null,
         sensorFreshness: {
           hand: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
           heart: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
+        },
+        loadedTracker: {
+          left: { value: null, falseSince: null },
+          right: { value: null, falseSince: null },
         },
         sideReps: { left: 0, right: 0 },
         tempoSamples: [],
@@ -546,7 +573,6 @@
           button.classList.toggle("active", button.dataset.difficulty === state.difficulty);
         });
         $("setupDifficulty").textContent = definition.label;
-        $("setupDuration").textContent = `${definition.duration} sec`;
         $("setupReps").textContent = definition.target;
       }
 
@@ -555,10 +581,50 @@
         $("sessionBadge").className = `session-badge ${status}`.trim();
       }
 
+      function initExercisePicker() {
+        const container = $("exercisePicker");
+        container.innerHTML = exerciseOrder.map((id) => {
+          const definition = exerciseDefinitions[id];
+          return `<div class="check-item"><span><input type="checkbox" class="exercise-pick" value="${id}" checked style="margin-right:8px" />${definition.name}</span></div>`;
+        }).join("");
+      }
+
+      function updateSessionModeUI() {
+        const mode = document.querySelector('input[name="sessionMode"]:checked')?.value || "coach";
+        $("exercisePicker").classList.toggle("hidden", mode !== "choose");
+        $("setupExerciseCount").textContent = String(currentQueuePreviewLength());
+      }
+
+      function currentQueuePreviewLength() {
+        const mode = document.querySelector('input[name="sessionMode"]:checked')?.value || "coach";
+        if (mode !== "choose") return exerciseOrder.length;
+        const chosen = document.querySelectorAll("#exercisePicker .exercise-pick:checked").length;
+        return chosen || exerciseOrder.length;
+      }
+
+      function shuffledCopy(list) {
+        const copy = list.slice();
+        for (let i = copy.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [copy[i], copy[j]] = [copy[j], copy[i]];
+        }
+        return copy;
+      }
+
+      function buildExerciseQueue() {
+        const mode = document.querySelector('input[name="sessionMode"]:checked')?.value || "coach";
+        if (mode === "random") return shuffledCopy(exerciseOrder);
+        if (mode === "choose") {
+          const chosen = Array.from(document.querySelectorAll("#exercisePicker .exercise-pick:checked")).map((el) => el.value);
+          const pool = chosen.length ? chosen : exerciseOrder;
+          return exerciseOrder.filter((id) => pool.includes(id));
+        }
+        return exerciseOrder.slice();
+      }
+
       function readSettings() {
         const difficulty = difficultyDefinitions[state.difficulty];
         state.target = difficulty.target;
-        state.duration = difficulty.duration;
         state.settings = {
           age: Number($("ageInput").value) || null,
           height_cm: Number($("heightInput").value) || null,
@@ -568,14 +634,21 @@
           difficulty: state.difficulty,
           position: "auto",
         };
-        $("setupDuration").textContent = `${state.duration} sec`;
         $("setupReps").textContent = state.target;
-        $("durationSummary").textContent = `${state.duration} sec`;
         $("weightSummary").textContent = state.settings.dumbbell_kg_per_hand == null ? "Not set" : `${state.settings.dumbbell_kg_per_hand} kg / hand`;
         $("positionSummary").textContent = "AUTO";
         $("userSummary").textContent = state.settings.age ? `${state.settings.age} years` : "Local session";
         updateDifficultyUI();
         updateExerciseUI();
+        updateSessionModeUI();
+      }
+
+      function updateProgressSummary() {
+        if (!state.exerciseQueue.length) {
+          $("progressSummary").textContent = "—";
+          return;
+        }
+        $("progressSummary").textContent = `${Math.min(state.exerciseIndex + 1, state.exerciseQueue.length)} of ${state.exerciseQueue.length}`;
       }
 
       function updateExerciseUI() {
@@ -585,6 +658,7 @@
         $("targetChip").textContent = definition?.chip || "SETUP";
         $("coachTitle").textContent = definition ? "Follow the movement" : "Ready when you are";
         $("coachText").textContent = definition?.subtitle || "Start the session and FitQuest will tell you exactly what to do next.";
+        updateProgressSummary();
       }
 
       function setDifficulty(key) {
@@ -622,9 +696,6 @@
 
       function clearStreams() {
         if (state.eventSource) { state.eventSource.close(); state.eventSource = null; }
-        clearInterval(state.timerId); state.timerId = null;
-        clearTimeout(startLiveStream.retryTimer);
-        startLiveStream.retryTimer = null;
       }
 
       function hideTransition() {
@@ -661,8 +732,15 @@
         updateRepProgress();
         state.setsCompleted += 1;
         state.inTransition = true;
+
+        const isLastExercise = state.exerciseIndex >= state.exerciseQueue.length - 1;
+        if (isLastExercise) {
+          finishSession("Session complete", "Nice work. Start a new session whenever you're ready.");
+          return;
+        }
+
         setSessionBadge("SET COMPLETE", "waiting");
-        state.exerciseIndex = (state.exerciseIndex + 1) % state.exerciseQueue.length;
+        state.exerciseIndex += 1;
         state.exercise = state.exerciseQueue[state.exerciseIndex];
         updateExerciseUI();
         announceCurrentExercise(
@@ -680,9 +758,8 @@
       }
 
       // Total elapsed active time for the whole session, excluding paused
-      // time and any time before the session started. Shared by the
-      // countdown display and the end-of-session results summary so both
-      // agree on the same number.
+      // time. Used only to report "active time" on the results screen and to
+      // drive pause/resume -- there is no session time limit anymore.
       function computeSessionElapsedSeconds() {
         if (!state.startedAt) return 0;
         const activeSpan = state.paused ? 0 : performance.now() - state.startedAt;
@@ -714,10 +791,18 @@
         $("resultsOverlay").classList.remove("hidden");
       }
 
+      function finishSession(title, note) {
+        setSessionBadge("SESSION COMPLETE", "waiting");
+        state.running = false;
+        clearStreams();
+        toast(`Session complete · ${state.totalReps} total reps`);
+        showResults(title, note);
+      }
+
       async function startSession() {
         hideTransition();
         $("resultsOverlay").classList.add("hidden");
-        state.exerciseQueue = exerciseOrder.slice();
+        state.exerciseQueue = buildExerciseQueue();
         state.exerciseIndex = 0;
         state.exercise = state.exerciseQueue[0];
         state.position = "auto";
@@ -726,6 +811,10 @@
         state.sensorFreshness = {
           hand: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
           heart: { lastSignalAt: 0, lastMarker: null, hadSignal: false },
+        };
+        state.loadedTracker = {
+          left: { value: null, falseSince: null },
+          right: { value: null, falseSince: null },
         };
         state.setsCompleted = 0;
         state.totalReps = 0;
@@ -750,8 +839,7 @@
         const resetAccepted = await requestSystemControl("reset_session");
         if (!state.running) return;
         startLiveStream();
-        startCountdown();
-        updateAvatar({ axes: {}, arm_signals: {} });
+        updateAvatar({ axes: {}, arm_signals: {} }, null, null);
         updateFeedback({}, 0, 0, null, null, null);
         announceCurrentExercise("FIRST MOVEMENT", 3200);
         toast(resetAccepted ? "Live session started" : "Live session started; waiting for detector");
@@ -797,23 +885,6 @@
           setSessionBadge("LIVE SENSOR SESSION");
           toast("Session resumed");
         }
-      }
-
-      function startCountdown() {
-        clearInterval(state.timerId);
-        state.timerId = setInterval(() => {
-          if (!state.running || state.paused) return;
-          const elapsed = computeSessionElapsedSeconds();
-          const remaining = Math.max(0, state.duration - elapsed);
-          $("durationSummary").textContent = `${remaining}s remaining`;
-          if (remaining <= 0) {
-            setSessionBadge("SESSION COMPLETE", "waiting");
-            state.running = false;
-            clearStreams();
-            toast(`Session complete · ${state.totalReps} total reps`);
-            showResults("Session complete", "Nice work. Start a new session whenever you're ready.");
-          }
-        }, 500);
       }
 
       function startLiveStream() {
@@ -883,6 +954,48 @@
         return "AUTO";
       }
 
+      // ---- Dumbbell "loaded" persistence --------------------------------
+      //
+      // A raw per-frame "not detected" reading is common and often wrong: the
+      // user's arm can be lowered near the body, the dumbbell can leave the
+      // frame briefly, blend into the background, or sit behind a hand/the
+      // torso. Treat a single missing frame as noise, not proof the weight
+      // was set down -- keep the last confirmed state for a short grace
+      // window: longer when the user declared a nonzero load at setup (a
+      // strong prior that they intend to hold weight all session), and
+      // longer still when the glove IMU is live on this side and still
+      // showing real hand motion -- a concrete case of the ESP32
+      // corroborating the camera instead of the camera being the sole
+      // source of truth, matching Milton's guidance to keep validating via
+      // the watch/ESP32 even when the camera alone loses the dumbbell.
+      const LOAD_UNLOAD_GRACE_MS = 700;
+      const LOAD_UNLOAD_GRACE_WITH_DECLARED_LOAD_MS = 1800;
+      const LOAD_UNLOAD_GRACE_WITH_GLOVE_MOTION_MS = 2600;
+      const MIN_IMU_MOTION_FOR_LOAD_CORROBORATION = 0.02;
+
+      function stableLoaded(side, rawLoaded, now, gloveCorroborates) {
+        const tracker = state.loadedTracker[side];
+        if (rawLoaded === true) {
+          tracker.value = true;
+          tracker.falseSince = null;
+          return true;
+        }
+        if (rawLoaded === false) {
+          if (tracker.falseSince == null) tracker.falseSince = now;
+          const declaredLoad = Number(state.settings.dumbbell_kg_per_hand) > 0;
+          let grace = declaredLoad ? LOAD_UNLOAD_GRACE_WITH_DECLARED_LOAD_MS : LOAD_UNLOAD_GRACE_MS;
+          if (gloveCorroborates) grace = Math.max(grace, LOAD_UNLOAD_GRACE_WITH_GLOVE_MOTION_MS);
+          if (tracker.value === true && now - tracker.falseSince < grace) {
+            return true;
+          }
+          tracker.value = false;
+          return false;
+        }
+        // Unknown this frame (field missing/null) -- keep the last belief
+        // rather than treating "no data" as "not loaded".
+        return tracker.value;
+      }
+
       const sensorDisplayCooldownMs = { hand: 3200, heart: 6500 };
       // Minimum "LIVE" window when a sensor doesn't report its own cadence.
       const sensorMinLiveGraceMs = { hand: 400, heart: 1000 };
@@ -923,11 +1036,6 @@
           tracker.lastSignalAt = now;
           if (marker != null) tracker.lastMarker = marker;
         }
-        // A sensor that reports on its own cadence (e.g. a watch posting every
-        // ~3s) is still "LIVE" between posts, not just on the single tick a
-        // new sample arrives. Size the LIVE window off the sensor's own
-        // reported interval instead of treating every non-new-sample frame
-        // as a delay.
         const reportedIntervalMs = numericValue(sensor.sample_interval_ms);
         const liveGraceMs = Math.min(
           sensorDisplayCooldownMs[kind],
@@ -974,28 +1082,33 @@
         const symmetry = clamp(axes.symmetry_score ?? control.signal_metrics?.bilateral?.symmetry_score ?? poseConfidence);
         const rawHandStability = control.esp32_glove?.stability_index;
         const cameraStabilityEstimate = clamp((poseConfidence + symmetry) / 2);
-        const loadedLeft = activeSideData(control, "left").dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded;
-        const loadedRight = activeSideData(control, "right").dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded;
+
+        const now = performance.now();
+        const sensorUI = updateSensorUI(control, now);
+        const rawImuMotion = clamp(axes.imu_motion_intensity ?? control.esp32_glove?.motion_intensity ?? 0);
+        const glove = gloveMountedSide(control);
+        const gloveExercising = sensorUI.hand.display && rawImuMotion > MIN_IMU_MOTION_FOR_LOAD_CORROBORATION;
+        const rawLoadedLeft = activeSideData(control, "left").dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded;
+        const rawLoadedRight = activeSideData(control, "right").dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded;
+        const loadedLeft = stableLoaded("left", rawLoadedLeft, now, gloveExercising && glove === "left");
+        const loadedRight = stableLoaded("right", rawLoadedRight, now, gloveExercising && glove === "right");
+
         const cameraForm = clamp((poseConfidence * .72) + (symmetry * .13) + (cameraStabilityEstimate * .15));
         const form = Math.round(cameraForm * 100);
         const heartRate = control.user_state?.heart_rate_bpm ?? control.wearable_watch?.heart_rate_bpm;
         const zone = control.user_state?.intensity_zone ?? control.wearable_watch?.intensity_zone ?? "unknown";
         const live = control.sensor_status?.vision === "ok" || control.status === "ready";
 
-        const sensorUI = updateConnectionUI(control, poseConfidence, loadedLeft, loadedRight, live);
-        // Fuse rather than fully override: the camera-derived estimate still
-        // contributes even when the glove is live, and the glove still helps
-        // even when the camera view is imperfect.
+        updateConnectionUI(control, poseConfidence, loadedLeft, loadedRight, live);
         const stability = sensorUI.hand.display && rawHandStability != null
           ? clamp(cameraStabilityEstimate * .4 + clamp(rawHandStability) * .6)
           : cameraStabilityEstimate;
-        const rawImuMotion = clamp(axes.imu_motion_intensity ?? control.esp32_glove?.motion_intensity ?? 0);
         const imuMotion = sensorUI.hand.display ? rawImuMotion : null;
         const handStabilityDisplay = sensorUI.hand.display ? clamp(rawHandStability ?? 0) : null;
         const visibleHeartRate = sensorUI.heart.display ? heartRate : null;
         const visibleZone = sensorUI.heart.display ? zone : "unknown";
         updateMetrics(control, form, cameraForm, stability, symmetry, imuMotion, visibleHeartRate, visibleZone, handStabilityDisplay);
-        updateAvatar(control);
+        updateAvatar(control, loadedLeft, loadedRight);
         processRep(control, poseConfidence, stability, loadedLeft, loadedRight, sensorUI, imuMotion);
         updateFeedback(control, form, stability, imuMotion, loadedLeft, loadedRight);
       }
@@ -1010,8 +1123,8 @@
         const difficulty = difficultyDefinitions[state.difficulty];
         const sides = ["left", "right"];
         const strictness = difficulty.strictness || .45;
-        const targetDown = definition.mode === "height" ? .30 + (strictness - .45) * .08 : .46 - (strictness - .45) * .05;
-        const targetUp = definition.mode === "height" ? .65 + (strictness - .45) * .08 : .72 + (strictness - .45) * .05;
+        const targetDown = (definition.mode === "height" || definition.mode === "lateral") ? .30 + (strictness - .45) * .08 : .46 - (strictness - .45) * .05;
+        const targetUp = (definition.mode === "height" || definition.mode === "lateral") ? .65 + (strictness - .45) * .08 : .72 + (strictness - .45) * .05;
         const handLive = sensorUI?.hand?.display === true;
         const glove = gloveMountedSide(control);
 
@@ -1044,7 +1157,7 @@
         for (const side of sides) {
           const extension = axis(control, side, "arm_extension", .82);
           const height = axis(control, side, "height_signal", .3);
-          const value = definition.mode === "height" ? height : extension;
+          const value = (definition.mode === "height" || definition.mode === "lateral") ? height : extension;
           const loaded = side === "left" ? loadedLeft : loadedRight;
           if (loaded === false) continue;
           if (definition.mode === "combo") {
@@ -1124,7 +1237,6 @@
         const calibration = control.calibration?.state || control.signal_metrics?.calibration?.state || "waiting";
         $("calibrationState").textContent = String(calibration).toUpperCase();
         $("calibrationState").className = calibration === "tracking" ? "value-good" : "value-warn";
-        return updateSensorUI(control);
       }
 
       function refreshSensorDisplays() {
@@ -1194,10 +1306,15 @@
           $("feedbackSide").textContent = side;
           return;
         }
+        const glove = gloveMountedSide(control);
+        const gloveRoll = numericValue(control.esp32_glove?.orientation_euler_deg?.roll);
         if (loadMissing) { title = "Check the load"; text = "A required dumbbell is not detected yet, so the repetition will not count."; icon = "!"; side = "LOAD"; }
         else if (form < 55) { title = "Adjust your form"; text = "Keep the torso steady and stay within your comfortable range."; icon = "↺"; side = "FORM"; }
         else if (stability < .45) { title = "Stabilize the movement"; text = "Slow down and avoid compensating with the shoulder or torso."; icon = "⌁"; side = "STABILITY"; }
         else if (imuMotion > .72) { title = "Movement is too abrupt"; text = "Lower the weight with control before starting the next repetition."; icon = "!"; side = "TEMPO"; }
+        else if (state.exercise === "hammer_curl" && imuMotion != null && gloveRoll != null && Math.abs(gloveRoll) > 45 && state.activeSide === glove) {
+          title = "Keep a neutral grip"; text = "Hammer curls work best with the wrist staying neutral (palm facing in) throughout."; icon = "⌁"; side = "GRIP";
+        }
         else if (state.reps > 0) { title = "Good tempo"; text = "Camera form and motion stability are aligned."; }
         $("feedbackIcon").textContent = icon;
         $("feedbackTitle").textContent = title;
@@ -1209,11 +1326,11 @@
       //
       // A low-poly, flat-shaded humanoid rendered with a locally vendored
       // Three.js (web/vendor/three.min.js) -- no CDN, so it keeps working
-      // without internet in the lab. Bone angles reuse the exact same
-      // extension/height formulas the project already validated for the
-      // previous 2D model, just reprojected into 3D coordinates, and are fed
-      // through the same requestAnimationFrame easing loop so the figure
-      // moves fluidly instead of snapping on every server-sent frame.
+      // without internet in the lab. Bone angles reuse the same
+      // extension/height/lateral-signal formulas already validated for this
+      // project, just reprojected into 3D coordinates, and are fed through a
+      // requestAnimationFrame easing loop so the figure moves fluidly instead
+      // of snapping on every server-sent frame.
 
       const AVATAR_LERP_RATE = 0.22;
       let avatar3d = null;
@@ -1336,7 +1453,7 @@
             lowerLeg.position.set(sign * 0.28, 0.42, 0);
             body.add(lowerLeg);
             const shoeMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.4), shoe);
-            shoeMesh.position.set(sign * 0.28, 0.02, 0.08);
+            shoeMesh.position.set(sign * 0.28, -0.04, 0.08);
             body.add(shoeMesh);
           }
 
@@ -1361,9 +1478,9 @@
         }
       }
 
-      // Mirrors the 2D geometry this project validated previously: shoulder
-      // anchor per side, fixed-length upper-arm/forearm segments, and the
-      // same extension/height -> angle formulas, reprojected into a 3D
+      // Mirrors the geometry approach already validated for this project:
+      // shoulder anchor per side, fixed-length upper-arm/forearm segments,
+      // extension/height/lateral-signal driven angles, reprojected into a 3D
       // vertical plane (world Y-up, so the sin term flips sign vs. the old
       // image-space Y-down convention) with a small Z sway for depth.
       function pointFor3D(THREE, side, extension, height, mode, exerciseId, overheadSide) {
@@ -1389,7 +1506,38 @@
           return { shoulder, elbow, wrist };
         }
 
+        if (mode === "triceps") {
+          // Upper arm anchored overhead; only the forearm swings, driven by
+          // the same elbow-bend signal as a curl (extended = arm straight up
+          // continuing the overhead line, bent = forearm folds down/back).
+          const curl = clamp((.84 - extension) / .57);
+          const upperAngle = -95;
+          const elbow = toPoint3D(shoulder, upperLength, upperAngle);
+          const forearmAngle = upperAngle + 15 + curl * 100;
+          const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
+          return { shoulder, elbow, wrist };
+        }
+
+        if (mode === "lateral") {
+          // Stays close to horizontal throughout (unlike the big vertical
+          // swing "height" mode uses for press/front raise), which reads as
+          // the arm reaching out to the side rather than up and forward.
+          const lift = clamp(height);
+          const upperAngle = 8 - lift * 14;
+          const elbow = toPoint3D(shoulder, upperLength, upperAngle);
+          const forearmAngle = upperAngle + 6;
+          const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
+          return { shoulder, elbow, wrist };
+        }
+
         if (mode === "combo") {
+          // The server only selects "combo" when one side is genuinely
+          // overhead and the other is at shoulder/torso height (see
+          // left_overhead_right_front_candidate / right_overhead_left_front_candidate
+          // in ironquest/motion_analysis.py). Which physical side is which
+          // can vary, so read it from the live tokens instead of assuming a
+          // fixed arm, and render the overhead side reaching up rather than
+          // curling.
           if (side === overheadSide) {
             const lift = clamp(.55 + height * .45);
             const upperAngle = 62 - lift * 97;
@@ -1415,7 +1563,7 @@
         return { shoulder, elbow, wrist };
       }
 
-      function updateAvatar(control) {
+      function updateAvatar(control, loadedLeft, loadedRight) {
         const mode = exerciseDefinitions[state.exercise]?.mode || "extension";
         if (mode === "combo") {
           const tokens = controlTokens(control);
@@ -1423,10 +1571,8 @@
           else if (tokens.has("right_overhead_left_front_candidate")) state.avatarOverheadSide = "right";
         }
         const overheadSide = state.avatarOverheadSide;
-        const leftData = activeSideData(control, "left");
-        const rightData = activeSideData(control, "right");
-        state.avatarLoaded.left = leftData.dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded ?? null;
-        state.avatarLoaded.right = rightData.dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded ?? null;
+        state.avatarLoaded.left = loadedLeft;
+        state.avatarLoaded.right = loadedRight;
         if (!avatar3d) return;
         const { THREE } = avatar3d;
         state.avatarTarget.left = pointFor3D(THREE, "left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise, overheadSide);
@@ -1498,10 +1644,13 @@
         $("setupOverlay").classList.remove("hidden");
       });
       document.querySelectorAll(".difficulty-btn").forEach((button) => button.addEventListener("click", () => setDifficulty(button.dataset.difficulty)));
+      document.querySelectorAll('input[name="sessionMode"]').forEach((input) => input.addEventListener("change", updateSessionModeUI));
+      $("exercisePicker").addEventListener("change", updateSessionModeUI);
 
+      initExercisePicker();
       readSettings();
       initAvatar3D();
-      updateAvatar({ axes: {} });
+      updateAvatar({ axes: {} }, null, null);
       requestAnimationFrame(renderAvatarFrame);
       setInterval(() => {
         refreshSensorDisplays();
