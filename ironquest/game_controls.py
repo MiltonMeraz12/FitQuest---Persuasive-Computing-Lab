@@ -7,6 +7,7 @@ without requiring code changes for different user ability levels.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -316,7 +317,12 @@ def _esp32_glove(esp32_payload: dict[str, Any], mounted_side: str) -> dict[str, 
     angular_delta = _optional_float(latest.get("angular_delta_dps", latest.get("gyro_delta_dps")))
     orientation_delta = _optional_float(latest.get("orientation_delta_deg"))
     sample_interval_ms = _optional_float(latest.get("sample_interval_ms"))
-    motion_intensity = _imu_motion_intensity(motion_delta, angular_delta, orientation_delta) if has_live_sample else None
+    gyro_magnitude = _vector_magnitude(latest.get("gyro_dps"))
+    motion_intensity = (
+        _imu_motion_intensity(motion_delta, angular_delta, orientation_delta, gyro_magnitude)
+        if has_live_sample
+        else None
+    )
     motion_state = _imu_motion_state(motion_intensity) if motion_intensity is not None else (
         "stale" if status == "stale" else "waiting"
     )
@@ -554,21 +560,43 @@ def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
+def _vector_magnitude(vector: Any) -> float | None:
+    """Return the Euclidean magnitude of an ``{"x","y","z"}`` payload vector."""
+
+    if not isinstance(vector, dict):
+        return None
+    try:
+        return math.sqrt(sum(float(vector.get(axis, 0.0)) ** 2 for axis in ("x", "y", "z")))
+    except (TypeError, ValueError):
+        return None
+
+
 def _imu_motion_intensity(
     motion_delta_mps2: float | None,
     angular_delta_dps: float | None,
     orientation_delta_deg: float | None,
+    gyro_magnitude_dps: float | None = None,
 ) -> float:
-    """Map real BNO08X deltas to a compact 0-1 movement signal.
+    """Map real BNO08X signals to a compact 0-1 movement signal.
 
-    The denominators are grounded in the first desk captures: tilt sweeps sit
-    around the middle of the range while deliberate motion bursts saturate.
+    The *_delta terms compare exactly two consecutive samples, which is a
+    fragile basis on its own: a real exercise rep is smooth, continuous
+    motion, so the frame-to-frame change between two closely-spaced samples
+    can stay small even while the hand is clearly moving through a rep (this
+    under-reported real sessions down to ~0-1%, confirmed against a real
+    capture where the camera tracked full reps the whole time). The raw gyro
+    magnitude adds a second, complementary view: it does not depend on
+    sampling cadence at all, just the current angular speed of the hand. A
+    deliberate arm rep sweeps roughly 90-120 degrees over about a second, i.e.
+    order-of-magnitude 90-150 deg/s peak angular velocity, hence the lower
+    denominator versus the delta-based gyro_score.
     """
 
     accel_score = 0.0 if motion_delta_mps2 is None else motion_delta_mps2 / 8.0
     gyro_score = 0.0 if angular_delta_dps is None else angular_delta_dps / 180.0
     orientation_score = 0.0 if orientation_delta_deg is None else orientation_delta_deg / 24.0
-    return round(_clamp01(max(accel_score, gyro_score, orientation_score)), 3)
+    rotation_speed_score = 0.0 if gyro_magnitude_dps is None else gyro_magnitude_dps / 110.0
+    return round(_clamp01(max(accel_score, gyro_score, orientation_score, rotation_speed_score)), 3)
 
 
 def _imu_motion_state(motion_intensity: float) -> str:

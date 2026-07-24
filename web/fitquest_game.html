@@ -384,6 +384,12 @@
         <div class="metric-big"><strong id="heartRate" class="hr-value">—</strong><span>BPM</span></div>
         <div id="heartZone" class="zone">ZONE —</div>
         <svg class="mini-chart" viewBox="0 0 300 38" preserveAspectRatio="none"><path id="hrChart" d="M0 30 L18 24 L36 27 L54 17 L72 24 L90 18 L108 26 L126 11 L144 22 L162 17 L180 27 L198 14 L216 23 L234 12 L252 21 L270 18 L300 22" fill="none" stroke="#ffb13b" stroke-width="2"/></svg>
+        <div class="metric-grid" style="margin-top:8px">
+          <div class="mini-stat"><span>BODY BATTERY</span><strong id="bodyBatteryValue" class="good">—</strong></div>
+          <div class="mini-stat"><span>STRESS</span><strong id="stressValue" class="violet">—</strong></div>
+          <div class="mini-stat"><span>RESPIRATION</span><strong id="respirationValue" class="cyan">—</strong></div>
+          <div class="mini-stat"><span>SPO2</span><strong id="pulseOxValue" class="cyan">—</strong></div>
+        </div>
       </section>
 
       <section class="card metric-card">
@@ -397,7 +403,7 @@
         <h3>SESSION SIGNALS</h3>
         <div class="metric-grid">
           <div class="mini-stat"><span>TEMPO</span><strong id="tempoValue" class="good">—</strong></div>
-          <div class="mini-stat"><span>SYMMETRY</span><strong id="symmetryValue" class="violet">—</strong></div>
+          <div class="mini-stat"><span id="symmetryLabel">SYMMETRY</span><strong id="symmetryValue" class="violet">—</strong></div>
           <div class="mini-stat"><span>HAND MOTION</span><strong id="imuMotionValue">—</strong></div>
           <div class="mini-stat"><span>HAND STABILITY</span><strong id="handStabilityValue" class="cyan">—</strong></div>
           <div class="mini-stat"><span>ACTIVE SIDE</span><strong id="activeSideValue">—</strong></div>
@@ -478,7 +484,7 @@
         lateral_raise: { name: "ALTERNATING LATERAL RAISE", subtitle: "Raise one dumbbell out to the side to shoulder height, then lower it with control.", chip: "TARGET: LATERAL RAISE", mode: "lateral", countMode: "alternating" },
         press: { name: "SINGLE-ARM PRESS", subtitle: "Raise the detected dumbbell without leaning through the torso.", chip: "TARGET: PRESS", mode: "height", countMode: "alternating" },
         overhead_triceps_extension: { name: "OVERHEAD TRICEPS EXTENSION", subtitle: "From an overhead position, lower the dumbbell behind your head, then extend back up.", chip: "TARGET: TRICEPS EXTENSION", mode: "triceps", countMode: "alternating" },
-        bent_over_row: { name: "BENT-OVER ROW", subtitle: "Hinge forward slightly and row the dumbbell toward your ribs, then lower with control.", chip: "TARGET: BENT-OVER ROW", mode: "extension", countMode: "alternating" },
+        bent_over_row: { name: "BENT-OVER ROW", subtitle: "Hinge forward slightly and row the dumbbell toward your ribs, then lower with control.", chip: "TARGET: BENT-OVER ROW", mode: "row", countMode: "alternating" },
         front_hold: { name: "BILATERAL FRONT HOLD", subtitle: "Hold both arms forward at shoulder height without shrugging.", chip: "TARGET: FRONT HOLD", mode: "hold", countMode: "hold", holdMs: 900 },
         double_press: { name: "DOUBLE-ARM PRESS", subtitle: "Raise both dumbbells together while keeping the torso centered.", chip: "TARGET: BILATERAL PRESS", mode: "height", countMode: "bilateral" },
         combo: { name: "OVERHEAD + FRONT HOLD", subtitle: "Press one arm fully overhead while the opposite arm holds steady at shoulder height, then swap.", chip: "TARGET: OVERHEAD + FRONT HOLD", mode: "combo", countMode: "alternating" },
@@ -526,6 +532,7 @@
           right: { value: null, falseSince: null },
         },
         sideReps: { left: 0, right: 0 },
+        smoothedSymmetry: null,
         tempoSamples: [],
         setsCompleted: 0,
         formSum: 0,
@@ -821,6 +828,7 @@
         state.imuConfirmedReps = 0;
         state.formSum = 0;
         state.formCount = 0;
+        state.smoothedSymmetry = null;
         state.avatarCurrent = null;
         state.inTransition = false;
         readSettings();
@@ -832,6 +840,10 @@
         updateSensorUI({});
         $("heartRate").textContent = "—";
         $("heartZone").textContent = "ZONE —";
+        $("bodyBatteryValue").textContent = "—";
+        $("stressValue").textContent = "—";
+        $("respirationValue").textContent = "—";
+        $("pulseOxValue").textContent = "—";
         $("imuMotionValue").textContent = "—";
         $("setupOverlay").classList.add("hidden");
         $("startButton").textContent = "Restart session";
@@ -860,6 +872,10 @@
         updateSensorUI({});
         $("heartRate").textContent = "—";
         $("heartZone").textContent = "ZONE —";
+        $("bodyBatteryValue").textContent = "—";
+        $("stressValue").textContent = "—";
+        $("respirationValue").textContent = "—";
+        $("pulseOxValue").textContent = "—";
         $("imuMotionValue").textContent = "—";
         setSessionBadge("SESSION STOPPED", "waiting");
         $("startButton").textContent = "Start session";
@@ -943,6 +959,20 @@
         return control.esp32_glove?.mounted_side === "left" ? "left" : "right";
       }
 
+      function watchMountedSide(control) {
+        return control.wearable_watch?.mounted_side === "right" ? "right" : "left";
+      }
+
+      // The Garmin watch samples motion far slower than the glove (every
+      // ~3s -- see monkey_c/ironquest_safe_telemetry, which buckets its own
+      // accel-magnitude delta into "steady"/"moving"/"active"), so unlike
+      // the glove's per-frame motionSeenDuringRep accumulation, this just
+      // reads the watch's latest known bucket at the moment a rep resolves.
+      function watchIndicatesMotion(control) {
+        const state = control.wearable_watch?.watch_motion_state;
+        return state === "moving" || state === "active";
+      }
+
       function detectPosition(control) {
         const body = control.body_posture?.body || {};
         const raw = body.position || body.posture_state || body.body_position || body.pose_level;
@@ -1003,6 +1033,15 @@
       function numericValue(value) {
         const number = Number(value);
         return Number.isFinite(number) ? number : null;
+      }
+
+      // Garmin fields like stress/body_battery can arrive as a number or as
+      // a qualitative label depending on the Connect IQ integration -- show
+      // whichever the device actually sent instead of forcing a bad parse.
+      function watchMetricText(value, suffix = "") {
+        if (value == null) return "—";
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? `${Math.round(numeric)}${suffix}` : String(value).toUpperCase();
       }
 
       function sensorMarker(sensor, kind) {
@@ -1079,7 +1118,16 @@
         state.lastFrame = control;
         const axes = control.axes || {};
         const poseConfidence = clamp(axes.pose_confidence ?? control.body_posture?.confidence ?? 0);
-        const symmetry = clamp(axes.symmetry_score ?? control.signal_metrics?.bilateral?.symmetry_score ?? poseConfidence);
+        // symmetry_score is an instantaneous left/right speed ratio -- during
+        // any alternating exercise (one arm moving, the other resting) it is
+        // *correctly* near 0 on most ticks, which reads as a form warning if
+        // shown raw. Smooth it (EMA) so the display reflects the trend
+        // instead of flickering every frame; this also naturally smooths
+        // cameraStabilityEstimate/cameraForm below, which had the same
+        // flicker problem.
+        const rawSymmetry = clamp(axes.symmetry_score ?? control.signal_metrics?.bilateral?.symmetry_score ?? poseConfidence);
+        state.smoothedSymmetry = state.smoothedSymmetry == null ? rawSymmetry : state.smoothedSymmetry + (rawSymmetry - state.smoothedSymmetry) * 0.15;
+        const symmetry = state.smoothedSymmetry;
         const rawHandStability = control.esp32_glove?.stability_index;
         const cameraStabilityEstimate = clamp((poseConfidence + symmetry) / 2);
 
@@ -1087,11 +1135,13 @@
         const sensorUI = updateSensorUI(control, now);
         const rawImuMotion = clamp(axes.imu_motion_intensity ?? control.esp32_glove?.motion_intensity ?? 0);
         const glove = gloveMountedSide(control);
+        const watch = watchMountedSide(control);
         const gloveExercising = sensorUI.hand.display && rawImuMotion > MIN_IMU_MOTION_FOR_LOAD_CORROBORATION;
+        const watchExercising = sensorUI.heart.display && watchIndicatesMotion(control);
         const rawLoadedLeft = activeSideData(control, "left").dumbbell?.loaded ?? control.dumbbells?.associations?.left?.loaded;
         const rawLoadedRight = activeSideData(control, "right").dumbbell?.loaded ?? control.dumbbells?.associations?.right?.loaded;
-        const loadedLeft = stableLoaded("left", rawLoadedLeft, now, gloveExercising && glove === "left");
-        const loadedRight = stableLoaded("right", rawLoadedRight, now, gloveExercising && glove === "right");
+        const loadedLeft = stableLoaded("left", rawLoadedLeft, now, (gloveExercising && glove === "left") || (watchExercising && watch === "left"));
+        const loadedRight = stableLoaded("right", rawLoadedRight, now, (gloveExercising && glove === "right") || (watchExercising && watch === "right"));
 
         const cameraForm = clamp((poseConfidence * .72) + (symmetry * .13) + (cameraStabilityEstimate * .15));
         const form = Math.round(cameraForm * 100);
@@ -1127,6 +1177,8 @@
         const targetUp = (definition.mode === "height" || definition.mode === "lateral") ? .65 + (strictness - .45) * .08 : .72 + (strictness - .45) * .05;
         const handLive = sensorUI?.hand?.display === true;
         const glove = gloveMountedSide(control);
+        const watchLive = sensorUI?.heart?.display === true;
+        const watch = watchMountedSide(control);
 
         if (definition.countMode === "hold") {
           const bothLoaded = loadedLeft !== false && loadedRight !== false;
@@ -1144,7 +1196,12 @@
               state.sideReps.left += 1;
               state.sideReps.right += 1;
               state.tempoSamples.push(performance.now());
-              if (handLive && state.holdImuStable) state.imuConfirmedReps += 1;
+              // A held hold should read "steady" on the watch, the opposite
+              // signal from the alternating case below -- corroborates the
+              // same idea (a real hold, not a jittery pose reading) from a
+              // different angle.
+              const watchSteady = watchLive && control.wearable_watch?.watch_motion_state === "steady";
+              if ((handLive && state.holdImuStable) || watchSteady) state.imuConfirmedReps += 1;
               state.holdStartedAt = 0;
               state.holdNeedsReset = true;
               if (state.reps >= state.target) { completeSet(); return; }
@@ -1165,13 +1222,26 @@
             if (axis(control, anchorSide, "height_signal", 0) < .55) continue;
           }
           // Cross-check with the glove IMU when it is mounted on this side and
-          // currently live: require real hand motion to have been observed
-          // during the bent/down phase before confirming the rep, catching a
-          // camera-only false positive (angle jitter with no real movement).
-          // When the glove isn't live, or is on the other hand, this never
-          // gates -- camera-only counting stays fully functional.
+          // currently live: real hand motion observed during the bent/down
+          // phase marks the rep as IMU-confirmed (the "IMU CONFIRMED x/y"
+          // counter and results-screen fusion note). This is corroboration,
+          // not a requirement -- the camera never needs the glove's help to
+          // finish counting a rep. A hard block here previously meant a
+          // miscalibrated or momentarily-quiet IMU signal could stall an
+          // exercise at 0 reps forever even while the camera clearly saw
+          // real reps happening (confirmed against a real session recording:
+          // hammer curl sat at 0/8 for the full ~55s it was on screen).
           const gated = handLive && side === glove;
           if (gated && imuMotion != null && imuMotion >= MIN_IMU_MOTION_CONFIRM) state.motionSeenDuringRep[side] = true;
+          // The Garmin watch is a second, independent corroboration source
+          // for whichever side it's worn on (opposite wrist from the glove
+          // by default) -- currently only the glove's side ever got any
+          // hardware confirmation. It samples far slower (~3s) than the
+          // glove, so it can't accumulate a per-frame "seen during this
+          // bent phase" flag the same way; instead it just checks its
+          // latest known bucket at the moment the rep resolves. Same soft
+          // rule as the glove: corroboration only, never blocks the rep.
+          const watchCorroborates = watchLive && side === watch && watchIndicatesMotion(control);
 
           if (state.phase[side] === "extended" && value < targetDown) {
             state.phase[side] = "bent";
@@ -1179,10 +1249,9 @@
             state.bilateralDown[side] = true;
             state.motionSeenDuringRep[side] = false;
           } else if (state.phase[side] === "bent" && value > targetUp) {
-            if (gated && !state.motionSeenDuringRep[side]) continue;
             state.phase[side] = "extended";
             state.sideReps[side] += 1;
-            if (gated) state.imuConfirmedReps += 1;
+            if ((gated && state.motionSeenDuringRep[side]) || watchCorroborates) state.imuConfirmedReps += 1;
             if (definition.countMode !== "bilateral") {
               state.reps += 1;
               state.totalReps += 1;
@@ -1246,10 +1315,18 @@
         if (sensorUI.heart.display && Number.isFinite(heartRate)) {
           $("heartRate").textContent = Math.round(heartRate);
           $("heartZone").textContent = `ZONE ${String(state.lastFrame.user_state?.intensity_zone || state.lastFrame.wearable_watch?.intensity_zone || "unknown").toUpperCase() === "UNKNOWN" ? "—" : String(state.lastFrame.user_state?.intensity_zone || state.lastFrame.wearable_watch?.intensity_zone).toUpperCase()}`;
+          $("bodyBatteryValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.body_battery);
+          $("stressValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.stress);
+          $("respirationValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.respiration_rate, "/min");
+          $("pulseOxValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.pulse_ox, "%");
         } else {
           $("heartRate").textContent = "—";
           $("heartZone").textContent = "ZONE —";
           $("hrChart").setAttribute("d", "M0 30 L300 30");
+          $("bodyBatteryValue").textContent = "—";
+          $("stressValue").textContent = "—";
+          $("respirationValue").textContent = "—";
+          $("pulseOxValue").textContent = "—";
         }
         $("imuMotionValue").textContent = sensorUI.hand.display ? pct(sensorUI.hand.sensor.motion_intensity ?? 0) : "—";
         $("handStabilityValue").textContent = sensorUI.hand.display ? pct(sensorUI.hand.sensor.stability_index ?? 0) : "—";
@@ -1264,17 +1341,27 @@
         $("stabilityValue").textContent = pct(stability);
         $("stabilityBar").style.width = pct(stability);
         $("symmetryValue").textContent = pct(symmetry);
+        $("symmetryLabel").textContent = exerciseDefinitions[state.exercise]?.countMode === "alternating" ? "BALANCE (ALT)" : "SYMMETRY";
         $("imuMotionValue").textContent = imuMotion == null ? "—" : pct(imuMotion);
         $("handStabilityValue").textContent = handStabilityDisplay == null ? "—" : pct(handStabilityDisplay);
         $("activeSideValue").textContent = state.activeSide.toUpperCase();
         $("imuConfirmedValue").textContent = state.totalReps > 0 ? `${state.imuConfirmedReps}/${state.totalReps}` : "—";
         const qualityLabel = form >= 85 ? "EXCELLENT" : form >= 70 ? "GOOD FORM" : form >= 50 ? "ADJUST" : "WAITING";
         $("formLabel").textContent = qualityLabel;
-        const hr = Number(heartRate);
+        // heartRate is already null when the wearable isn't "live" (gated in
+        // consumeFrame) -- Number(null) is 0, not NaN, so route null through
+        // NaN explicitly or a disconnected watch would flash "0 BPM".
+        const hr = heartRate == null ? NaN : Number(heartRate);
         $("heartRate").textContent = Number.isFinite(hr) ? Math.round(hr) : "—";
         $("heartZone").textContent = `ZONE ${String(zone).toUpperCase() === "UNKNOWN" ? "—" : String(zone).toUpperCase()}`;
         $("tempoValue").textContent = state.tempoSamples.length > 1 ? "CONTROLLED" : "—";
         if (Number.isFinite(hr)) drawHeartChart(hr);
+        const watch = control.wearable_watch || {};
+        const watchLive = Number.isFinite(hr);
+        $("bodyBatteryValue").textContent = watchLive ? watchMetricText(watch.body_battery) : "—";
+        $("stressValue").textContent = watchLive ? watchMetricText(watch.stress) : "—";
+        $("respirationValue").textContent = watchLive ? watchMetricText(watch.respiration_rate, "/min") : "—";
+        $("pulseOxValue").textContent = watchLive ? watchMetricText(watch.pulse_ox, "%") : "—";
         if (state.exercise) {
           state.formSum += form;
           state.formCount += 1;
@@ -1483,11 +1570,12 @@
       // extension/height/lateral-signal driven angles, reprojected into a 3D
       // vertical plane (world Y-up, so the sin term flips sign vs. the old
       // image-space Y-down convention) with a small Z sway for depth.
-      function pointFor3D(THREE, side, extension, height, mode, exerciseId, overheadSide) {
+      function pointFor3D(THREE, side, extension, height, mode, exerciseId, overheadSide, elapsedTime) {
         const sign = side === "left" ? -1 : 1;
         const shoulder = new THREE.Vector3(sign * 0.62, 2.98, 0);
         const upperLength = 0.52;
         const forearmLength = 0.56;
+        const idleSway = Math.sin(elapsedTime * 1.3 + (side === "left" ? Math.PI : 0)) * 3;
         const toPoint3D = (origin, length, degrees) => {
           const radians = degrees * Math.PI / 180;
           return new THREE.Vector3(
@@ -1498,20 +1586,40 @@
         };
 
         if (mode === "extension") {
+          // Curl/hammer curl: the forearm still carries the dominant ~125deg
+          // swing (that's the exercise), but the upper arm now sways with it
+          // instead of staying perfectly rigid -- a real curl always has some
+          // give, and a totally frozen upper arm read as broken rather than
+          // "correct form" when watched live.
           const curl = clamp((.84 - extension) / .57);
-          const upperAngle = 55;
+          const upperAngle = 50 + curl * 16;
           const forearmAngle = 68 - curl * 125;
           const elbow = toPoint3D(shoulder, upperLength, upperAngle);
           const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
           return { shoulder, elbow, wrist };
         }
 
+        if (mode === "row") {
+          // Bent-over row: unlike curl, the *upper arm* should carry the big
+          // swing (elbow driving up and back past the torso) while the
+          // forearm mostly follows along at a fixed offset -- the opposite
+          // emphasis from curl, even though both reuse the same underlying
+          // elbow-bend detection signal (see the plan note on bent_over_row).
+          const pull = clamp((.84 - extension) / .57);
+          const upperAngle = 35 + pull * 55;
+          const forearmAngle = upperAngle - 25;
+          const elbow = toPoint3D(shoulder, upperLength, upperAngle);
+          const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
+          return { shoulder, elbow, wrist };
+        }
+
         if (mode === "triceps") {
-          // Upper arm anchored overhead; only the forearm swings, driven by
-          // the same elbow-bend signal as a curl (extended = arm straight up
+          // Upper arm anchored overhead (plus a small idle sway so it never
+          // reads as frozen); the forearm carries the rep, driven by the
+          // same elbow-bend signal as a curl (extended = arm straight up
           // continuing the overhead line, bent = forearm folds down/back).
           const curl = clamp((.84 - extension) / .57);
-          const upperAngle = -95;
+          const upperAngle = -95 + idleSway;
           const elbow = toPoint3D(shoulder, upperLength, upperAngle);
           const forearmAngle = upperAngle + 15 + curl * 100;
           const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
@@ -1547,7 +1655,7 @@
             return { shoulder, elbow, wrist };
           }
           const lift = .52;
-          const upperAngle = 62 - lift * 97;
+          const upperAngle = 62 - lift * 97 + idleSway;
           const elbow = toPoint3D(shoulder, upperLength, upperAngle);
           const forearmAngle = upperAngle + 9;
           const wrist = toPoint3D(elbow, forearmLength, forearmAngle);
@@ -1575,8 +1683,9 @@
         state.avatarLoaded.right = loadedRight;
         if (!avatar3d) return;
         const { THREE } = avatar3d;
-        state.avatarTarget.left = pointFor3D(THREE, "left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise, overheadSide);
-        state.avatarTarget.right = pointFor3D(THREE, "right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode, state.exercise, overheadSide);
+        const elapsedTime = avatar3d.clock.getElapsedTime();
+        state.avatarTarget.left = pointFor3D(THREE, "left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise, overheadSide, elapsedTime);
+        state.avatarTarget.right = pointFor3D(THREE, "right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode, state.exercise, overheadSide, elapsedTime);
         if (!state.avatarCurrent) {
           state.avatarCurrent = {
             left: {

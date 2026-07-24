@@ -515,6 +515,37 @@ def test_game_control_payload_marks_imu_motion_bursts() -> None:
     assert "IMU_MOTION_BURST" in payload["events"]
 
 
+def test_game_control_payload_uses_raw_gyro_magnitude_for_sustained_motion() -> None:
+    """A real rep is smooth, continuous motion: the delta between two closely
+    spaced samples can stay tiny even while the hand is clearly rotating
+    (confirmed against a real capture where a whole exercise sat at 0 IMU-
+    confirmed reps despite the camera tracking obvious reps the whole time).
+    The raw gyro magnitude does not depend on sampling cadence, so it should
+    still register real motion even when the *_delta terms alone stay small.
+    """
+
+    motion = {"status": "ok", "sides": {}, "body": {}, "signal_metrics": {"bilateral": {}}}
+    movement = {"pose_confidence": 0.8, "object_detection": {}, "limbs": {"sides": {}}}
+    esp32 = {
+        "status": "connected",
+        "latest": {
+            "mount": "right_gym_glove",
+            "orientation_euler_deg": {"pitch": 0.0, "roll": 0.0, "yaw": 0.0},
+            "gyro_dps": {"x": 10.0, "y": 20.0, "z": 100.0},
+            "motion_delta_mps2": 0.05,
+            "angular_delta_dps": 1.0,
+            "orientation_delta_deg": 0.1,
+            "stability_index": 0.9,
+            "sample_interval_ms": 15.0,
+        },
+    }
+
+    payload = build_game_control_payload(motion, movement, esp32)
+
+    assert payload["esp32_glove"]["motion_intensity"] > 0.5
+    assert payload["esp32_glove"]["motion_state"] in ("active", "burst")
+
+
 def test_event_debouncer_holds_exercise_candidate_before_switching() -> None:
     motion_press = {"status": "ok", "tokens": ["left_arm_overhead"], "sides": {}, "body": {}, "signal_metrics": {"bilateral": {}}}
     motion_idle = {"status": "ok", "tokens": [], "sides": {}, "body": {}, "signal_metrics": {"bilateral": {}}}
