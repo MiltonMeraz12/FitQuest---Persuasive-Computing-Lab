@@ -62,6 +62,10 @@ def test_motion_analyzer_auto_calibrates_normalized_signals() -> None:
     assert 0.0 <= signals["bilateral"]["symmetry_score"] <= 1.0
     assert signals["bilateral"]["symmetry_score"] < 1.0
     assert payload["body"]["position"] == "seated_assumed"
+    # shoulder_width (120px, both shoulders at y=100) / torso_scale (150px,
+    # mean shoulder-to-hip distance) -- a dimensionless ratio used only to
+    # scale the 3D avatar toward the player's own proportions.
+    assert payload["body"]["build_ratio"] == 0.8
 
 
 def test_calibration_bounds_keep_expanding_after_tracking_starts() -> None:

@@ -134,7 +134,7 @@
     .meter { flex: 1; height: 7px; border-radius: 99px; overflow: hidden; background: #263c4c; }
     .meter i { display: block; height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--blue)); transition: width .25s ease; }
     .info-list { padding: 5px 13px 8px; }
-    .info-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.055); font-size: 11px; }
+    .info-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,.055); font-size: 12px; }
     .info-row:last-child { border-bottom: 0; }
     .info-row span { color: var(--muted); }
     .value-good { color: var(--good); font-weight: 800; }
@@ -145,9 +145,9 @@
     .device-row { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.055); }
     .device-row:last-child { border-bottom: 0; }
     .device-icon { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid #34536a; border-radius: 9px; color: var(--cyan); background: rgba(34, 230, 199, .06); font-size: 15px; }
-    .device-row strong { display: block; font-size: 10px; }
-    .device-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; }
-    .device-state { font-size: 10px; font-weight: 850; letter-spacing: .6px; }
+    .device-row strong { display: block; font-size: 11.5px; }
+    .device-row small { display: block; margin-top: 3px; color: var(--muted); font-size: 10.5px; }
+    .device-state { font-size: 11px; font-weight: 850; letter-spacing: .6px; }
 
     .stage {
       position: relative;
@@ -164,23 +164,23 @@
        topline taller pushes the card down with it instead of overlapping it. */
     .stage-header { position: absolute; top: 13px; left: 16px; right: 16px; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
     .stage-topline { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .exercise-name { color: #f2fbff; font-size: clamp(15px, 2vw, 22px); font-weight: 900; letter-spacing: 1px; }
-    .exercise-subtitle { margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .exercise-name { color: #f2fbff; font-size: clamp(17px, 2.4vw, 25px); font-weight: 900; letter-spacing: 1px; }
+    .exercise-subtitle { margin-top: 5px; color: var(--muted); font-size: 12.5px; }
     .coach-tag { flex: 0 0 auto; padding: 7px 10px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 999px; color: var(--cyan); background: rgba(34, 230, 199, .06); font-size: 10px; font-weight: 850; letter-spacing: .7px; white-space: nowrap; }
     .target-card { max-width: 290px; padding: 10px 12px; border: 1px solid #2b5065; border-radius: 11px; background: rgba(5, 14, 22, .78); }
-    .target-card strong { display: block; font-size: 14px; }
-    .target-card p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .target-card strong { display: block; font-size: 15.5px; }
+    .target-card p { margin: 5px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
     .target-chip { display: inline-block; margin-top: 8px; padding: 5px 8px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 99px; color: var(--cyan); font-size: 10px; font-weight: 850; }
     .transition-modal { width: min(430px, 100%); padding: 28px; border: 1px solid #2d6b80; border-radius: 18px; background: linear-gradient(145deg, #122b3c, #071017 72%); box-shadow: 0 28px 100px rgba(0,0,0,.62); text-align: center; }
     .transition-modal span { color: var(--cyan); font-size: 10px; font-weight: 900; letter-spacing: 1.4px; }
-    .transition-modal h2 { margin: 10px 0 8px; font-size: 25px; }
-    .transition-modal p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .transition-modal h2 { margin: 10px 0 8px; font-size: 29px; }
+    .transition-modal p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
     .transition-progress { height: 5px; margin-top: 22px; overflow: hidden; border-radius: 99px; background: #1b3546; }
     .transition-progress i { display: block; width: 100%; height: 100%; transform-origin: left; background: linear-gradient(90deg, var(--cyan), var(--blue)); animation: transitionCountdown 2.4s linear forwards; }
     @keyframes transitionCountdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
     .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 10px; text-align: left; }
     .results-stat { padding: 12px; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; background: rgba(255,255,255,.03); }
-    .results-stat strong { display: block; font-size: 24px; font-weight: 900; letter-spacing: -1px; }
+    .results-stat strong { display: block; font-size: 26px; font-weight: 900; letter-spacing: -1px; }
     .results-stat span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; }
     .results-fusion-note { margin: 0 0 8px; color: var(--cyan); font-size: 11px; font-weight: 750; }
     .avatar-stage { position: absolute; inset: 82px 12px 55px; display: grid; place-items: center; overflow: hidden; }
@@ -190,9 +190,9 @@
     .stage-feedback { position: absolute; left: 52px; right: 52px; bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 16px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 12px; background: linear-gradient(90deg, rgba(14, 45, 54, .94), rgba(8, 18, 28, .94)); z-index: 3; }
     .feedback-main { display: flex; align-items: center; gap: 11px; min-width: 0; }
     .feedback-icon { width: 33px; height: 33px; display: grid; place-items: center; border: 2px solid var(--cyan); border-radius: 50%; color: var(--cyan); font-weight: 900; }
-    .feedback-main strong { display: block; font-size: 13px; }
-    .feedback-main small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .feedback-side { color: var(--cyan); font-size: 11px; font-weight: 850; white-space: nowrap; }
+    .feedback-main strong { display: block; font-size: 15px; }
+    .feedback-main small { display: block; margin-top: 3px; color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .feedback-side { color: var(--cyan); font-size: 12px; font-weight: 850; white-space: nowrap; }
 
     .metric-card { padding: 8px 10px; }
     .metric-card h3 { margin: 0 0 6px; color: #c9d7e4; font-size: 10px; letter-spacing: 1px; }
@@ -201,11 +201,11 @@
     .rep-ring.pulse { animation: repPulse .38s ease; }
     @keyframes repPulse { 0% { transform: scale(1); } 40% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(34, 230, 199, 0); } 100% { transform: scale(1); } }
     .rep-content { position: relative; z-index: 1; text-align: center; }
-    .rep-number { display: block; font-size: 27px; font-weight: 950; letter-spacing: -2px; }
-    .rep-number span { color: var(--muted); font-size: 20px; letter-spacing: 0; }
-    .rep-content small { display: block; margin-top: 2px; color: var(--cyan); font-size: 11px; font-weight: 800; }
+    .rep-number { display: block; font-size: 31px; font-weight: 950; letter-spacing: -2px; }
+    .rep-number span { color: var(--muted); font-size: 22px; letter-spacing: 0; }
+    .rep-content small { display: block; margin-top: 2px; color: var(--cyan); font-size: 12px; font-weight: 800; }
     .metric-big { display: flex; align-items: baseline; gap: 8px; }
-    .metric-big strong { font-size: 28px; letter-spacing: -2px; }
+    .metric-big strong { font-size: 30px; letter-spacing: -2px; }
     .metric-big span { color: var(--muted); font-size: 13px; }
     .hr-value { color: var(--amber); }
     .zone { display: inline-block; margin-top: 6px; color: var(--amber); font-size: 12px; font-weight: 900; letter-spacing: .8px; }
@@ -216,8 +216,8 @@
     .amber-meter i { background: linear-gradient(90deg, var(--amber), #ffd57c); }
     .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
     .mini-stat { padding: 6px; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; background: rgba(255,255,255,.025); }
-    .mini-stat span { display: block; color: var(--muted); font-size: 10px; }
-    .mini-stat strong { display: block; margin-top: 3px; font-size: 13px; }
+    .mini-stat span { display: block; color: var(--muted); font-size: 10.5px; }
+    .mini-stat strong { display: block; margin-top: 3px; font-size: 14.5px; }
     .mini-stat strong.good { color: var(--good); }
     .mini-stat strong.violet { color: var(--violet); }
     .mini-stat strong.cyan { color: var(--cyan); }
@@ -277,7 +277,7 @@
       .camera-wrap { aspect-ratio: 16 / 10; }
       .metric-card { padding: 8px 10px; }
       .rep-ring { width: 96px; height: 96px; }
-      .rep-number { font-size: 28px; }
+      .rep-number { font-size: 29px; }
       .avatar-stage { inset: 96px 10px 48px; }
     }
     @media (max-width: 900px) {
@@ -385,10 +385,10 @@
         <div id="heartZone" class="zone">ZONE —</div>
         <svg class="mini-chart" viewBox="0 0 300 38" preserveAspectRatio="none"><path id="hrChart" d="M0 30 L18 24 L36 27 L54 17 L72 24 L90 18 L108 26 L126 11 L144 22 L162 17 L180 27 L198 14 L216 23 L234 12 L252 21 L270 18 L300 22" fill="none" stroke="#ffb13b" stroke-width="2"/></svg>
         <div class="metric-grid" style="margin-top:8px">
-          <div class="mini-stat"><span>BODY BATTERY</span><strong id="bodyBatteryValue" class="good">—</strong></div>
-          <div class="mini-stat"><span>STRESS</span><strong id="stressValue" class="violet">—</strong></div>
-          <div class="mini-stat"><span>RESPIRATION</span><strong id="respirationValue" class="cyan">—</strong></div>
-          <div class="mini-stat"><span>SPO2</span><strong id="pulseOxValue" class="cyan">—</strong></div>
+          <div id="bodyBatteryTile" class="mini-stat hidden"><span>BODY BATTERY</span><strong id="bodyBatteryValue" class="good">—</strong></div>
+          <div id="stressTile" class="mini-stat hidden"><span>STRESS</span><strong id="stressValue" class="violet">—</strong></div>
+          <div id="respirationTile" class="mini-stat hidden"><span>RESPIRATION</span><strong id="respirationValue" class="cyan">—</strong></div>
+          <div id="pulseOxTile" class="mini-stat hidden"><span>SPO2</span><strong id="pulseOxValue" class="cyan">—</strong></div>
         </div>
       </section>
 
@@ -531,6 +531,9 @@
           left: { value: null, falseSince: null },
           right: { value: null, falseSince: null },
         },
+        lastKnownAxisValue: {},
+        lastSetCompleteLine: null,
+        seenWatchExtraTiles: {},
         sideReps: { left: 0, right: 0 },
         smoothedSymmetry: null,
         tempoSamples: [],
@@ -543,11 +546,14 @@
         holdNeedsReset: false,
         holdImuStable: true,
         bilateralDown: { left: false, right: false },
+        repRangeTracker: { left: { min: null, max: null }, right: { min: null, max: null } },
         settings: {},
         avatarTarget: { left: null, right: null },
         avatarCurrent: null,
         avatarLoaded: { left: null, right: null },
         avatarOverheadSide: "right",
+        avatarBuildScale: 1,
+        avatarBuildScaleTarget: 1,
       };
 
       function toast(message) {
@@ -690,6 +696,7 @@
         state.holdNeedsReset = false;
         state.holdImuStable = true;
         state.bilateralDown = { left: false, right: false };
+        state.repRangeTracker = { left: { min: null, max: null }, right: { min: null, max: null } };
         if (resetClock) {
           state.elapsedBeforePause = 0;
           state.startedAt = performance.now();
@@ -712,7 +719,7 @@
         $("transitionOverlay").classList.add("hidden");
       }
 
-      function showTemporaryInstruction(eyebrow, title, text, duration = 2400, done = null) {
+      function showTemporaryInstruction(eyebrow, title, text, duration = 4000, done = null) {
         clearTimeout(state.transitionTimer);
         $("transitionEyebrow").textContent = eyebrow;
         $("transitionTitle").textContent = title;
@@ -734,6 +741,25 @@
         showTemporaryInstruction(eyebrow, definition.name, definition.subtitle, duration, done);
       }
 
+      // Short, varied set-completion lines -- a light game-feel touch, not a
+      // points/streak system. Picked so the same phrase rarely repeats back
+      // to back.
+      const SET_COMPLETE_LINES = [
+        "Nice set! Solid, steady reps.",
+        "Great tempo on that one.",
+        "Set complete -- strong finish.",
+        "That's a wrap on this move. Well done.",
+        "Good control through the whole set.",
+        "Set done. Keep that energy going.",
+      ];
+
+      function nextSetCompleteLine() {
+        const options = SET_COMPLETE_LINES.filter((line) => line !== state.lastSetCompleteLine);
+        const pick = options[Math.floor(Math.random() * options.length)];
+        state.lastSetCompleteLine = pick;
+        return pick;
+      }
+
       function completeSet() {
         if (state.inTransition) return;
         updateRepProgress();
@@ -742,17 +768,22 @@
 
         const isLastExercise = state.exerciseIndex >= state.exerciseQueue.length - 1;
         if (isLastExercise) {
-          finishSession("Session complete", "Nice work. Start a new session whenever you're ready.");
+          const exerciseCount = state.exerciseQueue.length;
+          finishSession(
+            "Session complete",
+            `You finished all ${exerciseCount} exercise${exerciseCount === 1 ? "" : "s"} in this session -- nice work. Start a new one whenever you're ready.`,
+          );
           return;
         }
 
+        toast(nextSetCompleteLine());
         setSessionBadge("SET COMPLETE", "waiting");
         state.exerciseIndex += 1;
         state.exercise = state.exerciseQueue[state.exerciseIndex];
         updateExerciseUI();
         announceCurrentExercise(
           "NEXT MOVEMENT",
-          3200,
+          4200,
           () => {
             if (!state.running) return;
             resetExerciseState(false);
@@ -823,6 +854,7 @@
           left: { value: null, falseSince: null },
           right: { value: null, falseSince: null },
         };
+        state.lastKnownAxisValue = {};
         state.setsCompleted = 0;
         state.totalReps = 0;
         state.imuConfirmedReps = 0;
@@ -830,6 +862,9 @@
         state.formCount = 0;
         state.smoothedSymmetry = null;
         state.avatarCurrent = null;
+        state.avatarBuildScale = 1;
+        state.avatarBuildScaleTarget = 1;
+        state.seenWatchExtraTiles = {};
         state.inTransition = false;
         readSettings();
         updateExerciseUI();
@@ -844,6 +879,7 @@
         $("stressValue").textContent = "—";
         $("respirationValue").textContent = "—";
         $("pulseOxValue").textContent = "—";
+        ["bodyBatteryTile", "stressTile", "respirationTile", "pulseOxTile"].forEach((id) => $(id).classList.add("hidden"));
         $("imuMotionValue").textContent = "—";
         $("setupOverlay").classList.add("hidden");
         $("startButton").textContent = "Restart session";
@@ -853,7 +889,7 @@
         startLiveStream();
         updateAvatar({ axes: {}, arm_signals: {} }, null, null);
         updateFeedback({}, 0, 0, null, null, null);
-        announceCurrentExercise("FIRST MOVEMENT", 3200);
+        announceCurrentExercise("FIRST MOVEMENT", 4200);
         toast(resetAccepted ? "Live session started" : "Live session started; waiting for detector");
       }
 
@@ -876,6 +912,7 @@
         $("stressValue").textContent = "—";
         $("respirationValue").textContent = "—";
         $("pulseOxValue").textContent = "—";
+        ["bodyBatteryTile", "stressTile", "respirationTile", "pulseOxTile"].forEach((id) => $(id).classList.add("hidden"));
         $("imuMotionValue").textContent = "—";
         setSessionBadge("SESSION STOPPED", "waiting");
         $("startButton").textContent = "Start session";
@@ -944,7 +981,18 @@
         const axes = control.axes || {};
         const direct = axes[sideKey(side, suffix)];
         const pose = control.arm_signals?.[side]?.pose?.[suffix];
-        return Number.isFinite(Number(direct)) ? Number(direct) : Number.isFinite(Number(pose)) ? Number(pose) : fallback;
+        const numeric = Number.isFinite(Number(direct)) ? Number(direct) : Number.isFinite(Number(pose)) ? Number(pose) : null;
+        const cacheKey = `${side}_${suffix}`;
+        // A momentarily missing axis (motion blur, brief occlusion, a frame
+        // the pose model dropped, going just out of the camera's edge) held
+        // the last real reading instead of snapping to a fixed fallback --
+        // snapping can inject a spurious phase transition (or mask a real
+        // one) right when the signal would otherwise be most useful.
+        if (numeric != null) {
+          state.lastKnownAxisValue[cacheKey] = numeric;
+          return numeric;
+        }
+        return state.lastKnownAxisValue[cacheKey] != null ? state.lastKnownAxisValue[cacheKey] : fallback;
       }
 
       function activeSideData(control, side) {
@@ -1042,6 +1090,20 @@
         if (value == null) return "—";
         const numeric = Number(value);
         return Number.isFinite(numeric) ? `${Math.round(numeric)}${suffix}` : String(value).toUpperCase();
+      }
+
+      // Some Garmin Connect IQ apps only ever send heart rate (confirmed:
+      // monkey_c/ironquest_safe_telemetry never queries body battery,
+      // stress, respiration, or SpO2) -- showing four permanent dashes is
+      // worse than not showing the tile at all. Reveal a tile the first
+      // time it actually receives a real value, and keep it visible for
+      // the rest of the session even through brief gaps.
+      function setWatchExtraTile(tileId, valueId, text) {
+        if (text !== "—") {
+          state.seenWatchExtraTiles[tileId] = true;
+        }
+        $(tileId).classList.toggle("hidden", !state.seenWatchExtraTiles[tileId]);
+        $(valueId).textContent = text;
       }
 
       function sensorMarker(sensor, kind) {
@@ -1166,6 +1228,43 @@
       const MIN_IMU_MOTION_CONFIRM = 0.04;
       const MIN_IMU_HOLD_STABILITY = 0.45;
 
+      // A user's real range of motion for a given exercise does not always
+      // reach the fixed, full-range-of-motion thresholds below -- especially
+      // once the server's own calibration bounds (session-wide, "only ever
+      // widen") were set by an earlier, different exercise. Confirmed against
+      // a real session recording: hammer curl sat at 0/8 for the ~95 seconds
+      // remaining in the clip because its natural range never crossed the
+      // fixed targetUp, even though the camera clearly saw continuous real
+      // reps. Track each side's observed value range for the CURRENT
+      // exercise and only ever relax a threshold toward what's actually
+      // reachable -- never make it stricter than the fixed default, so full
+      // range of motion stays the standard whenever the user can hit it.
+      const REP_RANGE_MIN_SPAN = 0.16;
+
+      function adaptiveRepThresholds(side, value, targetDown, targetUp) {
+        const tracker = state.repRangeTracker[side];
+        if (Number.isFinite(value)) {
+          tracker.min = tracker.min == null ? value : Math.min(tracker.min, value);
+          tracker.max = tracker.max == null ? value : Math.max(tracker.max, value);
+        }
+        if (tracker.min == null || tracker.max == null) return { down: targetDown, up: targetUp };
+        const span = tracker.max - tracker.min;
+        if (span < REP_RANGE_MIN_SPAN) return { down: targetDown, up: targetUp };
+        // 0.20/0.80 (not a narrower split like 0.32/0.68) so a genuinely
+        // wide, healthy range of motion keeps the fixed defaults as the
+        // binding constraint (Math.max/Math.min pick the fixed side) --
+        // only a range that truly can't reach one of the fixed thresholds
+        // gets relaxed toward what it can reach.
+        let down = Math.max(targetDown, tracker.min + span * 0.20);
+        let up = Math.min(targetUp, tracker.min + span * 0.80);
+        if (up - down < 0.08) {
+          const mid = (down + up) / 2;
+          down = mid - 0.04;
+          up = mid + 0.04;
+        }
+        return { down, up };
+      }
+
       function processRep(control, poseConfidence, stability, loadedLeft, loadedRight, sensorUI, imuMotion) {
         if (state.inTransition || poseConfidence < .35 || stability < .18) return;
         const definition = exerciseDefinitions[state.exercise];
@@ -1179,10 +1278,22 @@
         const glove = gloveMountedSide(control);
         const watchLive = sensorUI?.heart?.display === true;
         const watch = watchMountedSide(control);
+        // A declared nonzero load is a strong prior that the user intends to
+        // hold weight the whole session (same principle stableLoaded() uses
+        // for its grace window). Once declared, a stale "not detected"
+        // reading past the grace window still shows the "check the load"
+        // advisory (updateFeedback), but no longer hard-blocks phase
+        // tracking -- matching the IMU/watch gates, which corroborate but
+        // never require.
+        const declaredLoad = Number(state.settings.dumbbell_kg_per_hand) > 0;
 
         if (definition.countMode === "hold") {
-          const bothLoaded = loadedLeft !== false && loadedRight !== false;
-          const bothAtTarget = axis(control, "left", "height_signal", 0) > targetUp && axis(control, "right", "height_signal", 0) > targetUp;
+          const bothLoaded = declaredLoad || (loadedLeft !== false && loadedRight !== false);
+          const leftHeight = axis(control, "left", "height_signal", 0);
+          const rightHeight = axis(control, "right", "height_signal", 0);
+          const leftHoldThresholds = adaptiveRepThresholds("left", leftHeight, targetDown, targetUp);
+          const rightHoldThresholds = adaptiveRepThresholds("right", rightHeight, targetDown, targetUp);
+          const bothAtTarget = leftHeight > leftHoldThresholds.up && rightHeight > rightHoldThresholds.up;
           if (!bothLoaded || !bothAtTarget) {
             state.holdStartedAt = 0;
             if (!bothAtTarget) state.holdNeedsReset = false;
@@ -1215,8 +1326,9 @@
           const extension = axis(control, side, "arm_extension", .82);
           const height = axis(control, side, "height_signal", .3);
           const value = (definition.mode === "height" || definition.mode === "lateral") ? height : extension;
+          const { down: sideTargetDown, up: sideTargetUp } = adaptiveRepThresholds(side, value, targetDown, targetUp);
           const loaded = side === "left" ? loadedLeft : loadedRight;
-          if (loaded === false) continue;
+          if (loaded === false && !declaredLoad) continue;
           if (definition.mode === "combo") {
             const anchorSide = side === "left" ? "right" : "left";
             if (axis(control, anchorSide, "height_signal", 0) < .55) continue;
@@ -1243,12 +1355,12 @@
           // rule as the glove: corroboration only, never blocks the rep.
           const watchCorroborates = watchLive && side === watch && watchIndicatesMotion(control);
 
-          if (state.phase[side] === "extended" && value < targetDown) {
+          if (state.phase[side] === "extended" && value < sideTargetDown) {
             state.phase[side] = "bent";
             state.activeSide = side;
             state.bilateralDown[side] = true;
             state.motionSeenDuringRep[side] = false;
-          } else if (state.phase[side] === "bent" && value > targetUp) {
+          } else if (state.phase[side] === "bent" && value > sideTargetUp) {
             state.phase[side] = "extended";
             state.sideReps[side] += 1;
             if ((gated && state.motionSeenDuringRep[side]) || watchCorroborates) state.imuConfirmedReps += 1;
@@ -1315,18 +1427,18 @@
         if (sensorUI.heart.display && Number.isFinite(heartRate)) {
           $("heartRate").textContent = Math.round(heartRate);
           $("heartZone").textContent = `ZONE ${String(state.lastFrame.user_state?.intensity_zone || state.lastFrame.wearable_watch?.intensity_zone || "unknown").toUpperCase() === "UNKNOWN" ? "—" : String(state.lastFrame.user_state?.intensity_zone || state.lastFrame.wearable_watch?.intensity_zone).toUpperCase()}`;
-          $("bodyBatteryValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.body_battery);
-          $("stressValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.stress);
-          $("respirationValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.respiration_rate, "/min");
-          $("pulseOxValue").textContent = watchMetricText(state.lastFrame.wearable_watch?.pulse_ox, "%");
+          setWatchExtraTile("bodyBatteryTile", "bodyBatteryValue", watchMetricText(state.lastFrame.wearable_watch?.body_battery));
+          setWatchExtraTile("stressTile", "stressValue", watchMetricText(state.lastFrame.wearable_watch?.stress));
+          setWatchExtraTile("respirationTile", "respirationValue", watchMetricText(state.lastFrame.wearable_watch?.respiration_rate, "/min"));
+          setWatchExtraTile("pulseOxTile", "pulseOxValue", watchMetricText(state.lastFrame.wearable_watch?.pulse_ox, "%"));
         } else {
           $("heartRate").textContent = "—";
           $("heartZone").textContent = "ZONE —";
           $("hrChart").setAttribute("d", "M0 30 L300 30");
-          $("bodyBatteryValue").textContent = "—";
-          $("stressValue").textContent = "—";
-          $("respirationValue").textContent = "—";
-          $("pulseOxValue").textContent = "—";
+          setWatchExtraTile("bodyBatteryTile", "bodyBatteryValue", "—");
+          setWatchExtraTile("stressTile", "stressValue", "—");
+          setWatchExtraTile("respirationTile", "respirationValue", "—");
+          setWatchExtraTile("pulseOxTile", "pulseOxValue", "—");
         }
         $("imuMotionValue").textContent = sensorUI.hand.display ? pct(sensorUI.hand.sensor.motion_intensity ?? 0) : "—";
         $("handStabilityValue").textContent = sensorUI.hand.display ? pct(sensorUI.hand.sensor.stability_index ?? 0) : "—";
@@ -1358,10 +1470,10 @@
         if (Number.isFinite(hr)) drawHeartChart(hr);
         const watch = control.wearable_watch || {};
         const watchLive = Number.isFinite(hr);
-        $("bodyBatteryValue").textContent = watchLive ? watchMetricText(watch.body_battery) : "—";
-        $("stressValue").textContent = watchLive ? watchMetricText(watch.stress) : "—";
-        $("respirationValue").textContent = watchLive ? watchMetricText(watch.respiration_rate, "/min") : "—";
-        $("pulseOxValue").textContent = watchLive ? watchMetricText(watch.pulse_ox, "%") : "—";
+        setWatchExtraTile("bodyBatteryTile", "bodyBatteryValue", watchLive ? watchMetricText(watch.body_battery) : "—");
+        setWatchExtraTile("stressTile", "stressValue", watchLive ? watchMetricText(watch.stress) : "—");
+        setWatchExtraTile("respirationTile", "respirationValue", watchLive ? watchMetricText(watch.respiration_rate, "/min") : "—");
+        setWatchExtraTile("pulseOxTile", "pulseOxValue", watchLive ? watchMetricText(watch.pulse_ox, "%") : "—");
         if (state.exercise) {
           state.formSum += form;
           state.formCount += 1;
@@ -1420,6 +1532,12 @@
       // of snapping on every server-sent frame.
 
       const AVATAR_LERP_RATE = 0.22;
+      // Typical shoulder-width / torso-height ratio for a front-facing
+      // camera view -- the avatar's build scale is expressed relative to
+      // this reference and clamped to a narrow range, so an atypical
+      // reference guess only ever produces a subtly different proportion,
+      // never a broken-looking avatar.
+      const AVATAR_BUILD_REFERENCE_RATIO = 0.62;
       let avatar3d = null;
 
       function makeSphere(THREE, parent, material, radius, x, y, z) {
@@ -1671,6 +1789,25 @@
         return { shoulder, elbow, wrist };
       }
 
+      // Re-express a raw extension/height reading as progress (0..1) within
+      // this side's *observed* range for the current exercise (the same
+      // repRangeTracker rep-counting now adapts to -- see
+      // adaptiveRepThresholds), then map that progress back into the fixed
+      // input range pointFor3D's own formulas already expect. This keeps
+      // pointFor3D's per-mode geometry untouched while making the avatar's
+      // visible range of motion track what the user is actually
+      // demonstrating instead of a session-wide calibration that may not
+      // apply to this exercise -- the same real-range mismatch fixed in
+      // processRep, now applied to what the avatar shows.
+      function avatarAdaptiveInput(side, rawValue, kind) {
+        const tracker = state.repRangeTracker?.[side];
+        if (!tracker || tracker.min == null || tracker.max == null) return rawValue;
+        const span = tracker.max - tracker.min;
+        if (span < REP_RANGE_MIN_SPAN) return rawValue;
+        const progress = clamp((rawValue - tracker.min) / span);
+        return kind === "extension" ? (.84 - progress * .57) : progress;
+      }
+
       function updateAvatar(control, loadedLeft, loadedRight) {
         const mode = exerciseDefinitions[state.exercise]?.mode || "extension";
         if (mode === "combo") {
@@ -1679,13 +1816,32 @@
           else if (tokens.has("right_overhead_left_front_candidate")) state.avatarOverheadSide = "right";
         }
         const overheadSide = state.avatarOverheadSide;
+        const rangeKind = (mode === "height" || mode === "lateral") ? "height" : "extension";
         state.avatarLoaded.left = loadedLeft;
         state.avatarLoaded.right = loadedRight;
+        // Shoulder-width-to-torso-height is a dimensionless ratio (stays
+        // roughly constant regardless of distance from camera), computed
+        // server-side from the player's own pose -- a purely geometric
+        // proportion match, not an inference about body type. Clamped to a
+        // modest range so a noisy pose reading can never make the avatar
+        // look broken, only subtly narrower/broader.
+        const buildRatio = numericValue(control.body_posture?.body?.build_ratio);
+        if (buildRatio != null) {
+          state.avatarBuildScaleTarget = clamp(buildRatio / AVATAR_BUILD_REFERENCE_RATIO, .92, 1.1);
+        }
         if (!avatar3d) return;
         const { THREE } = avatar3d;
         const elapsedTime = avatar3d.clock.getElapsedTime();
-        state.avatarTarget.left = pointFor3D(THREE, "left", axis(control, "left", "arm_extension", .84), axis(control, "left", "height_signal", .30), mode, state.exercise, overheadSide, elapsedTime);
-        state.avatarTarget.right = pointFor3D(THREE, "right", axis(control, "right", "arm_extension", .84), axis(control, "right", "height_signal", .30), mode, state.exercise, overheadSide, elapsedTime);
+        const rawExtensionLeft = axis(control, "left", "arm_extension", .84);
+        const rawHeightLeft = axis(control, "left", "height_signal", .30);
+        const rawExtensionRight = axis(control, "right", "arm_extension", .84);
+        const rawHeightRight = axis(control, "right", "height_signal", .30);
+        const extensionLeft = rangeKind === "extension" ? avatarAdaptiveInput("left", rawExtensionLeft, "extension") : rawExtensionLeft;
+        const heightLeft = rangeKind === "height" ? avatarAdaptiveInput("left", rawHeightLeft, "height") : rawHeightLeft;
+        const extensionRight = rangeKind === "extension" ? avatarAdaptiveInput("right", rawExtensionRight, "extension") : rawExtensionRight;
+        const heightRight = rangeKind === "height" ? avatarAdaptiveInput("right", rawHeightRight, "height") : rawHeightRight;
+        state.avatarTarget.left = pointFor3D(THREE, "left", extensionLeft, heightLeft, mode, state.exercise, overheadSide, elapsedTime);
+        state.avatarTarget.right = pointFor3D(THREE, "right", extensionRight, heightRight, mode, state.exercise, overheadSide, elapsedTime);
         if (!state.avatarCurrent) {
           state.avatarCurrent = {
             left: {
@@ -1731,6 +1887,11 @@
           const elapsed = avatar3d.clock.getElapsedTime();
           avatar3d.body.position.y = Math.sin(elapsed * 0.9) * 0.02;
           avatar3d.body.rotation.y = Math.sin(elapsed * 0.35) * 0.06;
+          // Slowly settle into the player's own build proportions rather
+          // than snapping, so an early noisy pose reading doesn't cause a
+          // visible jump.
+          state.avatarBuildScale += (state.avatarBuildScaleTarget - state.avatarBuildScale) * 0.03;
+          avatar3d.body.scale.x = state.avatarBuildScale;
           avatar3d.renderer.render(avatar3d.scene, avatar3d.camera);
         }
         requestAnimationFrame(renderAvatarFrame);

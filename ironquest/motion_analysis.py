@@ -226,6 +226,7 @@ class BodyMotion:
     jump_candidate: bool = False
     vertical_speed: float | None = None
     position: str = "unknown"
+    build_ratio: float | None = None
 
     def as_payload(self) -> dict[str, Any]:
         """Convert body motion into the detector payload."""
@@ -238,6 +239,8 @@ class BodyMotion:
         }
         if self.vertical_speed is not None:
             payload["vertical_speed"] = round(self.vertical_speed, 3)
+        if self.build_ratio is not None:
+            payload["build_ratio"] = round(self.build_ratio, 3)
         return payload
 
 
@@ -416,6 +419,17 @@ class MotionAnalyzer:
         torso_scale = self._torso_scale(pose)
         left_shoulder = get_point(pose, "shoulder", "left", self.min_confidence)
         right_shoulder = get_point(pose, "shoulder", "right", self.min_confidence)
+        # Shoulder width relative to torso height (shoulder-to-hip distance)
+        # is a dimensionless ratio, so it stays roughly constant regardless
+        # of how close the user stands to the camera -- unlike either raw
+        # pixel measurement alone. Used only to gently scale the 3D avatar's
+        # own proportions toward the person playing; it is a purely
+        # geometric measurement, not an inference about body type.
+        build_ratio = (
+            float(_safe_norm(left_shoulder - right_shoulder) / torso_scale)
+            if left_shoulder is not None and right_shoulder is not None
+            else None
+        )
         torso_center = self._torso_center(pose)
         if torso_center is not None:
             self.body_history.append((timestamp, torso_center))
@@ -435,7 +449,7 @@ class MotionAnalyzer:
             sides[side] = side_motion
             tokens.extend(side_motion.tokens)
 
-        body_motion = self._analyze_body_motion(pose, torso_scale)
+        body_motion = self._analyze_body_motion(pose, torso_scale, build_ratio)
         if body_motion.jump_candidate:
             tokens.append("body_jump_candidate")
 
@@ -811,12 +825,12 @@ class MotionAnalyzer:
             tokens.append(f"{side}_front_hold_candidate")
         return tokens
 
-    def _analyze_body_motion(self, pose: PoseCandidate, torso_scale: float) -> BodyMotion:
+    def _analyze_body_motion(self, pose: PoseCandidate, torso_scale: float, build_ratio: float | None) -> BodyMotion:
         """Estimate whole-body vertical motion for jump-like game actions."""
 
         position = self._infer_body_position(pose, torso_scale)
         if len(self.body_history) < 2:
-            return BodyMotion(position=position)
+            return BodyMotion(position=position, build_ratio=build_ratio)
         first_time, first_center = self.body_history[0]
         current_time, current_center = self.body_history[-1]
         elapsed = max(current_time - first_time, 1e-6)
@@ -834,6 +848,7 @@ class MotionAnalyzer:
             motion_direction=direction,
             jump_candidate=delta_y > self.config.jump_delta_threshold and speed > self.config.jump_speed_threshold,
             position=position,
+            build_ratio=build_ratio,
         )
 
     def _infer_body_position(self, pose: PoseCandidate, torso_scale: float) -> str:
