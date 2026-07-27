@@ -26,7 +26,10 @@ This documentation reflects the June 23, 2026 project pivot. The project is now 
 | [18_GARMIN_VENU3_BRIDGE_PLAN.md](18_GARMIN_VENU3_BRIDGE_PLAN.md) | Defines the Garmin Venu 3 Connect IQ bridge, BLE fallback, and wearable JSON path. |
 | [19_WEEKLY_DETAILED_REPORT_2026_07_13.md](19_WEEKLY_DETAILED_REPORT_2026_07_13.md) | Weekly supervisor report covering ESP32/IMU runtime improvements and Garmin Venu 3 integration. |
 | [20_GARMIN_CONNECTIQ_TROUBLESHOOTING.md](20_GARMIN_CONNECTIQ_TROUBLESHOOTING.md) | Step-by-step Garmin Connect IQ sideload and telemetry troubleshooting. |
+| [21_WEEKLY_DETAILED_REPORT_2026_07_20.md](21_WEEKLY_DETAILED_REPORT_2026_07_20.md) | Weekly supervisor report covering the completed case model, ESP32/IMU and Garmin consolidation, and the confirmed web-game scope. |
+| [22_VP_VISIT_INTRO_AND_SPEECH_2026_07_20.md](22_VP_VISIT_INTRO_AND_SPEECH_2026_07_20.md) | Introduction and practice notes for the VPRI lab visit. |
 | [23_WEB_GAME_IMPLEMENTATION.md](23_WEB_GAME_IMPLEMENTATION.md) | Browser client, local gateway, demo/replay/live modes, and web-game commands. |
+| [24_WEEKLY_DETAILED_REPORT_2026_07_27.md](24_WEEKLY_DETAILED_REPORT_2026_07_27.md) | Weekly supervisor report covering the two real-hardware sessions, the critical rep-counting fix, the full exercise library, and the second case revision. |
 | [ESP32_PLANNING.md](ESP32_PLANNING.md) | ESP32-S3 and IMU bring-up plan. |
 | [TRAINING_PIPELINE.md](TRAINING_PIPELINE.md) | Active YOLO body-pose and dumbbell training profiles. |
 
