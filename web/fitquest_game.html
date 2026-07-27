@@ -171,6 +171,7 @@
     .target-card strong { display: block; font-size: 15.5px; }
     .target-card p { margin: 5px 0 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
     .target-chip { display: inline-block; margin-top: 8px; padding: 5px 8px; border: 1px solid rgba(34, 230, 199, .35); border-radius: 99px; color: var(--cyan); font-size: 10px; font-weight: 850; }
+    .validated-chip { margin-left: 6px; border-color: rgba(209, 178, 255, .35); color: var(--violet); }
     .transition-modal { width: min(430px, 100%); padding: 28px; border: 1px solid #2d6b80; border-radius: 18px; background: linear-gradient(145deg, #122b3c, #071017 72%); box-shadow: 0 28px 100px rgba(0,0,0,.62); text-align: center; }
     .transition-modal span { color: var(--cyan); font-size: 10px; font-weight: 900; letter-spacing: 1.4px; }
     .transition-modal h2 { margin: 10px 0 8px; font-size: 29px; }
@@ -183,7 +184,13 @@
     .results-stat strong { display: block; font-size: 26px; font-weight: 900; letter-spacing: -1px; }
     .results-stat span { display: block; margin-top: 3px; color: var(--muted); font-size: 10px; letter-spacing: .6px; text-transform: uppercase; }
     .results-fusion-note { margin: 0 0 8px; color: var(--cyan); font-size: 11px; font-weight: 750; }
-    .avatar-stage { position: absolute; inset: 82px 12px 55px; display: grid; place-items: center; overflow: hidden; }
+    /* Bottom inset must clear .stage-feedback's real height: measured via
+       getBoundingClientRect() at multiple viewport sizes, the feedback bar's
+       top edge consistently sits ~84px above the stage's bottom edge
+       (fixed-pixel bottom offset + content height, not size-dependent) --
+       55px put the avatar's own bottom edge under it at every size, not
+       just the short-viewport breakpoint. */
+    .avatar-stage { position: absolute; inset: 82px 12px 94px; display: grid; place-items: center; overflow: hidden; }
     #avatar3d { width: 100%; height: 100%; }
     #avatar3d canvas { display: block; margin: 0 auto; }
     .avatar-fallback { color: var(--muted); font-size: 12px; text-align: center; padding: 20px; }
@@ -278,7 +285,12 @@
       .metric-card { padding: 8px 10px; }
       .rep-ring { width: 96px; height: 96px; }
       .rep-number { font-size: 29px; }
-      .avatar-stage { inset: 96px 10px 48px; }
+      /* Bottom inset measured against .stage-feedback's real rendered
+         height at 1366x768 (getBoundingClientRect: feedback bar top sits
+         84px above the stage's bottom edge) plus a safety margin -- the
+         previous 48px put the avatar's bottom edge under the feedback bar,
+         confirmed via the same bounding-rect technique. */
+      .avatar-stage { inset: 96px 10px 96px; }
     }
     @media (max-width: 900px) {
       html, body { height: auto; min-height: 100%; overflow: auto; }
@@ -364,7 +376,7 @@
           <div><div id="exerciseName" class="exercise-name">PRESS START TO BEGIN</div><div id="exerciseSubtitle" class="exercise-subtitle">FitQuest will walk you through a short sequence of movements.</div></div>
           <div class="coach-tag" id="coachTag">COACH-LED</div>
         </div>
-        <div class="target-card"><strong id="coachTitle">Ready when you are</strong><p id="coachText">Start the session and FitQuest will tell you exactly what to do next.</p><span id="targetChip" class="target-chip">SETUP</span></div>
+        <div class="target-card"><strong id="coachTitle">Ready when you are</strong><p id="coachText">Start the session and FitQuest will tell you exactly what to do next.</p><span id="targetChip" class="target-chip">SETUP</span><span id="validatedByChip" class="target-chip validated-chip hidden">Camera only</span></div>
       </div>
       <div class="avatar-stage">
         <div id="avatar3d"></div>
@@ -373,6 +385,7 @@
     </section>
 
     <aside class="column right-column">
+      <div id="playerView">
       <section class="card metric-card">
         <h3>REPETITIONS</h3>
         <div id="repRing" class="rep-ring" style="--progress:0"><div class="rep-content"><span id="repNumber" class="rep-number">0 <span>/ 8</span></span><small id="repFeedback">READY</small></div></div>
@@ -410,7 +423,48 @@
           <div class="mini-stat"><span>IMU CONFIRMED</span><strong id="imuConfirmedValue" class="cyan">—</strong></div>
         </div>
       </section>
+      </div>
 
+      <div id="debugView" class="hidden">
+        <section class="card metric-card">
+          <h3>RAW AXES</h3>
+          <div class="metric-grid">
+            <div class="mini-stat"><span>L / R EXTENSION</span><strong id="dbgExtension">—</strong></div>
+            <div class="mini-stat"><span>L / R HEIGHT</span><strong id="dbgHeight">—</strong></div>
+            <div class="mini-stat"><span>L / R REACH</span><strong id="dbgReach">—</strong></div>
+            <div class="mini-stat"><span>SYMMETRY (RAW)</span><strong id="dbgSymmetry">—</strong></div>
+          </div>
+        </section>
+        <section class="card metric-card">
+          <h3>ADAPTIVE REP THRESHOLDS</h3>
+          <div class="metric-grid">
+            <div class="mini-stat"><span>LEFT DOWN / UP</span><strong id="dbgLeftThresholds">—</strong></div>
+            <div class="mini-stat"><span>RIGHT DOWN / UP</span><strong id="dbgRightThresholds">—</strong></div>
+            <div class="mini-stat"><span>LEFT WINDOW (MIN-MAX)</span><strong id="dbgLeftWindow">—</strong></div>
+            <div class="mini-stat"><span>RIGHT WINDOW (MIN-MAX)</span><strong id="dbgRightWindow">—</strong></div>
+          </div>
+        </section>
+        <section class="card metric-card">
+          <h3>RAW ESP32 / WATCH</h3>
+          <div class="metric-grid">
+            <div class="mini-stat"><span>GLOVE PITCH/ROLL/YAW</span><strong id="dbgGloveOrientation">—</strong></div>
+            <div class="mini-stat"><span>GLOVE SAMPLE AGE</span><strong id="dbgGloveAge">—</strong></div>
+            <div class="mini-stat"><span>WATCH MOTION STATE</span><strong id="dbgWatchMotion">—</strong></div>
+            <div class="mini-stat"><span>WATCH SAMPLE AGE</span><strong id="dbgWatchAge">—</strong></div>
+          </div>
+        </section>
+        <section class="card metric-card">
+          <h3>OBJECT DETECTION</h3>
+          <div class="metric-grid">
+            <div class="mini-stat"><span>STATUS</span><strong id="dbgObjStatus">—</strong></div>
+            <div class="mini-stat"><span>ACCEPTED BOXES</span><strong id="dbgAccepted">—</strong></div>
+            <div class="mini-stat"><span>L NEAREST DIST (PX)</span><strong id="dbgLeftDist">—</strong></div>
+            <div class="mini-stat"><span>R NEAREST DIST (PX)</span><strong id="dbgRightDist">—</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <p style="font-size:10px;color:var(--muted);text-align:center;margin:2px 0 0">Press SPACE for the debug view</p>
       <section class="card action-card"><button id="calibrateButton" class="secondary-btn" type="button">Calibrate</button><button id="startButton" class="primary-btn" type="button">Start session</button></section>
     </aside>
   </main>
@@ -546,7 +600,7 @@
         holdNeedsReset: false,
         holdImuStable: true,
         bilateralDown: { left: false, right: false },
-        repRangeTracker: { left: { min: null, max: null }, right: { min: null, max: null } },
+        repRangeTracker: { left: { samples: [] }, right: { samples: [] } },
         settings: {},
         avatarTarget: { left: null, right: null },
         avatarCurrent: null,
@@ -554,6 +608,9 @@
         avatarOverheadSide: "right",
         avatarBuildScale: 1,
         avatarBuildScaleTarget: 1,
+        avatarTargetSpeed: null,
+        debugView: false,
+        lastRepDebug: { left: null, right: null },
       };
 
       function toast(message) {
@@ -671,6 +728,7 @@
         $("targetChip").textContent = definition?.chip || "SETUP";
         $("coachTitle").textContent = definition ? "Follow the movement" : "Ready when you are";
         $("coachText").textContent = definition?.subtitle || "Start the session and FitQuest will tell you exactly what to do next.";
+        if (!definition) $("validatedByChip").classList.add("hidden");
         updateProgressSummary();
       }
 
@@ -696,7 +754,7 @@
         state.holdNeedsReset = false;
         state.holdImuStable = true;
         state.bilateralDown = { left: false, right: false };
-        state.repRangeTracker = { left: { min: null, max: null }, right: { min: null, max: null } };
+        state.repRangeTracker = { left: { samples: [] }, right: { samples: [] } };
         if (resetClock) {
           state.elapsedBeforePause = 0;
           state.startedAt = performance.now();
@@ -1223,6 +1281,8 @@
         updateAvatar(control, loadedLeft, loadedRight);
         processRep(control, poseConfidence, stability, loadedLeft, loadedRight, sensorUI, imuMotion);
         updateFeedback(control, form, stability, imuMotion, loadedLeft, loadedRight);
+        updateValidatedByChip(control, sensorUI);
+        updateDebugPanel(control);
       }
 
       const MIN_IMU_MOTION_CONFIRM = 0.04;
@@ -1235,28 +1295,45 @@
       // a real session recording: hammer curl sat at 0/8 for the ~95 seconds
       // remaining in the clip because its natural range never crossed the
       // fixed targetUp, even though the camera clearly saw continuous real
-      // reps. Track each side's observed value range for the CURRENT
-      // exercise and only ever relax a threshold toward what's actually
-      // reachable -- never make it stricter than the fixed default, so full
-      // range of motion stays the standard whenever the user can hit it.
+      // reps.
+      //
+      // A first attempt tracked each side's *lifetime* min/max for the
+      // current exercise (only ever widening). That fixed the freeze but
+      // reintroduced the same anti-pattern at a smaller scope: real human
+      // reps vary rep to rep, so a single unusually wide or unusually
+      // shallow early rep would permanently skew the whole rest of the set,
+      // making later, correctly-formed reps feel like they needed a "weird"
+      // exaggerated motion to register (reported directly: reps stop
+      // counting normally, or only count with an unnatural range, after the
+      // first exercise). Using a short ROLLING window instead means the
+      // thresholds track the user's *recent* range, forgetting an early
+      // outlier rep after a few seconds -- adaptive to real variability
+      // instead of anchored by whichever rep happened first.
       const REP_RANGE_MIN_SPAN = 0.16;
+      const REP_RANGE_WINDOW_MS = 6000;
 
-      function adaptiveRepThresholds(side, value, targetDown, targetUp) {
+      function adaptiveRepThresholds(side, value, targetDown, targetUp, now) {
         const tracker = state.repRangeTracker[side];
-        if (Number.isFinite(value)) {
-          tracker.min = tracker.min == null ? value : Math.min(tracker.min, value);
-          tracker.max = tracker.max == null ? value : Math.max(tracker.max, value);
+        if (Number.isFinite(value)) tracker.samples.push({ t: now, value });
+        while (tracker.samples.length && now - tracker.samples[0].t > REP_RANGE_WINDOW_MS) {
+          tracker.samples.shift();
         }
-        if (tracker.min == null || tracker.max == null) return { down: targetDown, up: targetUp };
-        const span = tracker.max - tracker.min;
+        if (tracker.samples.length < 2) return { down: targetDown, up: targetUp };
+        let min = Infinity;
+        let max = -Infinity;
+        for (const sample of tracker.samples) {
+          if (sample.value < min) min = sample.value;
+          if (sample.value > max) max = sample.value;
+        }
+        const span = max - min;
         if (span < REP_RANGE_MIN_SPAN) return { down: targetDown, up: targetUp };
         // 0.20/0.80 (not a narrower split like 0.32/0.68) so a genuinely
         // wide, healthy range of motion keeps the fixed defaults as the
         // binding constraint (Math.max/Math.min pick the fixed side) --
         // only a range that truly can't reach one of the fixed thresholds
         // gets relaxed toward what it can reach.
-        let down = Math.max(targetDown, tracker.min + span * 0.20);
-        let up = Math.min(targetUp, tracker.min + span * 0.80);
+        let down = Math.max(targetDown, min + span * 0.20);
+        let up = Math.min(targetUp, min + span * 0.80);
         if (up - down < 0.08) {
           const mid = (down + up) / 2;
           down = mid - 0.04;
@@ -1269,11 +1346,25 @@
         if (state.inTransition || poseConfidence < .35 || stability < .18) return;
         const definition = exerciseDefinitions[state.exercise];
         if (!definition) return;
+        const now = performance.now();
         const difficulty = difficultyDefinitions[state.difficulty];
         const sides = ["left", "right"];
         const strictness = difficulty.strictness || .45;
-        const targetDown = (definition.mode === "height" || definition.mode === "lateral") ? .30 + (strictness - .45) * .08 : .46 - (strictness - .45) * .05;
-        const targetUp = (definition.mode === "height" || definition.mode === "lateral") ? .65 + (strictness - .45) * .08 : .72 + (strictness - .45) * .05;
+        // front_raise gets its own, lower ceiling (shoulder height) distinct
+        // from press's overhead standard -- the avatar already drew this
+        // distinction visually (pointFor3D compresses front_raise's lift),
+        // but until now the actual rep-counting threshold was identical for
+        // both, so a shoulder-height front raise and a full overhead press
+        // were validated exactly the same way despite being different
+        // movements.
+        const isReachBased = definition.mode === "lateral";
+        const isHeightBased = definition.mode === "height";
+        const targetDown = isReachBased ? .28 + (strictness - .45) * .08
+          : isHeightBased ? .30 + (strictness - .45) * .08
+          : .46 - (strictness - .45) * .05;
+        const targetUp = isReachBased ? .62 + (strictness - .45) * .08
+          : isHeightBased ? (state.exercise === "front_raise" ? .52 : .65) + (strictness - .45) * .08
+          : .72 + (strictness - .45) * .05;
         const handLive = sensorUI?.hand?.display === true;
         const glove = gloveMountedSide(control);
         const watchLive = sensorUI?.heart?.display === true;
@@ -1291,8 +1382,8 @@
           const bothLoaded = declaredLoad || (loadedLeft !== false && loadedRight !== false);
           const leftHeight = axis(control, "left", "height_signal", 0);
           const rightHeight = axis(control, "right", "height_signal", 0);
-          const leftHoldThresholds = adaptiveRepThresholds("left", leftHeight, targetDown, targetUp);
-          const rightHoldThresholds = adaptiveRepThresholds("right", rightHeight, targetDown, targetUp);
+          const leftHoldThresholds = adaptiveRepThresholds("left", leftHeight, targetDown, targetUp, now);
+          const rightHoldThresholds = adaptiveRepThresholds("right", rightHeight, targetDown, targetUp, now);
           const bothAtTarget = leftHeight > leftHoldThresholds.up && rightHeight > rightHoldThresholds.up;
           if (!bothLoaded || !bothAtTarget) {
             state.holdStartedAt = 0;
@@ -1325,8 +1416,14 @@
         for (const side of sides) {
           const extension = axis(control, side, "arm_extension", .82);
           const height = axis(control, side, "height_signal", .3);
-          const value = (definition.mode === "height" || definition.mode === "lateral") ? height : extension;
-          const { down: sideTargetDown, up: sideTargetUp } = adaptiveRepThresholds(side, value, targetDown, targetUp);
+          // reach_signal (lateral distance from the shoulder, calibrated
+          // 0..1 the same way as height_signal) is what a lateral raise
+          // actually is -- reusing height_signal here (as before) meant a
+          // lateral raise was validated identically to a front raise.
+          const reach = axis(control, side, "reach_signal", .3);
+          const value = isReachBased ? reach : isHeightBased ? height : extension;
+          const { down: sideTargetDown, up: sideTargetUp } = adaptiveRepThresholds(side, value, targetDown, targetUp, now);
+          state.lastRepDebug[side] = { value, down: sideTargetDown, up: sideTargetUp, phase: state.phase[side] };
           const loaded = side === "left" ? loadedLeft : loadedRight;
           if (loaded === false && !declaredLoad) continue;
           if (definition.mode === "combo") {
@@ -1354,6 +1451,27 @@
           // latest known bucket at the moment the rep resolves. Same soft
           // rule as the glove: corroboration only, never blocks the rep.
           const watchCorroborates = watchLive && side === watch && watchIndicatesMotion(control);
+          // Per-exercise soft corroboration beyond generic motion: each of
+          // these only ever adds to the confirmed-rep count, never blocks a
+          // rep, matching the project's core validation principle (several
+          // imperfect signals corroborate each other; none is absolute).
+          // Checked at the moment of completion, the same lightweight
+          // pattern as watchCorroborates above, rather than accumulated
+          // across the whole bent phase.
+          const gloveRoll = numericValue(control.esp32_glove?.orientation_euler_deg?.roll);
+          const glovePitch = numericValue(control.esp32_glove?.orientation_euler_deg?.pitch);
+          // Hammer curl is specifically defined by a neutral (thumbs-up)
+          // grip -- the glove's roll is the one signal that can actually
+          // see wrist orientation.
+          const gripCorroborates = state.exercise === "hammer_curl" && gated && gloveRoll != null && Math.abs(gloveRoll) <= 45;
+          // Overhead triceps extension requires the arm to genuinely be
+          // overhead, not just any elbow bend at any arm height.
+          const overheadCorroborates = state.exercise === "overhead_triceps_extension" && height >= .55;
+          // A rowing pull changes the hand-mounted glove's pitch somewhat as
+          // the elbow drives up and back -- not a torso-hinge sensor (the
+          // glove is hand-mounted, so that stays a genuine hardware
+          // limitation), but a real, if partial, corroborating signal.
+          const rowCorroborates = state.exercise === "bent_over_row" && gated && glovePitch != null && Math.abs(glovePitch) > 8;
 
           if (state.phase[side] === "extended" && value < sideTargetDown) {
             state.phase[side] = "bent";
@@ -1363,7 +1481,7 @@
           } else if (state.phase[side] === "bent" && value > sideTargetUp) {
             state.phase[side] = "extended";
             state.sideReps[side] += 1;
-            if ((gated && state.motionSeenDuringRep[side]) || watchCorroborates) state.imuConfirmedReps += 1;
+            if ((gated && state.motionSeenDuringRep[side]) || watchCorroborates || gripCorroborates || overheadCorroborates || rowCorroborates) state.imuConfirmedReps += 1;
             if (definition.countMode !== "bilateral") {
               state.reps += 1;
               state.totalReps += 1;
@@ -1521,6 +1639,89 @@
         $("feedbackSide").textContent = side;
       }
 
+      // Surfaces the project's core validation principle directly to the
+      // player: which live sensors are actually corroborating the current
+      // exercise right now, not just the camera. Mirrors the exact
+      // corroboration sources wired into processRep for each exercise.
+      function updateValidatedByChip(control, sensorUI) {
+        const chip = $("validatedByChip");
+        if (!state.exercise) { chip.classList.add("hidden"); return; }
+        const handLive = sensorUI?.hand?.display === true;
+        const watchLive = sensorUI?.heart?.display === true;
+        const parts = ["Camera"];
+        if (handLive) {
+          if (state.exercise === "hammer_curl") parts.push("glove wrist rotation");
+          else if (state.exercise === "bent_over_row") parts.push("glove pitch");
+          else parts.push("glove motion");
+        }
+        if (watchLive) parts.push("watch motion");
+        chip.textContent = parts.length > 1 ? parts.join(" + ") : "Camera only";
+        chip.classList.remove("hidden");
+      }
+
+      // ---- Debug view ---------------------------------------------------
+      //
+      // Raw signals the player-facing cards summarize/round -- toggled with
+      // SPACE (see the keydown listener near the end of the file). Reads
+      // straight off the current control frame and state.repRangeTracker/
+      // lastRepDebug so it shows exactly what processRep() is actually
+      // seeing and deciding, not a re-derived approximation.
+      function fmtNum(value, digits = 3) {
+        return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : "—";
+      }
+
+      function updateDebugPanel(control) {
+        if (!state.debugView) return;
+        const axes = control.axes || {};
+        $("dbgExtension").textContent = `${fmtNum(axes.left_arm_extension)} / ${fmtNum(axes.right_arm_extension)}`;
+        $("dbgHeight").textContent = `${fmtNum(axes.left_height_signal)} / ${fmtNum(axes.right_height_signal)}`;
+        $("dbgReach").textContent = `${fmtNum(axes.left_reach_signal)} / ${fmtNum(axes.right_reach_signal)}`;
+        $("dbgSymmetry").textContent = fmtNum(axes.symmetry_score);
+
+        for (const side of ["left", "right"]) {
+          const debug = state.lastRepDebug[side];
+          const thresholdsId = side === "left" ? "dbgLeftThresholds" : "dbgRightThresholds";
+          const windowId = side === "left" ? "dbgLeftWindow" : "dbgRightWindow";
+          if (!debug) {
+            $(thresholdsId).textContent = "—";
+            $(windowId).textContent = "—";
+            continue;
+          }
+          $(thresholdsId).textContent = `${fmtNum(debug.down, 2)} / ${fmtNum(debug.up, 2)} (${debug.phase})`;
+          const samples = state.repRangeTracker[side].samples;
+          if (samples.length < 2) {
+            $(windowId).textContent = `${samples.length} sample(s)`;
+          } else {
+            let min = Infinity;
+            let max = -Infinity;
+            for (const sample of samples) { if (sample.value < min) min = sample.value; if (sample.value > max) max = sample.value; }
+            $(windowId).textContent = `${fmtNum(min, 2)}-${fmtNum(max, 2)} (${samples.length})`;
+          }
+        }
+
+        const glove = control.esp32_glove || {};
+        const orientation = glove.orientation_euler_deg || {};
+        $("dbgGloveOrientation").textContent = glove.status === "connected"
+          ? `${fmtNum(orientation.pitch, 1)}° / ${fmtNum(orientation.roll, 1)}° / ${fmtNum(orientation.yaw, 1)}°`
+          : "—";
+        $("dbgGloveAge").textContent = numericValue(glove.sample_age_seconds) != null ? `${fmtNum(glove.sample_age_seconds, 1)}s` : "—";
+        const watch = control.wearable_watch || {};
+        $("dbgWatchMotion").textContent = watch.watch_motion_state || "—";
+        $("dbgWatchAge").textContent = numericValue(watch.sample_age_seconds ?? watch.age_seconds) != null
+          ? `${fmtNum(watch.sample_age_seconds ?? watch.age_seconds, 1)}s`
+          : "—";
+
+        const dumbbells = control.dumbbells || {};
+        $("dbgObjStatus").textContent = String(dumbbells.status || "—").toUpperCase();
+        $("dbgAccepted").textContent = dumbbells.accepted_count != null ? String(dumbbells.accepted_count) : "—";
+        $("dbgLeftDist").textContent = numericValue(dumbbells.associations?.left?.nearest_distance_px) != null
+          ? `${fmtNum(dumbbells.associations.left.nearest_distance_px, 0)}`
+          : "—";
+        $("dbgRightDist").textContent = numericValue(dumbbells.associations?.right?.nearest_distance_px) != null
+          ? `${fmtNum(dumbbells.associations.right.nearest_distance_px, 0)}`
+          : "—";
+      }
+
       // ---- 3D avatar --------------------------------------------------
       //
       // A low-poly, flat-shaded humanoid rendered with a locally vendored
@@ -1531,7 +1732,16 @@
       // requestAnimationFrame easing loop so the figure moves fluidly instead
       // of snapping on every server-sent frame.
 
-      const AVATAR_LERP_RATE = 0.22;
+      // Speed-adaptive smoothing instead of one fixed lerp rate: a bigger
+      // jump between consecutive server-sent targets means the user is
+      // moving quickly, so the avatar catches up faster (less visible lag
+      // on fast reps); a small jump means they're moving slowly or
+      // holding, so it stays smoother/steadier (less jitter from pose
+      // noise on slow, controlled reps) -- matches the avatar's visible
+      // tempo to the user's real one instead of a single compromise value.
+      const AVATAR_LERP_RATE_MIN = 0.14;
+      const AVATAR_LERP_RATE_MAX = 0.4;
+      const AVATAR_LERP_SPEED_GAIN = 4;
       // Typical shoulder-width / torso-height ratio for a front-facing
       // camera view -- the avatar's build scale is expressed relative to
       // this reference and clamped to a narrow range, so an atypical
@@ -1800,11 +2010,17 @@
       // apply to this exercise -- the same real-range mismatch fixed in
       // processRep, now applied to what the avatar shows.
       function avatarAdaptiveInput(side, rawValue, kind) {
-        const tracker = state.repRangeTracker?.[side];
-        if (!tracker || tracker.min == null || tracker.max == null) return rawValue;
-        const span = tracker.max - tracker.min;
+        const samples = state.repRangeTracker?.[side]?.samples;
+        if (!samples || samples.length < 2) return rawValue;
+        let min = Infinity;
+        let max = -Infinity;
+        for (const sample of samples) {
+          if (sample.value < min) min = sample.value;
+          if (sample.value > max) max = sample.value;
+        }
+        const span = max - min;
         if (span < REP_RANGE_MIN_SPAN) return rawValue;
-        const progress = clamp((rawValue - tracker.min) / span);
+        const progress = clamp((rawValue - min) / span);
         return kind === "extension" ? (.84 - progress * .57) : progress;
       }
 
@@ -1816,7 +2032,7 @@
           else if (tokens.has("right_overhead_left_front_candidate")) state.avatarOverheadSide = "right";
         }
         const overheadSide = state.avatarOverheadSide;
-        const rangeKind = (mode === "height" || mode === "lateral") ? "height" : "extension";
+        const rangeKind = mode === "lateral" ? "reach" : mode === "height" ? "height" : "extension";
         state.avatarLoaded.left = loadedLeft;
         state.avatarLoaded.right = loadedRight;
         // Shoulder-width-to-torso-height is a dimensionless ratio (stays
@@ -1833,15 +2049,32 @@
         const { THREE } = avatar3d;
         const elapsedTime = avatar3d.clock.getElapsedTime();
         const rawExtensionLeft = axis(control, "left", "arm_extension", .84);
-        const rawHeightLeft = axis(control, "left", "height_signal", .30);
+        const rawHeightLeft = axis(control, "left", rangeKind === "reach" ? "reach_signal" : "height_signal", .30);
         const rawExtensionRight = axis(control, "right", "arm_extension", .84);
-        const rawHeightRight = axis(control, "right", "height_signal", .30);
+        const rawHeightRight = axis(control, "right", rangeKind === "reach" ? "reach_signal" : "height_signal", .30);
         const extensionLeft = rangeKind === "extension" ? avatarAdaptiveInput("left", rawExtensionLeft, "extension") : rawExtensionLeft;
-        const heightLeft = rangeKind === "height" ? avatarAdaptiveInput("left", rawHeightLeft, "height") : rawHeightLeft;
+        // "reach" reuses the height input slot -- pointFor3D's "lateral"
+        // branch already only reads the height parameter, so feeding it the
+        // reach-based progress (instead of height_signal) is enough to make
+        // the avatar's sideways lift match what lateral_raise now actually
+        // validates, with no changes needed inside pointFor3D itself.
+        const heightLeft = (rangeKind === "height" || rangeKind === "reach") ? avatarAdaptiveInput("left", rawHeightLeft, "height") : rawHeightLeft;
         const extensionRight = rangeKind === "extension" ? avatarAdaptiveInput("right", rawExtensionRight, "extension") : rawExtensionRight;
-        const heightRight = rangeKind === "height" ? avatarAdaptiveInput("right", rawHeightRight, "height") : rawHeightRight;
-        state.avatarTarget.left = pointFor3D(THREE, "left", extensionLeft, heightLeft, mode, state.exercise, overheadSide, elapsedTime);
-        state.avatarTarget.right = pointFor3D(THREE, "right", extensionRight, heightRight, mode, state.exercise, overheadSide, elapsedTime);
+        const heightRight = (rangeKind === "height" || rangeKind === "reach") ? avatarAdaptiveInput("right", rawHeightRight, "height") : rawHeightRight;
+        const newLeftTarget = pointFor3D(THREE, "left", extensionLeft, heightLeft, mode, state.exercise, overheadSide, elapsedTime);
+        const newRightTarget = pointFor3D(THREE, "right", extensionRight, heightRight, mode, state.exercise, overheadSide, elapsedTime);
+        // How far the target itself just moved (before the smoothing loop
+        // catches up) is a direct read on how fast the user is actually
+        // moving right now -- feeds the speed-adaptive lerp rate below.
+        if (state.avatarTarget.left && state.avatarTarget.right) {
+          const rawSpeed = Math.max(
+            state.avatarTarget.left.wrist.distanceTo(newLeftTarget.wrist),
+            state.avatarTarget.right.wrist.distanceTo(newRightTarget.wrist),
+          );
+          state.avatarTargetSpeed = state.avatarTargetSpeed == null ? rawSpeed : state.avatarTargetSpeed * 0.7 + rawSpeed * 0.3;
+        }
+        state.avatarTarget.left = newLeftTarget;
+        state.avatarTarget.right = newRightTarget;
         if (!state.avatarCurrent) {
           state.avatarCurrent = {
             left: {
@@ -1881,8 +2114,13 @@
 
       function renderAvatarFrame() {
         if (avatar3d && state.avatarCurrent && state.avatarTarget.left && state.avatarTarget.right) {
-          lerpArm3D(state.avatarCurrent.left, state.avatarTarget.left, AVATAR_LERP_RATE);
-          lerpArm3D(state.avatarCurrent.right, state.avatarTarget.right, AVATAR_LERP_RATE);
+          const lerpRate = clamp(
+            AVATAR_LERP_RATE_MIN + (state.avatarTargetSpeed || 0) * AVATAR_LERP_SPEED_GAIN,
+            AVATAR_LERP_RATE_MIN,
+            AVATAR_LERP_RATE_MAX,
+          );
+          lerpArm3D(state.avatarCurrent.left, state.avatarTarget.left, lerpRate);
+          lerpArm3D(state.avatarCurrent.right, state.avatarTarget.right, lerpRate);
           drawAvatar3D(state.avatarCurrent.left, state.avatarCurrent.right, state.avatarLoaded.left, state.avatarLoaded.right);
           const elapsed = avatar3d.clock.getElapsedTime();
           avatar3d.body.position.y = Math.sin(elapsed * 0.9) * 0.02;
@@ -1916,6 +2154,22 @@
       document.querySelectorAll(".difficulty-btn").forEach((button) => button.addEventListener("click", () => setDifficulty(button.dataset.difficulty)));
       document.querySelectorAll('input[name="sessionMode"]').forEach((input) => input.addEventListener("change", updateSessionModeUI));
       $("exercisePicker").addEventListener("change", updateSessionModeUI);
+
+      // SPACE swaps the right-column cards for a debug view (raw axes,
+      // adaptive thresholds, raw ESP32/watch fields, object-detection
+      // counts) -- extra data for debugging or a curious user, not needed
+      // to play. Ignored while a form field has focus so it doesn't fight
+      // typing/selecting in the setup screen.
+      document.addEventListener("keydown", (event) => {
+        if (event.code !== "Space" && event.key !== " ") return;
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+        event.preventDefault();
+        state.debugView = !state.debugView;
+        $("playerView").classList.toggle("hidden", state.debugView);
+        $("debugView").classList.toggle("hidden", !state.debugView);
+        if (state.debugView && state.lastFrame) updateDebugPanel(state.lastFrame);
+      });
 
       initExercisePicker();
       readSettings();
