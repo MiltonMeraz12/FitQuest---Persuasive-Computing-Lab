@@ -43,7 +43,7 @@ The project deliberately keeps no mock heart-rate generator: every wearable numb
 Run the offline simulator instead of the live detector. It drives the same
 `MotionAnalyzer`/`build_body_context`/`build_game_control_payload` functions
 with a scripted pose sequence, so the browser client can be checked end to
-end (calibration, all six exercises, rep counting, sensor cards, set
+end (calibration, all ten exercises, rep counting, sensor cards, set
 completion, results screen) with no camera, ESP32, or Garmin watch:
 
 ```powershell

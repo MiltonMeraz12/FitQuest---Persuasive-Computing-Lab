@@ -1,0 +1,38 @@
+# Cloudflare Worker that relays Garmin Connect IQ samples to the laptop.
+#
+# The watch posts here instead of directly to the laptop because a phone
+# hotspot will not route back into a hotspot client, and Connect IQ requires
+# HTTPS. See docs/10_GARMIN_VENU3_BRIDGE.md.
+#
+# Deploy:
+#   npx wrangler deploy
+#
+# Before the first deploy, fill in database_id below. Get it with:
+#   npx wrangler d1 list
+#
+# If the D1 database does not exist yet, create it first:
+#   npx wrangler d1 create fitquest-garmin
+#
+# The Worker creates its own table on first request (ensureSchema in
+# worker.js), so no migration step is needed.
+
+name = "fitquest-garmin"
+main = "worker.js"
+compatibility_date = "2026-07-17"
+
+# worker.js reads this binding as env.FITQUEST_DB and returns 503 without it.
+[[d1_databases]]
+binding = "FITQUEST_DB"
+database_name = "fitquest-garmin"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+# Optional shared secret. It is NOT set here on purpose: secrets do not belong
+# in a committed file. Set it out of band, and the Worker starts requiring an
+# X-FitQuest-Token header on POST /garmin:
+#
+#   npx wrangler secret put FITQUEST_SHARED_TOKEN
+#
+# Leaving it unset keeps the endpoint open, which is the current deployed
+# behavior. If you set it, add the same header to the :headers options in
+# monkey_c/fitquest_telemetry/source/FitQuestTelemetryView.mc, rebuild, and
+# re-sideload the watch app.

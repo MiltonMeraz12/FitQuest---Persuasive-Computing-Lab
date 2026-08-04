@@ -66,7 +66,17 @@ http://<laptop-wifi-ip>:8765/garmin
 
 ### Cloudflare Worker
 
-`cloudflare/fitquest-garmin/worker.js` relays samples when the watch cannot reach the laptop directly. It allowlists the same fields as the local Python bridge instead of storing whatever the client sends, and clamps `heart_rate_bpm` to a plausible 20-240 range.
+`cloudflare/fitquest-garmin/worker.js` relays samples when the watch cannot reach the laptop directly — a phone hotspot will not route back into a hotspot client, and Connect IQ requires HTTPS. It allowlists the same fields as the local Python bridge instead of storing whatever the client sends, and clamps `heart_rate_bpm` to a plausible 20-240 range.
+
+Deploy it with `cloudflare/fitquest-garmin/wrangler.toml`:
+
+```powershell
+cd cloudflare\fitquest-garmin
+npx wrangler d1 create fitquest-garmin
+npx wrangler deploy
+```
+
+Fill in `database_id` in `wrangler.toml` from `npx wrangler d1 list` before the first deploy. The Worker creates its own table on first request, so there is no migration step.
 
 It also supports an opt-in shared secret: if the `FITQUEST_SHARED_TOKEN` Worker secret is set (`wrangler secret put FITQUEST_SHARED_TOKEN`), `POST /garmin` requires a matching `X-FitQuest-Token` header. Leaving the secret unset keeps the endpoint open, so this is safe to leave unconfigured. To enable it, add the same header to the `:headers` options in `FitQuestTelemetryView.mc`, rebuild, and re-sideload.
 

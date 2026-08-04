@@ -128,14 +128,26 @@ No extra vision model outside the active paper scope is loaded.
 
 ## Evidence to Save
 
-For each training run, keep:
+Ultralytics writes everything to `runs/`, which is gitignored because a run is
+hundreds of megabytes of checkpoints and batch previews. The small subset that
+is actual paper evidence gets copied into [`docs/figures/`](figures/README.md)
+and committed, so it does not depend on one laptop surviving.
 
-- dataset counts;
-- `results.csv`;
-- validation metrics;
-- confusion matrix or representative plots;
-- short success/failure screenshots;
-- JSONL payloads from the same scenario.
+For each training run, copy over:
+
+- `results.csv` (the source of every metric you quote);
+- `results.png` (loss and metric curves);
+- `confusion_matrix_normalized.png`;
+- `BoxPR_curve.png` and `BoxF1_curve.png`;
+- `args.yaml` (the exact arguments that run used);
+
+and update the numbers in `docs/figures/README.md` in the same commit, so the
+figures and the claims cannot drift apart.
+
+Also keep, per capture session: dataset counts, the `capture_analysis.md`
+summary, and JSONL payloads from the same scenario. The session summaries in
+[`docs/figures/capture_sessions/`](figures/capture_sessions/) are the distilled
+text form of captures whose raw video and frames were not worth keeping.
 
 ## When Not to Train
 
