@@ -5,12 +5,10 @@
 %  Persuasive Computing Lab, Dalhousie University
 %
 %  Compiles standalone with pdfLaTeX. No external images or bibliography files
-%  are required. Upload this single .tex to Overleaf and press Recompile.
+%  are required.
 %
-%  Structure note: Sections 4-9 (architecture, sensing, contract, application,
-%  decisions, results) are written so they can be lifted into the research
-%  paper with minimal rewriting. Sections 2, 10 and 11 are internship-specific
-%  and would be dropped from a paper.
+%  Sections 4-9 are written as paper-ready material. Sections 2, 10 and 11 are
+%  specific to the internship and would not appear in a paper.
 %==============================================================================
 
 \documentclass[11pt,a4paper]{article}
@@ -46,11 +44,11 @@
 \setlist[enumerate]{itemsep=2pt, topsep=4pt, parsep=0pt}
 
 % ---- Helpers ----------------------------------------------------------------
+% Do not name these \partial or \0 -- LaTeX already defines those.
 \newcommand{\code}[1]{\texttt{\small #1}}
 \newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
-% NOTE: do not name these \halfdone or \0 -- LaTeX already defines those.
-\newcommand{\done}{\textbf{Complete}}
-\newcommand{\halfdone}{\textbf{Partial}}
+\newcommand{\done}{Delivered}
+\newcommand{\halfdone}{Partial}
 
 \lstset{
   basicstyle=\ttfamily\footnotesize,
@@ -120,22 +118,21 @@
 
 \section{Executive Summary}
 
-This report documents a twelve-week Mitacs Globalink Research Internship at the
-Persuasive Computing Lab, Dalhousie University. The internship began under the
-title \emph{IronQuest 3D --- Smart Dumbbell Fitness Gaming Platform} and was
-deliberately renarrowed on June 23, 2026 into \emph{FitQuest}, a sensor-fusion
-engine that converts camera, inertial, and physiological measurements into a
-single normalized signal contract, with a small browser application built on top
-of that contract to prove the complete path from physical movement to
-interaction.
+This report documents a twelve-week Mitacs Globalink Research Internship
+conducted at the Persuasive Computing Lab, Dalhousie University. The project
+began under the title \emph{IronQuest 3D --- Smart Dumbbell Fitness Gaming
+Platform} and was renarrowed on June 23, 2026 to \emph{FitQuest}, a sensor-fusion
+system that converts camera, inertial, and physiological measurements into a
+normalized signal specification, together with a browser application that
+consumes those signals to demonstrate the complete path from physical movement
+to interaction.
 
-The core argument of the work is that the reusable research contribution is not
-the game. It is the middleware: a documented, per-user calibrated,
-hardware-asymmetric signal contract that any downstream application --- a game,
-a rehabilitation tool, an adherence monitor --- can consume without knowing
-anything about YOLO, I\textsuperscript{2}C, or Bluetooth Low Energy.
+The primary deliverable is the middleware layer rather than the application
+built upon it. The system publishes a documented, per-user calibrated payload
+that downstream applications consume without direct knowledge of the underlying
+vision models, inertial hardware, or wireless transports.
 
-\subsection*{Headline outcomes}
+\subsection*{Summary of outcomes}
 
 \begin{table}[h]
 \centering
@@ -144,45 +141,42 @@ anything about YOLO, I\textsuperscript{2}C, or Bluetooth Low Energy.
 \toprule
 \textbf{Dimension} & \textbf{Result} & \textbf{Evidence} \\
 \midrule
-Sensing modalities fused & 3 (+1 derived) & Camera pose, dumbbell detection, ESP32/BNO08x IMU, Garmin Venu 3 \\
-Object detector quality & mAP50 $=0.919$ & 80-epoch run, 7{,}332-image merged dataset \\
-Signal contract & \code{game\_control}, schema \code{2026-08-fusion-v2} & 10 documented sections, JSONL export \\
-Browser application & 10 exercises, 3 session modes, 4 difficulty levels & Live client over SSE + MJPEG \\
-Physical prototype & 2 printed case revisions & Blender source, STL, sliced G-code in repository \\
+Sensing modalities & 3 & Camera pose and object detection, ESP32/BNO08x IMU, Garmin Venu 3 \\
+Object detector & mAP@50 $=0.919$ & 80-epoch run, 7{,}332-image merged dataset \\
+Signal specification & \code{game\_control}, schema \code{2026-08-fusion-v2} & 10 documented sections, JSONL export \\
+Browser application & 10 exercises, 3 session modes, 4 difficulty levels & Live client over SSE and MJPEG \\
+Physical prototype & 2 printed enclosure revisions & Blender source, STL, sliced G-code \\
 Automated verification & 62 tests, all passing & 10 test modules \\
-Codebase & 9{,}109 lines Python; 5{,}609 lines browser client & 96 tracked files after consolidation \\
-Documentation & 15 technical documents + 8 dated reports & 2{,}903 lines; all internal links verified \\
+Codebase & 9{,}109 lines Python; 5{,}609 lines browser client & 96 tracked files \\
+Documentation & 15 technical documents, 8 dated reports & 2{,}903 lines; internal links verified \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection*{What was delivered against what was promised}
+\subsection*{Delivery against the original mandate}
 
-The original invitation described sensor-enabled dumbbells driving a 3D web game
-with repetition, tempo, and range-of-motion feedback. Table~\ref{tab:promised}
-compares that mandate against what exists at the close of the internship. The
-honest reading is that the \emph{sensing} half of the original proposal was
-delivered more completely than proposed, the \emph{game} half was delivered as a
-deliberate proof of concept rather than a platform, and instrumenting the
-dumbbells themselves was replaced by a superior alternative.
+The original invitation described sensor-enabled dumbbells driving a 3D web game,
+with repetition, tempo, and range-of-motion signals supporting feedback, goals,
+analytics, and exercise adherence. Table~\ref{tab:promised} compares that mandate
+with the delivered system.
 
 \begin{table}[h]
 \centering
 \small
-\caption{Original mandate versus delivered system.}
+\caption{Original mandate compared with the delivered system.}
 \label{tab:promised}
-\begin{tabularx}{\textwidth}{@{}L{4.4cm} L{2.3cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{4.4cm} L{2.1cm} X@{}}
 \toprule
-\textbf{Original element} & \textbf{Status} & \textbf{Delivered form and rationale} \\
+\textbf{Original element} & \textbf{Status} & \textbf{Delivered form} \\
 \midrule
-Sensor-enabled dumbbells & Replaced & Instrumenting each dumbbell does not scale past the specific weights instrumented. A glove-mounted IMU plus camera-based dumbbell detection generalizes to any weight the user picks up, and adds body context the dumbbell itself cannot see. \\
-Repetition counting & \done & Multi-sensor validated; camera provides the signal, IMU and watch corroborate. \\
+Sensor-enabled dumbbells & Substituted & Instrumenting individual dumbbells applies only to the weights instrumented. A glove-mounted IMU combined with camera-based dumbbell detection generalizes to any weight and provides body context that the dumbbell alone cannot supply. \\
+Repetition counting & \done & Validated against camera, inertial, and wearable evidence. \\
 Range-of-motion signals & \done & Per-user calibrated \code{range\_utilization}, \code{arm\_extension}, \code{height\_signal}, \code{reach\_signal}. \\
-Tempo signals & \halfdone & Frame timing and IMU sample cadence are logged; tempo is derivable from \code{signal\_log} but is not surfaced as a first-class signal. \\
-3D web game & \done\ (as proof of concept) & Ten exercises with a 3D avatar, deliberately not a platform. \\
-Feedback and goals & \done & Live coaching text, per-rep validation, results screen. \\
-Analytics and adherence & \halfdone & Frame-level JSONL export is in place; longitudinal adherence analysis is future work. \\
-Physiological context & \done & Beyond the original scope: heart rate, exertion level, intensity zone. \\
+Tempo signals & \halfdone & Frame timing and inertial sample cadence are logged and tempo is derivable from \code{signal\_log}, but it is not published as a distinct signal. \\
+3D web game & \done & Ten exercises with a 3D avatar, scoped as a proof of concept. \\
+Feedback and goals & \done & Live coaching text, per-repetition validation, results summary. \\
+Analytics and adherence & \halfdone & Frame-level JSONL export is implemented; longitudinal analysis is future work. \\
+Physiological context & \done & Extension beyond the original scope: heart rate, exertion level, intensity zone. \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -190,155 +184,152 @@ Physiological context & \done & Beyond the original scope: heart rate, exertion 
 \newpage
 
 %==============================================================================
-\section{Introduction and Internship Context}
+\section{Introduction and Context}
 
-\subsection{The lab and the mandate}
+\subsection{Institutional setting}
 
-The Persuasive Computing Lab at Dalhousie University studies systems that
+The Persuasive Computing Lab at Dalhousie University studies systems intended to
 influence health and well-being behaviour. The internship was framed around
-building an application or system for monitoring health and well-being, with the
-specific proposal being IronQuest 3D: a smart-dumbbell fitness gaming platform in
-which sensor-enabled dumbbells feed a browser-based 3D game, and repetition,
-tempo, and range-of-motion signals support feedback, goal setting, analytics, and
-exercise adherence.
+developing a system for monitoring health and well-being, with the specific
+proposal being IronQuest 3D: a smart-dumbbell fitness gaming platform in which
+sensor-enabled dumbbells feed a browser-based 3D game, and repetition, tempo, and
+range-of-motion signals support feedback, goal setting, analytics, and exercise
+adherence.
 
-Two constraints shaped everything that followed. First, the internship had a hard
-twelve-week ceiling from a May 18, 2026 start. Second, the expected output was a
-research paper due August 7, 2026 --- roughly eleven weeks in. A fitness gaming
-platform is not a research contribution on that timeline; a validated sensing
-method can be.
+Two constraints shaped the work. The internship had a twelve-week maximum from a
+May 18, 2026 start date, and the expected output was a research paper due
+August 7, 2026, approximately eleven weeks after the start.
 
-\subsection{What this document is}
+\subsection{Purpose and structure of this report}
 
-This is the final report of the internship. It records what was built, in what
-order, why each significant engineering decision was made, what was measured, and
-what remains unresolved. It is written to serve two audiences at once: the
-supervisory team, who need the internship narrative and an honest accounting of
-progress; and my own future self assembling the research paper, who needs the
-technical sections to be precise enough to lift directly.
+This report records what was built, in what sequence, the reasoning behind the
+principal engineering decisions, the measurements obtained, and the questions
+that remain open. It addresses two audiences: the supervisory team, who require
+the internship narrative and an account of progress; and the subsequent research
+paper, for which the technical sections are written to be transferable with
+minimal revision.
 
-Sections~\ref{sec:architecture} through~\ref{sec:decisions} and
-Section~\ref{sec:results} are written as paper-ready material.
-Sections~\ref{sec:chronology} and~\ref{sec:consolidation} are
-internship-specific.
+Sections~\ref{sec:architecture} through~\ref{sec:results} contain the technical
+material. Sections~\ref{sec:chronology} and~\ref{sec:consolidation} are specific
+to the internship.
 
 \subsection{Terminology}
 
 \emph{IronQuest 3D} refers to the original proposal and remains the repository
 name. \emph{FitQuest} refers to the delivered system and is the name used in the
-browser client, the watch application, and the presentation material. The two
-names describe the same project at different stages of scope.
+browser client, the watch application, and the presentation material. Both names
+denote the same project at different stages of its scope.
 
 %==============================================================================
-\section{Scope Evolution: From IronQuest 3D to FitQuest}
+\section{Change of Scope}
 \label{sec:scope}
 
-\subsection{The problem with the original scope}
+\subsection{Rationale}
 
-By the third week it was clear that the original scope contained a hidden
-dependency chain that could not be completed and validated within the deadline:
+By the third week of the internship it became apparent that the original scope
+contained a sequential dependency chain that could not be completed and validated
+within the available time:
 
 \begin{enumerate}
 \item Instrumented dumbbells require designing, building, and calibrating custom
       hardware for each weight.
 \item A 3D game platform requires game design, asset production, and interaction
       tuning.
-\item Adherence analytics requires longitudinal data from real users, which
-      requires the first two to already work.
+\item Adherence analytics requires longitudinal data from participants, which
+      depends on the first two components being operational.
 \end{enumerate}
 
-Attempting all three would produce three unfinished halves. Worse, none of the
-three is where the research novelty lies. The novel and defensible claim is the
-middle layer: that heterogeneous, asymmetrically mounted sensors can be fused
-into a single per-user calibrated contract that is stable enough for a real-time
-interactive application.
+Pursuing all three in parallel would have produced three incomplete components.
+The contribution with the clearest research value is the intermediate layer: the
+proposition that heterogeneous, asymmetrically mounted sensors can be combined
+into a single per-user calibrated specification stable enough to drive a
+real-time interactive application.
 
-\subsection{The June 23 pivot}
+\subsection{Revised scope, June 23, 2026}
 
 The project was formally renarrowed on June 23, 2026. The pivot report recorded
 five decisions:
 
 \begin{itemize}
-\item The final game is deferred to a small proof-of-concept slice.
-\item The vision system is frozen at body pose plus dumbbell/weight detection.
-      No additional vision model enters scope.
-\item The abandoned extra keypoint-analysis runtime path is removed entirely ---
-      code, CLI commands, tests, tools, model runs, and documentation.
-\item \code{game\_control} is reworked from a game-input structure into a
-      general sensor-fusion payload.
-\item Per-user auto-calibration becomes a first-class requirement rather than a
-      refinement.
+\item The final game is deferred and reduced to a proof-of-concept slice.
+\item The vision system is fixed at body pose and dumbbell/weight detection. No
+      additional vision model enters scope.
+\item The abandoned keypoint-analysis runtime path is removed in full, including
+      code, command-line interface entries, tests, tools, model runs, and
+      documentation.
+\item \code{game\_control} is reworked from a game-input structure into a general
+      sensor-fusion payload.
+\item Per-user auto-calibration becomes a requirement rather than a refinement.
 \end{itemize}
 
-The last decision is the one that turned the project into research. Without
-calibration, every normalized signal encodes the body proportions and range of
-motion of whoever happened to develop it. With calibration, the same physical
-effort maps to the same normalized value across different users, which is the
-property that makes the contract reusable.
+The calibration decision is the one with the greatest bearing on the research
+value of the work. Without calibration, every normalized signal encodes the body
+proportions and range of motion of the individual who developed it. With
+calibration, comparable physical effort maps to comparable normalized values
+across users, which is the property required for the specification to transfer.
 
-\subsection{Explicit non-goals}
+\subsection{Non-goals}
 
-Declaring non-goals in writing prevented scope creep for the remaining seven
-weeks. The system deliberately does not attempt: complex game development,
-multiplayer, production platform features, rule-based gym repetition counting
-(that is, counting from hard-coded joint-angle thresholds without calibration),
-or any vision model beyond the two named above.
+The following were declared out of scope in writing and remained so:
+complex game development, multiplayer functionality, production platform
+features, rule-based repetition counting from fixed joint-angle thresholds, and
+any vision model beyond the two named above.
 
 %==============================================================================
 \section{System Architecture}
 \label{sec:architecture}
 
-\subsection{Design principle: the payload is the contract}
+\subsection{Design principle}
 
-The architecture is organized around one rule: \textbf{clients consume
-\code{game\_control}, never raw sensor output}. The browser never sees a YOLO
-bounding box, a quaternion, or a Bluetooth characteristic. It sees normalized
-scalars, booleans, and labels.
+The architecture follows one rule: clients consume \code{game\_control} and do
+not access raw sensor output. The browser receives normalized scalars, booleans,
+and categorical labels, not bounding boxes, quaternions, or Bluetooth
+characteristics.
 
-This rule is what makes the work reusable. A rehabilitation application, an
-adherence monitor, or a different game can be written against the same contract
-without touching the sensing code. It also makes the system testable: 62
-automated tests exercise the contract directly, with no camera or hardware
-attached.
+This separation has two consequences. A rehabilitation application, an adherence
+monitor, or an alternative game can be developed against the same specification
+without modifying the sensing code. It also makes the system testable: the 62
+automated tests exercise the specification directly, with no camera or hardware
+present.
 
 \subsection{Frame-level data flow}
 
-Every camera frame passes through the following pipeline:
+Each camera frame passes through the following stages:
 
 \begin{lstlisting}
 Camera frame
   -> YOLO26 body pose (17 COCO keypoints)
-  -> temporal pose smoothing (blend + occlusion hold)
+  -> temporal pose smoothing (blend and occlusion hold)
   -> dumbbell/weight detector (strided, with temporal tracking)
   -> body/object side association (wrist and forearm proximity)
-  -> middleware pose-stream state
+  -> pose-stream state
   -> auto-calibrated motion signal analysis
-  -> Garmin wearable context merge
-  -> ESP32/IMU telemetry merge
-  -> sensor-fusion game_control payload
+  -> wearable context merge
+  -> inertial telemetry merge
+  -> game_control payload
   -> flat signal_log record
   -> OpenCV monitor / JSONL file / browser gateway
 \end{lstlisting}
 
-\subsection{Runtime layers}
+\subsection{Runtime modules}
 
 \begin{table}[h]
 \centering
 \small
-\caption{Runtime modules and their responsibilities.}
+\caption{Runtime modules and responsibilities.}
 \label{tab:modules}
 \begin{tabularx}{\textwidth}{@{}L{3.6cm} r L{2.6cm} X@{}}
 \toprule
 \textbf{Module} & \textbf{Lines} & \textbf{Layer} & \textbf{Responsibility} \\
 \midrule
 \code{cli.py} & 2{,}180 & Orchestration & Commands, model loading, camera lifecycle, background bridges, single-instance lock. \\
-\code{ui.py} & 1{,}682 & Presentation & OpenCV developer monitor: skeleton, boxes, telemetry panels. \\
-\code{sensors.py} & 1{,}363 & Adapters & Garmin JSON and ESP32 serial/UDP normalization; transport auto-selection. \\
-\code{motion\_analysis.py} & 1{,}023 & Analysis & Per-session calibration and all normalized camera signals. \\
+\code{ui.py} & 1{,}682 & Presentation & OpenCV monitor: skeleton, detection boxes, telemetry panels. \\
+\code{sensors.py} & 1{,}363 & Adapters & Wearable JSON and inertial serial/UDP normalization; transport selection. \\
+\code{motion\_analysis.py} & 1{,}023 & Analysis & Per-session calibration and normalized camera signals. \\
 \code{body\_context.py} & 987 & Analysis & Object-to-limb association and temporal object tracking. \\
-\code{game\_controls.py} & 677 & Contract & Assembles the \code{game\_control} payload; owns the shared IMU intensity formula. \\
+\code{game\_controls.py} & 677 & Specification & Assembles the payload; defines the shared inertial intensity function. \\
 \code{capture\_analysis.py} & 459 & Offline & Session quality reporting from recorded JSONL. \\
-\code{web\_gateway.py} & 403 & Transport & Standard-library HTTP server: SSE payloads, MJPEG preview, control endpoint. \\
+\code{web\_gateway.py} & 403 & Transport & HTTP server: SSE payloads, MJPEG preview, control endpoint. \\
 \code{keypoints.py} & 319 & Primitives & COCO keypoint mapping, pose smoothing, geometry, stream state. \\
 \midrule
 \textbf{Total} & \textbf{9{,}109} & & \\
@@ -346,22 +337,22 @@ Camera frame
 \end{tabularx}
 \end{table}
 
-\subsection{Why the standard library for the gateway}
+\subsection{Gateway implementation}
 
-The browser gateway is built on Python's \code{http.server} rather than Flask,
-FastAPI, or a WebSocket framework. The reasoning: the demonstration must run on a
-lab laptop with no internet access and no additional service. Server-Sent Events
-over plain HTTP are sufficient for a one-way payload stream at camera frame rate,
-and MJPEG over \code{multipart/x-mixed-replace} is sufficient for the preview.
-Adding a web framework would have introduced a dependency, a second process, and
-a failure mode, in exchange for capabilities the demonstration does not use.
+The browser gateway uses the Python standard library \code{http.server} rather
+than a web framework. The demonstration must run on a laptop without internet
+access and without an additional service. Server-Sent Events over HTTP are
+sufficient for a unidirectional payload stream at camera frame rate, and MJPEG
+over \code{multipart/x-mixed-replace} is sufficient for the preview image. A
+framework would introduce a dependency and an additional failure mode without
+providing capability the demonstration requires.
 
-The preview stream is deliberately downscaled to 640\,px at JPEG quality 72. The
-browser renders it inside a card roughly 290\,px wide, so encoding at full camera
-resolution was approximately three times oversampled: it cost encode time on the
-publishing thread and decode time in the browser, which appeared as the camera
-view visibly lagging the user's real movement. Detection still runs on the
-full-resolution frame, so accuracy is untouched.
+The preview stream is downscaled to 640\,px at JPEG quality 72. The browser
+renders it in a card approximately 290\,px wide, so encoding at full camera
+resolution represented roughly threefold oversampling, which added encode time on
+the publishing thread and decode time in the browser and produced observable
+latency between the user's movement and the displayed image. Detection continues
+to operate on the full-resolution frame, so accuracy is unaffected.
 
 %==============================================================================
 \section{Sensing Subsystems}
@@ -369,34 +360,32 @@ full-resolution frame, so accuracy is untouched.
 
 \subsection{Computer vision}
 
-Two YOLO26 models run per frame. Body pose produces 17 COCO keypoints; a
-separately trained detector produces \code{dumbbell}, \code{weight}, and
+Two YOLO26 models run per frame. The body-pose model produces 17 COCO keypoints;
+a separately trained detector produces \code{dumbbell}, \code{weight}, and
 \code{other} boxes.
 
-Three mechanisms stabilize the vision layer against the failure modes observed in
-real sessions:
+Three mechanisms address failure modes observed during testing:
 
 \begin{description}[leftmargin=1.2cm,style=nextline,itemsep=3pt]
-\item[Pose smoothing] YOLO estimates each frame independently, so lighting
-changes, motion blur, or partial occlusion can make a wrist or elbow jump for a
-single frame. Visible joints are blended with their recent position, and a joint
-that disappears is held briefly before it is dropped from analysis.
+\item[Pose smoothing] The pose model estimates each frame independently, so
+lighting changes, motion blur, or partial occlusion can displace a wrist or elbow
+for a single frame. Visible joints are blended with their recent position, and a
+joint that disappears is held briefly before being excluded from analysis.
 \item[Strided object inference] The dumbbell detector runs every $N$ frames
-(default 2) and cached boxes are reused between runs. Object position changes far
-more slowly than the pose does, so this halves the inference cost with no
-observable loss.
-\item[Temporal object tracking] A detected box is held for a configurable number
-of missed frames and smoothed across frames. This exists because a dumbbell
-passing in front of the torso is regularly lost for two or three frames, and
-without the hold the system would report the weight as dropped mid-repetition.
+(default 2), with cached boxes reused between runs. Object position changes more
+slowly than pose, so this reduces inference cost without measurable loss.
+\item[Temporal object tracking] A detected box is retained for a configurable
+number of missed frames and smoothed across frames. A dumbbell passing in front
+of the torso is regularly lost for two or three frames; without this mechanism the
+system would report the weight as released mid-repetition.
 \end{description}
 
-Accepted boxes must additionally pass per-class confidence floors, frame-area
-ratio bounds, and a wrist-or-forearm proximity requirement before they are
-allowed to mean ``loaded''. Section~\ref{sec:results} explains why this filtering
-is not optional.
+Accepted boxes must further satisfy per-class confidence floors, frame-area ratio
+bounds, and a wrist-or-forearm proximity requirement before contributing to the
+loaded state. Section~\ref{sec:results} presents the measurements that motivate
+this filtering.
 
-\subsection{Inertial glove: ESP32-S3 and BNO08x}
+\subsection{Inertial subsystem}
 
 \begin{table}[h]
 \centering
@@ -410,77 +399,76 @@ Microcontroller & ESP32-S3 DevKitC-1, UART USB port \\
 Inertial sensor & BNO08x, I\textsuperscript{2}C address \code{0x4B} \\
 Bus pins & \code{SDA = GPIO8}, \code{SCL = GPIO9} \\
 Telemetry interval & 66\,ms ($\approx$15\,Hz) \\
-Transports & USB serial and Wi-Fi UDP, published simultaneously \\
-Telemetry port / discovery port & 4210 / 4211 \\
-Mount & Right forearm armband (configurable) \\
+Transports & USB serial and Wi-Fi UDP, published concurrently \\
+Telemetry and discovery ports & 4210 and 4211 \\
+Mount & Right forearm armband, configurable \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-The firmware publishes each sample over serial \emph{and} UDP from the same
-build. This was a deliberate simplification: an earlier serial-only sketch was
-maintained alongside the wireless one, which meant two firmware files could drift
-apart. Because the wireless sketch is a strict superset, the serial-only variant
-was removed during final consolidation.
+The firmware publishes each sample over serial and UDP from a single build. An
+earlier serial-only sketch was maintained alongside the wireless variant, which
+introduced the possibility of divergence between two firmware files. Since the
+wireless sketch is a strict superset, the serial-only variant was removed during
+final consolidation.
 
-Two robustness details in the firmware are worth recording. The board calls
-\code{WiFi.disconnect(true)} before each reconnect attempt, which avoids a known
-ESP32 Wi-Fi library failure pattern after a dropped connection. And the laptop
-broadcasts a discovery packet so the board can relearn the laptop's address after
-a hotspot or network change --- necessary because the demonstration environment
-frequently switched between a phone hotspot and the campus network. That
-discovery packet carries a shared token, because without one any device on the
-same hotspot could redirect the telemetry stream by sending its own discovery
+Two implementation details address observed instability. The board calls
+\code{WiFi.disconnect(true)} before each reconnection attempt, which avoids a
+documented ESP32 Wi-Fi library failure pattern following a dropped connection.
+The laptop broadcasts a discovery packet so that the board can reacquire the
+laptop address after a network change, which was necessary because the testing
+environment alternated between a phone hotspot and the campus network. The
+discovery packet carries a shared token; without one, any device on the same
+network could redirect the telemetry stream by transmitting its own discovery
 packet.
 
-\subsection{Wearable context: Garmin Venu 3}
+\subsection{Wearable subsystem}
 
-The watch is treated as a \emph{context} source, never as the primary motion
-sensor. Three access paths were implemented, in decreasing order of richness:
+The Garmin Venu 3 provides physiological and secondary motion context. It is not
+used as a primary motion sensor. Three access paths were implemented:
 
 \begin{enumerate}
-\item \textbf{Connect IQ application.} A custom watch application posts heart
-rate, optional RR intervals, accelerometer, gyroscope, and location fields.
+\item \textbf{Connect IQ application.} A watch application transmits heart rate,
+optional RR intervals, accelerometer, gyroscope, and location fields.
 \item \textbf{Cloudflare Worker relay.} A serverless endpoint backed by a D1
-database receives the watch payload and serves the latest sample.
+database receives the watch payload and serves the most recent sample.
 \item \textbf{Bluetooth Low Energy fallback.} Heart rate only, from the watch's
 standard broadcast mode.
 \end{enumerate}
 
-The Worker exists because of a specific network topology problem. When the laptop
-is connected to the phone's hotspot, the phone is simultaneously the hotspot
-gateway and the Garmin Connect bridge, and it will not route the watch's request
-back into a hotspot client. Connect IQ additionally requires HTTPS. A permanent
-HTTPS relay solves both at once, and replaced an earlier approach based on
-ephemeral tunnels whose URL changed on every restart --- which required
-rebuilding and re-sideloading the watch application each time.
+The relay addresses a specific network condition. When the laptop is connected to
+the phone hotspot, the phone acts simultaneously as hotspot gateway and as the
+Garmin Connect bridge, and does not route the watch request back to a hotspot
+client. Connect IQ additionally requires HTTPS. A persistent HTTPS relay resolves
+both conditions and replaced an earlier approach based on ephemeral tunnels,
+whose URL changed on each restart and required rebuilding and re-sideloading the
+watch application.
 
-The BLE fallback is disabled by default. Running both sources against the same
-wearable JSON file allowed a BLE missing-device state to overwrite a perfectly
-valid Connect IQ sample.
+The BLE fallback is disabled by default. Operating both sources against the same
+wearable file allowed a BLE missing-device state to overwrite a valid Connect IQ
+sample.
 
 \subsection{Physical enclosure}
 
-The inertial hardware began as a breadboard assembly with jumper wires, which is
-adequate for a desk test and unusable for movement capture. A protective case was
-modelled in Blender and printed in two revisions. The repository carries the
-Blender source, the exported STL, and sliced G-code for the printer profile used.
+The inertial hardware was initially assembled on a breadboard with jumper wires,
+which is adequate for desk testing but unsuitable for movement capture. A
+protective enclosure was modelled in Blender and printed in two revisions. The
+repository contains the Blender source, the exported STL, and sliced G-code for
+the printer profile used.
 
-The case constrains one thing that matters analytically: the IMU's orientation
-relative to the forearm. Because the rotation at which the case sits on the strap
-sets an absolute pitch offset, the browser's per-repetition validation is
-deliberately keyed to the \emph{excursion} of forearm elevation rather than its
-absolute band, so that a constant mounting offset cancels out.
+The enclosure fixes the sensor orientation relative to the forearm. The rotation
+at which the enclosure sits on the strap determines an absolute pitch offset;
+Section~\ref{sec:browser} describes how repetition validation accommodates this.
 
 %==============================================================================
-\section{The Sensor-Fusion Contract}
+\section{Signal Specification}
 \label{sec:contract}
 
 \subsection{Normalization}
 
-The contract expresses everything in four value types: scalars normalized to
-$[0,1]$, booleans, vectors (pitch, roll, yaw, acceleration), and categorical
-labels such as \code{intensity\_zone}. The control mode identifier is
+The specification uses four value types: scalars normalized to $[0,1]$, booleans,
+vectors (pitch, roll, yaw, acceleration), and categorical labels such as
+\code{intensity\_zone}. The control mode identifier is
 \code{sensor\_fusion\_engine} and the schema version is
 \code{2026-08-fusion-v2}.
 
@@ -492,82 +480,76 @@ labels such as \code{intensity\_zone}. The control mode identifier is
 \toprule
 \textbf{Section} & \textbf{Contents} \\
 \midrule
-\code{body\_posture} & Pose array and per-side summaries; body-wide torso hinge. \\
+\code{body\_posture} & Pose array, per-side summaries, and torso hinge. \\
 \code{dumbbells} & Accepted boxes and left/right associations. \\
-\code{arm\_signals} & Per-side fusion of camera pose, dumbbell association, and attached hardware. \\
+\code{arm\_signals} & Per-side combination of camera pose, dumbbell association, and attached hardware. \\
 \code{esp32\_glove} & Orientation, motion deltas, motion intensity and state, stability index, sample cadence. \\
-\code{wearable\_watch} & Heart rate and derived exertion values; watch motion state. \\
-\code{user\_state} & Overall normalized state: \code{exertion\_level}, \code{intensity\_zone}. \\
+\code{wearable\_watch} & Heart rate, derived exertion values, and watch motion state. \\
+\code{user\_state} & Aggregate normalized state: \code{exertion\_level}, \code{intensity\_zone}. \\
 \code{signal\_metrics} & Calibrated camera signals and bilateral comparison. \\
 \code{calibration} & Calibration state, observed bounds, and quality assessment. \\
-\code{axes} & Compact normalized values for direct UI binding. \\
-\code{events} & Neutral event candidates, debounced. \\
+\code{axes} & Compact normalized values for direct interface binding. \\
+\code{events} & Debounced event candidates. \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
-\subsection{Per-user auto-calibration}
+\subsection{Per-user calibration}
 
-At session start the system runs a calibration window (7\,s by default) during
+At session start the system runs a calibration window, 7\,s by default, during
 which the user moves through a comfortable range. Per-side minimum and maximum
 bounds are recorded for each feature, and subsequent measurements are normalized
-against those bounds. The same physical effort therefore maps to comparable
-normalized values across users of different height, limb length, and mobility ---
-without retraining a model or editing source for each user.
+against those bounds. Comparable physical effort therefore maps to comparable
+normalized values across users of differing height, limb length, and mobility,
+without model retraining or per-user code changes.
 
 Calibration reports a quality assessment of \code{good}, \code{limited}, or
-\code{insufficient}. This exists because of a real failure mode: the timer and
-sample-count gates can both pass while the user has barely moved, which produces
-a near-degenerate span and therefore a saturation-prone signal for the rest of the
-session. The browser's calibration control watches the live quality field rather
-than closing on a fixed timer.
+\code{insufficient}. The timer and sample-count conditions can both be satisfied
+while the user has moved very little, which produces a narrow span and a
+saturation-prone signal for the remainder of the session. The browser's
+calibration control monitors the reported quality rather than closing after a
+fixed interval.
 
-\subsection{Disambiguating exercises that share a signal}
+\subsection{Exercise disambiguation signals}
 
-A plain curl and an overhead triceps extension both bend the elbow through a
-similar range. Elbow angle alone cannot separate them; only the position of the
-upper arm relative to the torso can. Two signal families were added specifically
-for this:
+A curl and an overhead triceps extension bend the elbow through a comparable
+range. Elbow angle alone does not separate them; the position of the upper arm
+relative to the torso does. Two signal families address this:
 
 \begin{itemize}
-\item \code{upper\_arm\_angle} --- from the hip--shoulder--elbow angle.
-      $0^\circ$ is the arm at the side (curl); $180^\circ$ is overhead (press,
-      triceps extension).
-\item \code{torso\_hinge} --- from the angle between vertical and the line
+\item \code{upper\_arm\_angle}, derived from the hip--shoulder--elbow angle.
+      $0^\circ$ corresponds to the arm at the side; $180^\circ$ to overhead.
+\item \code{torso\_hinge}, derived from the angle between vertical and the line
       joining the hip midpoint to the shoulder midpoint. Near zero when upright,
-      increasing with a forward hinge (bent-over row).
+      increasing with forward hinge.
 \end{itemize}
 
-Both are published in two forms: a calibrated $[0,1]$ signal and a raw degree
-measurement. \textbf{The browser's repetition gates read the raw degrees, not the
-calibrated signal.} Whether an arm is near the torso or overhead is a fixed
-anatomical fact and should not require per-user calibration; furthermore, an
-exercise that deliberately keeps the upper arm still --- a curl --- leaves the
-calibrated span near-degenerate early in a session, which made the calibrated
-version unstable enough to false-trigger. The calibrated forms remain in
-\code{signal\_log} for cross-user comparison in the research analysis; they
-simply do not gate a repetition.
+Both are published in calibrated $[0,1]$ form and in raw degrees. The browser's
+repetition gates use the raw degree values. Whether an arm is near the torso or
+overhead is a fixed anatomical relationship and does not require per-user
+calibration; further, an exercise that holds the upper arm still, such as a curl,
+leaves the calibrated span narrow early in a session, which made the calibrated
+form unstable enough to trigger falsely. The calibrated forms remain in
+\code{signal\_log} for cross-user comparison.
 
-\subsection{Asymmetric hardware}
+\subsection{Asymmetric hardware configuration}
 
-The system assumes, by default, that the inertial glove is on the right hand and
-the watch on the left. Both sides are command-line configurable without code
-changes. This asymmetry is not an accident of available hardware --- it is the
-realistic deployment case, and handling it explicitly is part of the
-contribution. It also produces an honest limitation: with one glove on one wrist,
-a grip-rotation difference such as curl versus hammer curl can only be
-hard-verified on the instrumented side.
+The system assumes by default that the inertial glove is worn on the right hand
+and the watch on the left. Both are configurable from the command line. This
+asymmetry reflects the expected deployment configuration and is handled
+explicitly in the specification. It also produces a limitation: with a single
+glove, a grip-rotation difference such as curl against hammer curl can be
+verified only on the instrumented side.
 
 %==============================================================================
-\section{The Browser Application}
+\section{Browser Application}
 \label{sec:browser}
 
-\subsection{Scope discipline}
+\subsection{Scope}
 
-The browser client exists to demonstrate that the contract drives a real
-interaction. It is intentionally a single self-contained page served by the local
-gateway, with a vendored copy of the 3D library so that it works with no internet
-connection in the lab.
+The browser client demonstrates that the specification drives a functioning
+interaction. It is a single self-contained page served by the local gateway, with
+a vendored copy of the 3D library so that it operates without internet access.
 
 \subsection{Exercise library}
 
@@ -577,27 +559,27 @@ patterns.
 \begin{table}[h]
 \centering
 \small
-\caption{Implemented exercises, their validation mode, and arm pattern.}
+\caption{Implemented exercises, validation mode, and arm pattern.}
 \begin{tabularx}{\textwidth}{@{}L{5.4cm} L{2.6cm} L{2.8cm} X@{}}
 \toprule
 \textbf{Exercise} & \textbf{Mode} & \textbf{Arm pattern} & \textbf{Primary signal} \\
 \midrule
 Curl & extension & alternating & Elbow bend \\
-Hammer curl & extension & alternating & Elbow bend + grip roll \\
+Hammer curl & extension & alternating & Elbow bend and grip roll \\
 Front raise & height & alternating & Shoulder-height ceiling \\
 Lateral raise & lateral & alternating & Reach from shoulder \\
 Single-arm press & height & alternating & Overhead ceiling \\
-Overhead triceps extension & triceps & alternating & Upper-arm angle + glove pitch \\
-Bent-over row & row & alternating & Torso hinge + arm height \\
+Overhead triceps extension & triceps & alternating & Upper-arm angle and glove pitch \\
+Bent-over row & row & alternating & Torso hinge and arm height \\
 Bilateral front hold & hold & simultaneous & Sustained height, both sides \\
 Double-arm press & height & simultaneous & Overhead, both sides \\
-Overhead + front hold & combo & opposed & Opposed per-side targets \\
+Overhead and front hold & combo & opposed & Opposed per-side targets \\
 \bottomrule
 \end{tabularx}
 \end{table}
 
 Sessions run in one of three modes --- coach-led, user-selected, or randomized ---
-at one of four difficulty levels that set both the repetition target and a
+at one of four difficulty levels that determine both the repetition target and a
 strictness parameter.
 
 \begin{table}[h]
@@ -616,119 +598,119 @@ Fit      & 20 & 0.86 \\
 \end{tabular}
 \end{table}
 
-\subsection{Repetition validation: hard gates and soft corroboration}
+\subsection{Repetition validation}
 
-The validation design is the browser's most important technical decision, and it
-came directly from real sessions rather than from theory. It separates two
-categories of evidence:
+Validation separates two categories of evidence:
 
 \begin{description}[leftmargin=1.2cm,style=nextline,itemsep=3pt]
-\item[Hard gates] Conditions that must hold for a repetition to count at all.
-These are postural preconditions read from raw degree measurements: is the upper
-arm actually overhead for a press, is the torso actually hinged for a row. A hard
-gate rejects a movement that is anatomically not the prescribed exercise.
-\item[Soft corroboration] Additional sensor evidence that \emph{strengthens}
-confidence but can never block a repetition. Glove stability, watch motion state,
-forearm excursion range, and grip orientation all fall here.
+\item[Postural preconditions] Conditions that must hold for a repetition to be
+counted, evaluated from raw degree measurements: whether the upper arm is
+overhead for a press, whether the torso is hinged for a row. These reject
+movements that are anatomically not the prescribed exercise.
+\item[Corroborating evidence] Additional sensor input that increases confidence
+but cannot prevent a repetition from counting. Glove stability, watch motion
+state, forearm excursion range, and grip orientation fall into this category.
 \end{description}
 
-The reason for this asymmetry is a failure observed directly in a real session:
-when every sensor could veto a repetition, a single delayed or briefly stale
-sensor silently froze counting, and the user had no way to tell why. Under the
-current design no single sensor can permanently block a valid repetition; a
-missing sensor only reduces the corroboration available.
+This asymmetry follows from behaviour observed in testing. When every sensor could
+reject a repetition, a single delayed or briefly stale sensor stopped counting
+without any indication to the user. Under the current design no single sensor can
+block a valid repetition; a missing sensor reduces only the available
+corroboration.
 
-A second correction came from the same source. An early adaptive-threshold
-implementation tracked each side's lifetime minimum and maximum for the current
-exercise, only ever widening. A single unusually wide or shallow early repetition
-therefore skewed the threshold permanently. The current implementation uses a
-6-second rolling window, so thresholds track recent range and forget an early
-outlier.
+Forearm-based validation uses the \emph{excursion} of forearm elevation rather
+than its absolute value, so that the constant pitch offset introduced by
+enclosure rotation (Section~\ref{sec:sensing}) cancels.
+
+An earlier adaptive-threshold implementation tracked each side's lifetime minimum
+and maximum for the current exercise and only widened. A single unusually wide or
+shallow early repetition therefore skewed the threshold for the remainder of the
+set. The current implementation uses a 6-second rolling window, so thresholds
+follow the recent range.
 
 \subsection{Occlusion tolerance}
 
-A dumbbell that briefly disappears behind the torso must not invalidate the load.
-The client applies a graded grace period whose length depends on the available
-corroborating evidence: a declared dumbbell weight extends it, glove motion
-extends it further, and postures known to be occlusion-prone extend it more
-still. This is the browser-side counterpart to the temporal object tracking in
-the vision layer, and the two together are what made mid-set counting survive
-realistic camera angles.
+A dumbbell that briefly disappears behind the torso must not invalidate the loaded
+state. The client applies a graded grace period whose duration depends on the
+available corroborating evidence: a declared dumbbell weight extends it, glove
+motion extends it further, and postures known to be occlusion-prone extend it
+further still. This complements the temporal object tracking described in
+Section~\ref{sec:sensing}.
 
 %==============================================================================
-\section{Engineering Decisions and Rejected Alternatives}
+\section{Design Decisions}
 \label{sec:decisions}
 
-Recording rejected alternatives matters more than recording chosen ones: the
-choice is visible in the code, the rejection is not.
+This section records the principal design decisions taken during the internship,
+together with the alternatives considered and the reasons for rejecting them.
 
 \begin{longtable}{@{}L{3.9cm} L{4.6cm} X@{}}
-\caption{Significant decisions, the alternative rejected, and the reason.}\\
+\caption{Design decisions, alternatives considered, and rationale.}\\
 \toprule
-\textbf{Decision} & \textbf{Rejected alternative} & \textbf{Reason} \\
+\textbf{Decision} & \textbf{Alternative rejected} & \textbf{Rationale} \\
 \midrule
 \endfirsthead
 \toprule
-\textbf{Decision} & \textbf{Rejected alternative} & \textbf{Reason} \\
+\textbf{Decision} & \textbf{Alternative rejected} & \textbf{Rationale} \\
 \midrule
 \endhead
 \bottomrule
 \endfoot
-Glove-mounted IMU plus camera dumbbell detection &
-Instrumenting the dumbbells themselves &
-Instrumented weights only work for the weights instrumented. A glove generalizes to any weight and adds body context. \\
+Glove-mounted IMU with camera dumbbell detection &
+Instrumenting the dumbbells &
+Instrumented weights apply only to the weights instrumented. A glove generalizes to any weight and adds body context. \\
 \addlinespace
 Per-user calibration window &
 Fixed anatomical thresholds &
-Fixed thresholds encode the developer's body. Calibration is what makes the contract transferable across users. \\
+Fixed thresholds encode the proportions of whoever implemented them. Calibration is required for the specification to transfer between users. \\
 \addlinespace
 Raw degrees for repetition gates &
 Calibrated $[0,1]$ signals &
-Anatomical facts should not need calibration, and a curl leaves the calibrated span degenerate early in a session. \\
+Anatomical relationships do not require calibration, and a curl leaves the calibrated span narrow early in a session. \\
 \addlinespace
-Soft corroboration, hard postural gates &
-Every sensor can veto &
-Observed in a real session: one stale sensor silently froze counting with no user-visible cause. \\
+Corroborating evidence cannot block a repetition &
+Every sensor may reject &
+A stale sensor stopped counting with no indication to the user. \\
 \addlinespace
 Rolling 6-second threshold window &
-Lifetime min/max per exercise &
-Lifetime tracking let one outlier repetition permanently skew the threshold. \\
+Lifetime minimum and maximum &
+Lifetime tracking allowed one outlier repetition to skew the threshold for the set. \\
 \addlinespace
-Permanent Cloudflare Worker relay &
+Persistent Cloudflare Worker relay &
 Ephemeral HTTPS tunnel &
-Tunnel URLs changed on restart, forcing a watch rebuild and re-sideload each time. \\
+Tunnel URLs changed on restart, requiring a watch rebuild and re-sideload each time. \\
 \addlinespace
-Connect IQ as default, BLE opt-in &
+Connect IQ default, BLE opt-in &
 Both wearable sources active &
-Two writers on one file let a BLE missing-device state overwrite a valid Connect IQ sample. \\
+Two writers on one file allowed a BLE missing-device state to overwrite a valid sample. \\
 \addlinespace
-Timer started from view lifecycle &
+Timer started from the view lifecycle &
 Timer started from application \code{onStart} &
-Caused a reproducible on-device crash on Venu 3 firmware 17.05 / Connect IQ 6.0.2. \\
+Produced a reproducible on-device crash on Venu 3 firmware 17.05 with Connect IQ 6.0.2. \\
 \addlinespace
-Single firmware over serial and UDP &
+Single firmware for serial and UDP &
 Separate serial and wireless sketches &
-Two sketches drift. The wireless build is a strict superset. \\
+Two sketches admit divergence. The wireless build is a strict superset. \\
 \addlinespace
 Standard-library HTTP gateway &
-Flask, FastAPI, or WebSockets &
-Offline lab demonstration; SSE and MJPEG suffice. A framework adds a dependency and a failure mode for unused capability. \\
+Web framework or WebSockets &
+Offline demonstration; SSE and MJPEG are sufficient. A framework adds a dependency and a failure mode. \\
 \addlinespace
 640\,px preview at quality 72 &
 Full-resolution preview &
-The browser card is $\approx$290\,px wide. Oversampling cost encode and decode time, appearing as visible camera lag. \\
+The display card is approximately 290\,px wide. Oversampling added encode and decode time and produced observable latency. \\
 \addlinespace
 Strided object inference &
-Every-frame object inference &
-Object position changes far more slowly than pose. Halves cost with no observable loss. \\
+Per-frame object inference &
+Object position changes more slowly than pose; cost is reduced without measurable loss. \\
 \addlinespace
 Vendored 3D library &
-CDN-loaded library &
-The lab demonstration must run with no internet access. \\
+Library loaded from a CDN &
+The demonstration must operate without internet access. \\
 \addlinespace
 No synthetic wearable generator &
 Retaining a mock heart-rate writer &
-Prevents simulated physiology from reaching paper evidence by accident. \\
+Removes the possibility of simulated physiological values entering recorded evidence. \\
 \end{longtable}
 
 %==============================================================================
@@ -737,7 +719,7 @@ Prevents simulated physiology from reaching paper evidence by accident. \\
 
 \subsection{Object detector}
 
-The dumbbell/weight detector was trained for 80 epochs on a merged dataset.
+The dumbbell and weight detector was trained for 80 epochs on a merged dataset.
 
 \begin{table}[h]
 \centering
@@ -760,15 +742,12 @@ mAP@50--95 (B) & 0.744 \\
 \end{tabular}
 \end{table}
 
-\subsection{The caveat the aggregate metric hides}
-
-Per-class behaviour from the normalized confusion matrix is more informative than
-the headline mAP.
+\subsection{Per-class performance}
 
 \begin{table}[h]
 \centering
 \small
-\caption{Normalized confusion matrix, correctly predicted fraction per true class.}
+\caption{Normalized confusion matrix: fraction correctly predicted per true class.}
 \begin{tabular}{@{}lr@{}}
 \toprule
 \textbf{True class} & \textbf{Correctly predicted} \\
@@ -782,18 +761,18 @@ Background predicted as \code{dumbbell} & 0.72 \\
 \end{tabular}
 \end{table}
 
-The final row is the important one. The detector finds real dumbbells well, but it
-is \emph{liberal}: it proposes dumbbells in empty regions far more often than it
-misses real ones. Reporting mAP@50 alone would materially overstate what the
-system does in a live session.
+The detector identifies dumbbells present in the frame reliably, but proposes
+dumbbells in background regions at a substantially higher rate than it misses
+those present. Reporting mAP@50 alone would therefore overstate performance in
+live operation.
 
-This is precisely why the runtime does not trust raw boxes. Before any box is
-allowed to mean ``the hand is loaded'', it must pass per-class confidence floors,
-frame-area ratio bounds, and a wrist-or-forearm proximity requirement. The
-filtered behaviour, not the raw metric, is what should be quoted when describing
-system performance --- and the gap between the two is itself a finding worth
-reporting: a detector that is adequate by aggregate metrics can still require
-substantial geometric gating to be usable as an interaction signal.
+This measurement is the reason the runtime does not act on raw detections.
+Before a box contributes to the loaded state it must satisfy per-class confidence
+floors, frame-area ratio bounds, and a wrist-or-forearm proximity requirement.
+The filtered behaviour, rather than the aggregate metric, characterizes the
+system in operation. The difference between the two is itself a result: a
+detector with acceptable aggregate metrics may still require substantial
+geometric filtering before it can serve as an interaction signal.
 
 \subsection{Automated verification}
 
@@ -803,16 +782,16 @@ substantial geometric gating to be usable as an interaction signal.
 \caption{Test suite composition. All 62 tests pass.}
 \begin{tabularx}{\textwidth}{@{}L{5.6cm} r X@{}}
 \toprule
-\textbf{Module} & \textbf{Tests} & \textbf{Covers} \\
+\textbf{Module} & \textbf{Tests} & \textbf{Coverage} \\
 \midrule
-\code{test\_sensor\_fusion\_payload.py} & 20 & Contract shape, ESP32 bridges, wearable normalization, event debouncing \\
+\code{test\_sensor\_fusion\_payload.py} & 20 & Payload structure, inertial bridges, wearable normalization, event debouncing \\
 \code{test\_cli\_detection\_defaults.py} & 10 & Command defaults and explicit-flag precedence \\
 \code{test\_signal\_motion\_analysis.py} & 8 & Calibration behaviour and normalized signals \\
 \code{test\_web\_gateway.py} & 6 & Client serving, SSE, control queue, path-traversal guard \\
 \code{test\_garmin\_connectiq\_http\_bridge.py} & 4 & Heart-rate sanitization \\
 \code{test\_object\_temporal\_tracking.py} & 4 & Detector dropout hold and box smoothing \\
-\code{test\_fitquest\_worker\_pull.py} & 3 & Worker polling and atomic writes \\
-\code{test\_ui\_sensor\_labels.py} & 3 & Sensor status wording \\
+\code{test\_fitquest\_worker\_pull.py} & 3 & Relay polling and atomic writes \\
+\code{test\_ui\_sensor\_labels.py} & 3 & Sensor status labelling \\
 \code{test\_body\_context.py} & 2 & Dumbbell-to-limb association \\
 \code{test\_capture\_analysis.py} & 2 & Offline session quality reporting \\
 \midrule
@@ -821,12 +800,12 @@ substantial geometric gating to be usable as an interaction signal.
 \end{tabularx}
 \end{table}
 
-Because the tests exercise the contract rather than the hardware, the entire suite
-runs in approximately six seconds with no camera, board, or watch attached. This
-was a deliberate design property: it made it practical to verify correctness
-between real hardware sessions, which were scarce.
+The tests exercise the signal specification rather than the hardware, so the
+suite completes in approximately six seconds without a camera, board, or watch
+attached. This property allowed correctness to be verified between hardware
+sessions, which were limited in number.
 
-\subsection{Codebase}
+\subsection{Delivered artefacts}
 
 \begin{table}[h]
 \centering
@@ -837,7 +816,7 @@ between real hardware sessions, which were scarce.
 \textbf{Component} & \textbf{Lines} & \textbf{Language} \\
 \midrule
 Runtime package & 9{,}109 & Python \\
-Browser client & 5{,}609 & HTML / CSS / JavaScript \\
+Browser client & 5{,}609 & HTML, CSS, JavaScript \\
 Documentation & 2{,}903 & Markdown \\
 Inertial firmware & 375 & Arduino C++ \\
 Watch application & 317 & Monkey C \\
@@ -850,20 +829,20 @@ Relay worker & 176 & JavaScript \\
 
 \begin{itemize}
 \item Full test suite: 62 tests passing.
-\item Gateway end to end: client served, vendored library served, live payloads
-      streaming, removed routes correctly returning 404.
-\item Browser: page renders with zero console errors; live sensor status
-      flowing; 3D library loaded.
+\item Gateway: client and vendored library served, live payloads streaming,
+      removed routes returning 404.
+\item Browser client: page renders without console errors; live sensor status
+      updating; 3D library loaded.
 \item Watch application: compiles for the Venu 3 target with Connect IQ SDK
       9.2.0.
-\item Two full real-hardware sessions with camera, inertial glove, and watch
-      operating simultaneously.
-\item Five recorded capture sessions summarized through the offline analysis
+\item Two full sessions with camera, inertial glove, and watch operating
+      concurrently.
+\item Five recorded capture sessions processed through the offline analysis
       pipeline.
 \end{itemize}
 
 %==============================================================================
-\section{Chronology of the Internship}
+\section{Chronology}
 \label{sec:chronology}
 
 \subsection{Phase overview}
@@ -877,13 +856,13 @@ Relay worker & 176 & JavaScript \\
 \textbf{Period} & \textbf{Phase} & \textbf{Principal outcome} \\
 \midrule
 May 18 -- Jun 22 & Foundation & Vision pipeline, detector training, initial architecture \\
-Jun 23 -- Jun 28 & Pivot & Scope renarrowed; contract redesigned; dead path removed \\
+Jun 23 -- Jun 28 & Change of scope & Scope renarrowed; specification redesigned; abandoned path removed \\
 Jun 29 -- Jul 5 & Inertial bring-up & ESP32/BNO08x validated over USB and Wi-Fi \\
-Jul 6 -- Jul 12 & Wearable integration & Garmin path implemented; transports unified \\
-Jul 13 -- Jul 19 & Consolidation & Watch application; relay worker; case modelled \\
-Jul 20 -- Jul 26 & Application & Browser client built; case printed; 10 exercises \\
-Jul 27 -- Aug 3 & Correctness & Real-session bugs fixed; validation redesigned \\
-Aug 4 -- Aug 7 & Release & Repository consolidation; evidence preserved; reporting \\
+Jul 6 -- Jul 12 & Wearable integration & Wearable path implemented; transports unified \\
+Jul 13 -- Jul 19 & Consolidation & Watch application, relay worker, enclosure modelled \\
+Jul 20 -- Jul 26 & Application & Browser client, enclosure printed, exercise library \\
+Jul 27 -- Aug 3 & Correctness & Session-derived corrections; validation redesigned \\
+Aug 4 -- Aug 7 & Release & Repository consolidation, evidence preservation, reporting \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -894,86 +873,83 @@ The opening phase established the vision pipeline. The base YOLO26 pose and
 detection weights were obtained, the merged dumbbell dataset was assembled from
 two annotated sources, and the object detector was trained through its 80-epoch
 run. The repository layout, capture tooling, and offline analysis pipeline were
-established in this period.
+established during this period.
 
-This phase also produced the realization that drove the pivot. With the vision
-half working, the remaining path to the originally proposed platform --- custom
-dumbbell hardware, a full 3D game, and longitudinal analytics --- was visibly
-longer than the time remaining.
+This phase also produced the assessment that led to the change of scope. With the
+vision component operational, the remaining work required by the original
+proposal --- custom dumbbell hardware, a complete 3D game, and longitudinal
+analytics --- exceeded the time available.
 
-\subsection{Week 6: the pivot (June 23 -- June 28)}
+\subsection{Week 6: change of scope (June 23 -- June 28)}
 
-Scope was formally renarrowed. The abandoned keypoint-analysis path was removed
-in its entirety, \code{game\_control} was reworked from a game-input structure
-into a general sensor-fusion payload, auto-calibration and normalized arm signals
-were added, heart rate was mapped to \code{exertion\_level} and
-\code{intensity\_zone}, and flat \code{signal\_log} records were introduced for
-analysis. The documentation was rewritten around the new deliverable.
+Scope was formally renarrowed. The abandoned keypoint-analysis path was removed in
+full, \code{game\_control} was reworked from a game-input structure into a general
+sensor-fusion payload, auto-calibration and normalized arm signals were added,
+heart rate was mapped to \code{exertion\_level} and \code{intensity\_zone}, and
+flat \code{signal\_log} records were introduced. The documentation was rewritten
+around the revised deliverable.
 
 The pivot report recorded five risks. Reviewed at the close of the internship,
-four materialized in some form: the detector did need substantial geometric
-gating; IMU mounting did introduce an orientation offset requiring an
-excursion-based workaround; the Garmin path did require a bridge workaround; and
-camera-derived signals did require careful validation. The fifth --- avoiding any
-implication that the game is complete --- was addressed by scope discipline.
+four materialized in some form: the detector required substantial geometric
+filtering; the inertial mounting introduced an orientation offset requiring an
+excursion-based approach; the wearable path required a relay; and camera-derived
+signals required validation before use. The fifth, avoiding any implication that
+the game is complete, was addressed through scope definition.
 
 \subsection{Week 7: inertial bring-up (June 29 -- July 5)}
 
 The ESP32-S3 and BNO08x were assembled and validated. The I\textsuperscript{2}C
-scanner confirmed the sensor at address \code{0x4B}; firmware was written to
-publish structured telemetry; and both the USB serial path and the Wi-Fi UDP path
-were confirmed against the Python bridge. Five capture sessions were recorded in
-this period --- still, tilt sweep, and motion burst conditions --- and summarized
-through the analysis pipeline. Those summaries recorded an effective sample rate
-of approximately 15\,Hz and pose confidence medians above 0.84, confirming the
-data was usable.
+scanner confirmed the sensor at address \code{0x4B}, firmware was written to
+publish structured telemetry, and both the USB serial and Wi-Fi UDP paths were
+confirmed against the Python bridge. Five capture sessions were recorded during
+this period, covering still, tilt-sweep, and motion-burst conditions, and
+processed through the analysis pipeline. Those summaries recorded an effective
+sample rate of approximately 15\,Hz and median pose confidence above 0.84.
 
-The honest assessment recorded at the time was that the breadboard assembly was
-functional but too fragile for movement capture, which set the agenda for the
-enclosure work.
+The breadboard assembly was functional but insufficiently robust for movement
+capture, which established the requirement for the enclosure.
 
 \subsection{Week 8: wearable integration (July 6 -- July 12)}
 
 The transport layer was unified so that a single launcher command listens on USB
-serial and Wi-Fi simultaneously, removing the need to choose a transport before
-each run. The Garmin BLE heart-rate bridge was added, the wearable JSON contract
-was extended to carry heart-rate contact, resting and maximum references, and
-optional RR intervals, and the offline analysis was extended to summarize
-wearable status, heart-rate percentiles, exertion, and intensity zones.
+serial and Wi-Fi concurrently, removing the need to select a transport before each
+run. The BLE heart-rate bridge was added, the wearable specification was extended
+to carry heart-rate contact, resting and maximum references, and optional RR
+intervals, and the offline analysis was extended to summarize wearable status,
+heart-rate percentiles, exertion, and intensity zones.
 
 \subsection{Week 9: consolidation (July 13 -- July 19)}
 
 The Connect IQ watch application was developed, which required generating a
-developer key and working through a sideloading process that initially produced
-an on-device crash. Diagnosis identified a timer started from the application's
-\code{onStart} lifecycle hook; moving it to the view lifecycle resolved it. The
-Cloudflare Worker relay was written and deployed, replacing the ephemeral tunnel
-approach. The enclosure was modelled in Blender.
+developer key and establishing a sideloading procedure. An initial on-device
+crash was traced to a timer started from the application \code{onStart} lifecycle
+hook; relocating it to the view lifecycle resolved the fault. The Cloudflare
+Worker relay was written and deployed, replacing the ephemeral tunnel approach.
+The enclosure was modelled in Blender.
 
 \subsection{Week 10: application (July 20 -- July 26)}
 
-This was the highest-output week. The enclosure was printed and validated; the
-browser client was built from an early prototype into a client with a prescribed
-exercise flow, a 3D avatar, and a real results screen; the exercise library was
-expanded to ten; and the ESP32 Wi-Fi telemetry and Garmin bridges were hardened.
-The second case revision was produced in response to fit observations from the
-first print. A VPRI lab visit occurred on July 20, for which a project
-introduction was prepared.
+The enclosure was printed and validated. The browser client was developed from an
+early prototype into a client with a prescribed exercise sequence, a 3D avatar,
+and a results summary; the exercise library was extended to ten exercises; and the
+Wi-Fi telemetry and wearable bridges were made more robust. A second enclosure
+revision was produced in response to fit observations from the first print. A VPRI
+lab visit took place on July 20, for which a project introduction was prepared.
 
 \subsection{Week 11: correctness (July 27 -- August 3)}
 
-Two full real-hardware sessions were run with all three sensing modalities
-operating together. These exposed failures that isolated testing had not: brief
-dumbbell occlusions invalidating the load, a single stale sensor freezing
-repetition counting, and an adaptive threshold permanently skewed by an early
-outlier repetition. Each was diagnosed and corrected, and the validation
-architecture described in Section~\ref{sec:browser} is the result. Per-exercise
-validation was made genuinely distinct rather than several exercises sharing
-identical detection logic, and a debug view was added.
+Two full sessions were conducted with all three sensing modalities operating
+concurrently. These identified conditions that isolated testing had not: brief
+dumbbell occlusions invalidating the loaded state, a single stale sensor stopping
+repetition counting, and an adaptive threshold skewed by an early outlier
+repetition. Each was diagnosed and corrected; the validation design described in
+Section~\ref{sec:browser} is the result. Per-exercise validation was made
+distinct rather than shared across several exercises, and a diagnostic view was
+added.
 
-The pattern worth recording is that every significant correctness fix in this
-project originated in a real session, not in testing. The automated suite is
-valuable for preventing regressions; it did not find these bugs.
+The corrections in this period originated in full-system sessions rather than in
+component testing, which indicates that the automated suite, while effective
+against regression, does not substitute for integrated trials.
 
 \subsection{Week 12: release (August 4 -- August 7)}
 
@@ -981,158 +957,150 @@ Repository consolidation and final reporting, described in
 Section~\ref{sec:consolidation}.
 
 %==============================================================================
-\section{Final Repository Consolidation}
+\section{Repository Consolidation}
 \label{sec:consolidation}
 
-Reproducibility is a research obligation, so the final week was spent making the
-repository something a reader can actually use. The audit examined tracked files,
-cross-file references, and --- importantly --- content excluded by version
-control, which turned out to be where the significant problems were.
+Reproducibility being a requirement for the research output, the final week was
+allocated to consolidating the repository. The review covered tracked files,
+cross-file references, and content excluded by version control.
 
-\subsection{Removed}
+\subsection{Removals}
 
-Superseded or unreferenced material was removed: a standalone training launcher
-duplicating logic already in the command-line interface; an unreferenced dataset
-preparation script; a synthetic heart-rate generator and its sample file; a
-one-off workspace organizer; a legacy regression fixture and its serving route;
-the serial-only firmware variant; a deprecated watch application and its
-sideloading smoke test; a Blender autosave and a superseded G-code revision; and
-four presentation iterations totalling approximately 14\,MB. Tracked files fell
-from 124 to 83, then rose to 96 once the evidence figures described below were
-brought under version control.
+Superseded and unreferenced material was removed: a training launcher duplicating
+logic present in the command-line interface; an unreferenced dataset preparation
+script; a synthetic heart-rate generator and its sample file; a workspace
+organizer; a legacy regression fixture and its route; the serial-only firmware
+variant; a deprecated watch application and its sideloading test; a Blender
+autosave and a superseded G-code revision; and four presentation iterations
+totalling approximately 14\,MB. Tracked files decreased from 124 to 83, and
+subsequently to 96 once the evidence figures described below were brought under
+version control.
 
-\subsection{Unified}
+\subsection{Unification}
 
-Two commands defined approximately fifty command-line options twice in nearly
-identical blocks; they now share one definition and differ only through an
-explicit defaults table, which also documents the differences. A 100-line
-compatibility class whose only real output was pose liveness was folded into the
-keypoint module. Dead browser code and unused style rules were removed.
+Two commands defined approximately fifty command-line options in nearly identical
+blocks; these now share a single definition and differ only through an explicit
+defaults table, which also documents the differences. A compatibility class whose
+only output was pose liveness was folded into the keypoint module. Unused browser
+code and style rules were removed.
 
-\subsection{A defect found during unification}
+Two defects were identified during this work. The presentation module contained a
+copy of the inertial intensity function written before an angular-velocity term
+was added to the runtime version; the monitor consequently under-reported
+movement, reporting 0.025 where the runtime and browser reported 0.617 for the
+same input. The monitor now imports the runtime function. Separately, one
+command's serial port default disabled the serial transport, making an explicitly
+requested serial connection inoperative. Both defects resulted from duplicated
+logic updated in only one location, and neither was detectable by the test suite,
+since each copy was internally consistent.
 
-The presentation module carried its own copy of the inertial intensity formula,
-written before a raw angular-velocity term was added to the runtime version. The
-developer monitor therefore under-reported real movement: a hand rotating at
-approximately 68\,deg/s read 0.025 --- effectively ``steady'' --- on the monitor
-while the runtime and the browser both read 0.617, or ``active''. The monitor now
-imports the runtime function, so the two surfaces cannot diverge again.
+\subsection{Preservation of evidence}
 
-A second latent defect surfaced in the same pass: one command's serial port
-defaulted to a value that silently disabled the serial transport entirely, making
-an explicitly requested serial connection a no-op.
-
-Both defects share a cause worth naming: duplicated logic that drifted when only
-one copy was updated. Neither was detectable by the test suite, because both
-copies were individually self-consistent.
-
-\subsection{Evidence preserved}
-
-Training output is excluded from version control because a run is hundreds of
-megabytes. That exclusion also captured the confusion matrix, precision-recall
-curves, and per-epoch metrics for the detector --- the exact material this report
-cites --- which existed on a single laptop with no backup. That subset is now
-committed, with a document recording which run produced it and what the numbers
-mean. Five capture sessions were similarly reduced from 54\,MB of video and
+Training output is excluded from version control because a single run produces
+several hundred megabytes. That exclusion also covered the confusion matrix,
+precision-recall curves, and per-epoch metrics for the detector, which are the
+measurements this report cites and which existed on a single machine without
+backup. That subset is now committed with a document recording the run that
+produced it. Five capture sessions were similarly reduced from 54\,MB of video and
 frames to 5.6\,KB of analysis summaries before the raw media was discarded.
 
-Finally, the relay worker's source was committed but its deployment configuration
-was not, meaning the service could be read but not rebuilt from the repository. A
+The relay worker's source was committed without its deployment configuration,
+which meant the service could be read but not rebuilt from the repository. A
 deployment configuration was added.
 
 %==============================================================================
 \section{Limitations}
 \label{sec:limitations}
 
-Stated plainly, because a research artefact that overstates itself is worse than
-a modest one.
-
 \begin{description}[leftmargin=1.2cm,style=nextline,itemsep=4pt]
 \item[Single-camera depth] Body posture is estimated from one 2D camera. Depth is
-approximate and derived from apparent scale, not measured.
+approximated from apparent scale rather than measured.
 
-\item[Detector false positives] As quantified in Section~\ref{sec:results}, the
+\item[Detector false positives] As reported in Section~\ref{sec:results}, the
 detector proposes dumbbells in background regions at a high rate. System
-behaviour depends on geometric gating, not on the detector alone.
+behaviour depends on geometric filtering in addition to the detector.
 
-\item[Single-side inertial verification] With one glove on one wrist by design,
-grip-rotation differences on the uninstrumented arm cannot be verified by any
-current sensor and continue to count from the camera's elbow-bend signal alone.
+\item[Single-side inertial verification] With one glove, grip-rotation
+differences on the uninstrumented arm cannot be verified by any current sensor and
+continue to be counted from the camera's elbow-bend signal alone.
 
-\item[Mounting offset] The case rotation on the strap sets an absolute pitch
-offset. Absolute forearm elevation is therefore a best-effort convenience value;
-validation deliberately relies on excursion instead.
+\item[Mounting offset] Enclosure rotation on the strap determines an absolute
+pitch offset. Absolute forearm elevation is therefore an approximate value, and
+validation relies on excursion instead.
 
-\item[Wearable latency] Heart rate is a context and intensity signal, not a
-control signal or a safety stop, and its samples can arrive with latency.
+\item[Wearable latency] Heart rate is a context and intensity signal rather than a
+control or safety signal, and samples may arrive with latency.
 
-\item[No user study] The system has been validated technically and exercised in
-real sessions by its developer. It has not been evaluated with independent
-participants, so no claim is made about usability, engagement, or adherence.
+\item[No participant evaluation] The system has been validated technically and
+exercised in full sessions by the author. It has not been evaluated with
+independent participants, and no claim is made regarding usability, engagement, or
+adherence.
 
 \item[Calibration assumes cooperation] The calibration window assumes the user
-moves through a genuine range. Quality reporting detects when this does not
-happen, but cannot repair the resulting session.
+moves through a representative range. Quality reporting identifies when this does
+not occur but cannot correct the resulting session.
 
 \item[Proof-of-concept application] The browser client demonstrates the sensing
-path. It is not a fitness product and should not be presented as one.
+path. It is not a fitness product.
 \end{description}
 
 %==============================================================================
 \section{Future Work}
 
 \begin{enumerate}
-\item \textbf{Participant evaluation.} The most valuable next step by a wide
-margin. The calibration mechanism specifically claims cross-user
-transferability, and that claim is currently argued from design rather than
-demonstrated with data.
+\item \textbf{Participant evaluation.} The calibration mechanism is intended to
+provide cross-user transferability, and this property is currently supported by
+design rather than by measurement. An evaluation with independent participants is
+the most direct next step.
 
 \item \textbf{Local detector training data.} The detector was trained on general
-annotated sources. Images from the actual lab setting --- the specific weights,
-camera angle, lighting, and occlusion cases --- would directly address the
-background false-positive rate.
+annotated sources. Images from the deployment setting --- the specific weights,
+camera angle, lighting, and occlusion conditions --- would address the background
+false-positive rate reported in Section~\ref{sec:results}.
 
-\item \textbf{Tempo as a first-class signal.} Frame and sample timing are already
-logged; surfacing tempo would complete the original proposal's signal triad of
-repetition, range, and tempo.
+\item \textbf{Tempo as a published signal.} Frame and sample timing are already
+recorded; publishing tempo would complete the repetition, range, and tempo triad
+described in the original proposal.
 
-\item \textbf{Longitudinal adherence analysis.} The frame-level export format was
-designed for this and has not yet been used across sessions over time.
+\item \textbf{Longitudinal analysis.} The frame-level export format was designed
+for cross-session analysis and has not yet been applied over time.
 
 \item \textbf{Bilateral inertial sensing.} A second glove would remove the
-single-side verification limitation, at the cost of the asymmetric-hardware
-property the current contract deliberately handles.
+single-side verification limitation, at the cost of the asymmetric configuration
+the current specification handles explicitly.
 
-\item \textbf{Rehabilitation framing.} The signal set --- range utilization,
-bilateral symmetry, stability, exertion --- maps naturally onto rehabilitation
-assessment. This is the most promising direction beyond fitness.
+\item \textbf{Rehabilitation applications.} The signal set --- range utilization,
+bilateral symmetry, stability, exertion --- corresponds to measures used in
+rehabilitation assessment, which represents the most direct extension beyond
+fitness applications.
 \end{enumerate}
 
 %==============================================================================
 \section{Conclusion}
 
-The internship delivered a working sensor-fusion engine that converts camera,
-inertial, and physiological measurements into a single documented, per-user
-calibrated signal contract, together with a browser application that consumes
-that contract to prescribe exercises, validate repetitions against multi-sensor
-evidence, and provide live feedback.
+The internship delivered a sensor-fusion system that converts camera, inertial,
+and physiological measurements into a documented, per-user calibrated signal
+specification, together with a browser application that consumes that
+specification to prescribe exercises, validate repetitions against multi-sensor
+evidence, and provide feedback during a session.
 
-The decision that made this possible was narrowing scope in week six. The
-original proposal contained three large deliverables whose dependencies ran in
-series; attempting all three would have produced three unfinished halves. Naming
-the middle layer as the contribution, freezing the vision scope, and reducing the
-game to a proof of concept converted an unachievable plan into a completed one.
+The change of scope in week six was the decision that made completion possible.
+The original proposal contained three substantial deliverables with sequential
+dependencies; pursuing all three would have produced three incomplete components.
+Identifying the intermediate layer as the contribution, fixing the vision scope,
+and reducing the application to a proof of concept produced a plan that could be
+completed and validated within the available time.
 
-Three findings are worth carrying forward beyond this project. First, aggregate
-detector metrics can materially overstate usable performance: the gap between
-mAP@50 of 0.919 and a background false-positive rate of 0.72 is the difference
-between a detector that scores well and one that can drive an interaction
-unaided. Second, in a multi-sensor system, allowing every sensor to veto produces
-worse behaviour than treating most sensors as corroboration --- a single stale
-input should degrade confidence, not halt the system. Third, every significant
-correctness defect in this project was found in a real session with all hardware
-present, and none were found by an automated suite that nonetheless remains
-essential for preventing their return.
+Three observations extend beyond the immediate project. Aggregate detector metrics
+can overstate performance in operation: the difference between an mAP@50 of 0.919
+and a background false-positive rate of 0.72 separates a detector that scores well
+from one that can serve as an interaction signal without additional filtering. In
+a multi-sensor system, permitting every sensor to reject an event produces less
+robust behaviour than treating most sensors as corroboration, since a single stale
+input should reduce confidence rather than halt the system. Finally, the
+correctness defects identified in this work were found in integrated sessions
+rather than in component testing, which indicates that automated testing, while
+necessary to prevent regression, does not replace full-system trials.
 
 %==============================================================================
 \appendix
@@ -1145,12 +1113,12 @@ essential for preventing their return.
 \toprule
 \textbf{Path} & \textbf{Contents} \\
 \midrule
-\code{ironquest/} & Runtime package: CLI, pipeline, sensors, analysis, contract, monitor, gateway \\
+\code{ironquest/} & Runtime package: interface, pipeline, sensors, analysis, specification, monitor, gateway \\
 \code{web/} & Browser client and vendored 3D library \\
-\code{tools/} & Wearable bridges and the offline stream simulator \\
+\code{tools/} & Wearable bridges and offline stream simulator \\
 \code{tests/} & Regression suite \\
 \code{firmware/} & ESP32-S3 sketches \\
-\code{monkey\_c/} & Garmin Connect IQ watch application \\
+\code{monkey\_c/} & Connect IQ watch application \\
 \code{hardware/} & Enclosure model and print files \\
 \code{cloudflare/} & Relay worker and deployment configuration \\
 \code{configs/} & Training profiles \\
@@ -1165,7 +1133,7 @@ essential for preventing their return.
 # Normal operation: camera, sensors, gateway, and browser client
 .\run_ironquest.bat
 
-# Exercise the browser client with no hardware attached
+# Exercise the browser client without hardware
 python -m tools.simulate_game_control_stream
 
 # Inertial telemetry check
@@ -1182,7 +1150,7 @@ python -m ironquest train-combined-dumbbell-detector --device 0
 python -m pytest tests\ -q
 \end{lstlisting}
 
-\section{Contract Excerpt}
+\section{Payload Excerpt}
 
 \begin{lstlisting}
 {
