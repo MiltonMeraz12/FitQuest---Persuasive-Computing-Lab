@@ -3,10 +3,16 @@
 This does not run YOLO or read real hardware. It drives the same production
 functions the live detector uses (``MotionAnalyzer``, ``build_body_context``,
 ``build_game_control_payload``) with a scripted sequence of synthetic poses,
-so the browser client can be exercised end to end -- calibration, all six
-exercises, rep counting, sensor cards, set completion, and the results
-screen -- without a camera, ESP32, or Garmin watch attached. Same spirit as
-``tools/simulate_wearable_json.py`` and docs/09_OFFLINE_AND_PRESENTATION.md.
+so the browser client can be exercised end to end -- calibration, all ten
+exercises (including the posture-precondition hard gates and the glove grip
+gate for curl vs. hammer curl), rep counting, sensor cards, set completion,
+the results screen, and the avatar's bent-over-row torso hinge -- without a
+camera, ESP32, or Garmin watch attached. See
+docs/12_OFFLINE_AND_PRESENTATION.md for when to reach for it.
+
+This is the project's only synthetic data source, and it exists to exercise
+the browser client, never to stand in for a measurement: every number it
+publishes is generated here, so nothing it produces belongs in the paper.
 
 Run it, then open the printed URL in a browser:
 
@@ -29,9 +35,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from ironquest.body_context import ObjectDetection, build_body_context
 from ironquest.game_controls import EventDebouncer, build_game_control_payload
-from ironquest.keypoints import COCO_KEYPOINTS, PoseCandidate
+from ironquest.keypoints import COCO_KEYPOINTS, PoseCandidate, pose_stream_state
 from ironquest.motion_analysis import MotionAnalyzer
-from ironquest.movement import MovementClassifier
 from ironquest.web_gateway import WebGateway
 
 FRAME_SHAPE = (480, 640, 3)
@@ -50,31 +55,46 @@ def to_point(origin: tuple[float, float], sign: float, length: float, degrees: f
     return np.array([origin[0] + sign * math.cos(radians) * length, origin[1] + math.sin(radians) * length])
 
 
-def arm_points(side: str, upper_deg: float, forearm_deg: float) -> tuple[np.ndarray, np.ndarray]:
+def arm_points(
+    side: str, upper_deg: float, forearm_deg: float, shoulder: tuple[float, float] | None = None
+) -> tuple[np.ndarray, np.ndarray]:
     """Return (elbow, wrist) for one side given upper-arm/forearm angles in degrees."""
 
     sign = -1.0 if side == "left" else 1.0
-    shoulder = LEFT_SHOULDER if side == "left" else RIGHT_SHOULDER
-    elbow = to_point(shoulder, sign, UPPER_LENGTH, upper_deg)
+    origin = shoulder if shoulder is not None else (LEFT_SHOULDER if side == "left" else RIGHT_SHOULDER)
+    elbow = to_point(origin, sign, UPPER_LENGTH, upper_deg)
     wrist = to_point(elbow, sign, FOREARM_LENGTH, forearm_deg)
     return elbow, wrist
 
 
 def build_pose(
-    left_upper: float, left_forearm: float, right_upper: float, right_forearm: float
+    left_upper: float,
+    left_forearm: float,
+    right_upper: float,
+    right_forearm: float,
+    torso_lean_px: float = 0.0,
 ) -> PoseCandidate:
-    """Build a synthetic full-confidence pose from four joint angles."""
+    """Build a synthetic full-confidence pose from four joint angles.
+
+    ``torso_lean_px`` shifts both shoulders forward (in x, same direction)
+    relative to the fixed hips, exercising the new torso_hinge_deg/signal
+    (motion_analysis.py's ``_torso_hinge_deg``) the same way a real
+    bent-over row does: hips planted, shoulders no longer sitting directly
+    above them.
+    """
 
     xy = np.zeros((17, 2), dtype=float)
     conf = np.zeros(17, dtype=float)
-    left_elbow, left_wrist = arm_points("left", left_upper, left_forearm)
-    right_elbow, right_wrist = arm_points("right", right_upper, right_forearm)
+    left_shoulder = (LEFT_SHOULDER[0] + torso_lean_px, LEFT_SHOULDER[1])
+    right_shoulder = (RIGHT_SHOULDER[0] + torso_lean_px, RIGHT_SHOULDER[1])
+    left_elbow, left_wrist = arm_points("left", left_upper, left_forearm, shoulder=left_shoulder)
+    right_elbow, right_wrist = arm_points("right", right_upper, right_forearm, shoulder=right_shoulder)
     points = {
-        "left_shoulder": LEFT_SHOULDER,
+        "left_shoulder": left_shoulder,
         "left_elbow": tuple(left_elbow),
         "left_wrist": tuple(left_wrist),
         "left_hip": (LEFT_SHOULDER[0], HIP_Y),
-        "right_shoulder": RIGHT_SHOULDER,
+        "right_shoulder": right_shoulder,
         "right_elbow": tuple(right_elbow),
         "right_wrist": tuple(right_wrist),
         "right_hip": (RIGHT_SHOULDER[0], HIP_Y),
@@ -95,6 +115,13 @@ BENT_CURL = (75.0, -35.0)
 EXTENDED_CURL = (75.0, 80.0)
 FRONT_HOLD = (2.0, 6.0)
 OVERHEAD = (-100.0, -95.0)
+LATERAL_OUT = (0.0, 6.0)
+ROW_EXTENDED = (75.0, 80.0)
+ROW_BENT = (60.0, -20.0)
+ROW_TORSO_LEAN_PX = 70.0
+TRICEPS_UPPER_DEG = -100.0
+TRICEPS_EXTENDED_FOREARM = -95.0
+TRICEPS_BENT_FOREARM = -10.0
 
 
 def oscillate(t: float, period_s: float) -> float:
@@ -144,13 +171,53 @@ def script_combo(t: float) -> tuple[tuple[float, float], tuple[float, float], bo
     return moving, FRONT_HOLD, True, True
 
 
+def script_lateral_raise(t: float) -> tuple[tuple[float, float], tuple[float, float], bool, bool]:
+    phase = oscillate(t, 2.2)
+    active = lerp_pair(DOWN, LATERAL_OUT, phase)
+    return active, DOWN, True, False
+
+
+def script_hammer_curl(t: float) -> tuple[tuple[float, float], tuple[float, float], bool, bool]:
+    # Moves the RIGHT arm specifically (the glove's mounted side by default,
+    # see build_esp32_payload's "right_forearm_armband" mount) so the browser's
+    # new grip hard gate actually engages -- unlike script_curl, which moves
+    # the left (non-glove) arm and so never exercises that gate.
+    phase = oscillate(t, 2.2)
+    active = lerp_pair(EXTENDED_CURL, BENT_CURL, phase)
+    return DOWN, active, False, True
+
+
+def script_bent_over_row(t: float) -> tuple[tuple[float, float], tuple[float, float], bool, bool]:
+    phase = oscillate(t, 2.4)
+    active = lerp_pair(ROW_EXTENDED, ROW_BENT, phase)
+    return DOWN, active, True, True
+
+
+def script_overhead_triceps_extension(t: float) -> tuple[tuple[float, float], tuple[float, float], bool, bool]:
+    phase = oscillate(t, 2.4)
+    forearm = TRICEPS_EXTENDED_FOREARM + (TRICEPS_BENT_FOREARM - TRICEPS_EXTENDED_FOREARM) * phase
+    active = (TRICEPS_UPPER_DEG, forearm)
+    return DOWN, active, False, True
+
+
 CALIBRATION_ANGLES = (DOWN, DOWN)
 
+# Exercises whose posture precondition (posturePrecondition() in
+# fitquest_game.html) requires a forward torso hinge -- main() shifts the
+# shoulders forward in x for these labels only, so the sequence spends most
+# of its time upright (matching every other exercise) and only leans for
+# the row segment, the same way a real session would.
+TORSO_HINGE_EXERCISES = {"bent_over_row"}
+
 EXERCISE_SCRIPT: list[tuple[str, float, "callable"]] = [
-    ("curl", 14.0, script_curl),
-    ("press", 14.0, script_press),
-    ("double_press", 14.0, script_double_press),
-    ("front_raise", 14.0, script_front_raise),
+    ("curl", 12.0, script_curl),
+    ("hammer_curl", 14.0, script_hammer_curl),
+    ("lateral_raise", 12.0, script_lateral_raise),
+    ("press", 12.0, script_press),
+    ("overhead_triceps_extension", 14.0, script_overhead_triceps_extension),
+    ("bent_over_row", 14.0, script_bent_over_row),
+    ("double_press", 12.0, script_double_press),
+    ("front_raise", 12.0, script_front_raise),
     ("front_hold", 10.0, script_front_hold),
     ("combo", 16.0, script_combo),
 ]
@@ -159,14 +226,20 @@ CALIBRATION_SECONDS = 3.0
 
 def build_esp32_payload(t: float) -> dict:
     wobble = (math.sin(t * 2.3) + 1.0) / 2.0
+    # Slow oscillation (period well beyond one rep cycle) between a neutral,
+    # thumbs-up roll (~0deg, correct for hammer_curl) and a rotated,
+    # palms-up roll (~95deg, correct for curl) -- lets a session sit on
+    # hammer_curl long enough to see the new grip hard gate both pass and
+    # block within the same ~14s segment (see script_hammer_curl).
+    grip_roll = 95.0 * ((math.sin(t * 0.35) + 1.0) / 2.0)
     return {
         "status": "connected",
         "transport": "auto:udp",
         "transport_summary": "WIFI",
         "connected_transports": ["wifi"],
         "latest": {
-            "mount": "right_gym_glove",
-            "orientation_euler_deg": {"pitch": 4.0 * wobble, "roll": -2.0, "yaw": 90.0 + 6.0 * wobble},
+            "mount": "right_forearm_armband",
+            "orientation_euler_deg": {"pitch": 4.0 * wobble, "roll": grip_roll, "yaw": 90.0 + 6.0 * wobble},
             "motion_delta_mps2": 0.4 + wobble * 1.6,
             "angular_delta_dps": 6.0 + wobble * 30.0,
             "orientation_delta_deg": 0.5 + wobble * 1.5,
@@ -250,7 +323,6 @@ def main() -> int:
     print("Open that URL in a browser and press \"Start live session\".", flush=True)
 
     analyzer = MotionAnalyzer(calibration_seconds=CALIBRATION_SECONDS)
-    tracker = MovementClassifier()
     debouncer = EventDebouncer()
     frame_interval = 1.0 / max(1.0, args.fps)
     started_at = time.time()
@@ -276,9 +348,12 @@ def main() -> int:
                     running_total += duration
                 (left_upper, left_forearm), (right_upper, right_forearm), left_loaded, right_loaded = script(segment_t)
 
-            pose = build_pose(left_upper, left_forearm, right_upper, right_forearm)
-            _, left_wrist = arm_points("left", left_upper, left_forearm)
-            _, right_wrist = arm_points("right", right_upper, right_forearm)
+            torso_lean_px = ROW_TORSO_LEAN_PX if label in TORSO_HINGE_EXERCISES else 0.0
+            pose = build_pose(left_upper, left_forearm, right_upper, right_forearm, torso_lean_px=torso_lean_px)
+            left_shoulder = (LEFT_SHOULDER[0] + torso_lean_px, LEFT_SHOULDER[1])
+            right_shoulder = (RIGHT_SHOULDER[0] + torso_lean_px, RIGHT_SHOULDER[1])
+            _, left_wrist = arm_points("left", left_upper, left_forearm, shoulder=left_shoulder)
+            _, right_wrist = arm_points("right", right_upper, right_forearm, shoulder=right_shoulder)
             sided_wrists = []
             if left_loaded:
                 sided_wrists.append(("left", left_wrist))
@@ -286,7 +361,7 @@ def main() -> int:
                 sided_wrists.append(("right", right_wrist))
             candidates = dumbbell_detections(sided_wrists)
 
-            movement_payload = tracker.update_from_pose(pose)
+            movement_payload = pose_stream_state(pose)
             body_payload = build_body_context(
                 pose,
                 object_result=candidates or None,

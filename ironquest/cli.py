@@ -24,9 +24,8 @@ from ultralytics import YOLO
 from .body_context import ObjectTemporalTracker, build_body_context
 from .capture_analysis import analyze_capture, print_capture_summary, resolve_capture_jsonl, write_capture_report
 from .game_controls import EventDebouncer, build_game_control_payload
-from .keypoints import PoseSmoother, extract_primary_pose
+from .keypoints import PoseSmoother, extract_primary_pose, pose_stream_state
 from .motion_analysis import MotionAnalyzer
-from .movement import MovementClassifier
 from .sensors import (
     DEFAULT_ESP32_DISCOVERY_TOKEN,
     ESP32AutoBridge,
@@ -104,7 +103,10 @@ DETECT_DEFAULTS = {
     "esp32_side": "right",
     "esp32_transport": "auto",
     "wearable_side": "left",
-    "esp32_port": None,
+    # "auto" scans the visible serial devices for the ESP32. Leaving this None
+    # silently disables the serial transport entirely (see ESP32SerialBridge),
+    # which used to make "--esp32-transport serial" a no-op on `detect`.
+    "esp32_port": "auto",
     "esp32_baud": 115200,
     "esp32_udp_host": "0.0.0.0",
     "esp32_udp_port": 4210,
@@ -126,6 +128,19 @@ DETECT_DEFAULTS = {
     "garmin_connectiq_host": "0.0.0.0",
     "garmin_connectiq_port": 8765,
     "fitquest_worker_url": None,
+}
+
+# ``detect`` is the neutral debugging entry point: it shows the camera at a
+# smaller window size, leaves the preview un-mirrored so raw anatomical sides
+# are obvious, and pays for a larger object-detector input because throughput
+# matters less than seeing what the detector really sees. ``run`` keeps the
+# demo-tuned values in DETECT_DEFAULTS above. Everything else is shared.
+DETECT_COMMAND_DEFAULTS = {
+    **DETECT_DEFAULTS,
+    "pose_smoothing": 0.55,
+    "object_imgsz": 960,
+    "display_width": 960,
+    "mirror": False,
 }
 
 
@@ -524,12 +539,6 @@ def should_run_object_frame(args: argparse.Namespace, frame_index: int) -> bool:
     return frame_index % stride == 0 or not hasattr(args, "_cached_object_result")
 
 
-def build_tracker(args: argparse.Namespace):
-    """Create the lightweight middleware tracker."""
-
-    return MovementClassifier()
-
-
 def esp32_discovery_token() -> str:
     """Return the shared UDP-discovery token, overridable without editing source.
 
@@ -864,6 +873,11 @@ def build_signal_log_record(payload: dict) -> dict:
         "imu_rotation_intensity": esp32.get("rotation_intensity"),
         "imu_motion_state": esp32.get("motion_state"),
         "stability_index": esp32.get("stability_index"),
+        # Forearm-armband posture, flattened for Pandas alongside the rest --
+        # this is the signal the per-exercise validation keys off, so it has
+        # to be in the exported record for the paper's analysis.
+        "forearm_elevation": (esp32.get("forearm") or {}).get("elevation"),
+        "forearm_grip": (esp32.get("forearm") or {}).get("grip"),
     }
 
 
@@ -871,7 +885,6 @@ def analyze_frame(
     frame,
     pose_model,
     object_model,
-    tracker,
     motion_analyzer: MotionAnalyzer,
     pose_smoother: PoseSmoother | None,
     object_tracker: ObjectTemporalTracker | None,
@@ -929,7 +942,7 @@ def analyze_frame(
 
     raw_pose = extract_primary_pose(result)
     pose = pose_smoother.update(raw_pose) if pose_smoother is not None else raw_pose
-    payload = tracker.update_from_pose(pose)
+    payload = pose_stream_state(pose)
 
     body_payload = build_body_context(
         pose,
@@ -992,7 +1005,6 @@ class PipelineRunner:
         self.pose_model = None
         self.object_model = None
         self.cap = None
-        self.tracker = None
         self.motion_analyzer: MotionAnalyzer | None = None
         self.pose_smoother: PoseSmoother | None = None
         self.object_tracker: ObjectTemporalTracker | None = None
@@ -1032,11 +1044,33 @@ class PipelineRunner:
         self.object_model = YOLO(resolve_weights_path(self.args.object_model)) if self.args.object_model else None
         prepare_yolo_model(self.pose_model, self.args.inference_device)
         prepare_yolo_model(self.object_model, self.args.inference_device)
-        self.cap = cv2.VideoCapture(parse_source(self.args.source))
+        resolved_source = parse_source(self.args.source)
+        self.cap = cv2.VideoCapture(resolved_source)
         if not self.cap.isOpened():
             raise RuntimeError(f"Could not open source: {self.args.source}")
+        if isinstance(resolved_source, int):
+            # Root cause of the reported camera lag ("la camara tiene un
+            # ligero retraso... parece que va lento o laggeado").
+            #
+            # A capture device keeps an internal queue of frames, several
+            # deep by default. This pipeline runs YOLO pose plus dumbbell
+            # detection per frame, which is comfortably slower than a
+            # webcam's native 30fps, so that queue fills and never drains --
+            # and cap.read() hands back the OLDEST queued frame, not the
+            # newest. The preview therefore falls progressively further
+            # behind the user's real movement, which is exactly the symptom.
+            #
+            # Requesting a 1-frame buffer makes the driver keep only the
+            # latest frame and drop stale ones. This costs no accuracy: the
+            # frames being dropped are ones the pipeline had no time to
+            # process anyway, and it is what keeps the camera reading
+            # time-aligned with the IMU and watch samples it is fused with,
+            # instead of being fused against several-hundred-ms-old vision.
+            #
+            # Only for live devices -- a video file must not skip frames.
+            # Unsupported backends ignore this, so it is safe either way.
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
-        self.tracker = build_tracker(self.args)
         self.motion_analyzer = MotionAnalyzer(
             window=self.args.analysis_window,
             min_confidence=self.args.pose_joint_conf,
@@ -1146,14 +1180,12 @@ class PipelineRunner:
         """Run analysis and attach runtime FPS for one frame."""
 
         assert self.pose_model is not None
-        assert self.tracker is not None
         assert self.motion_analyzer is not None
         self._apply_pending_controls()
         payload, pose, object_result = analyze_frame(
             frame,
             self.pose_model,
             self.object_model,
-            self.tracker,
             self.motion_analyzer,
             self.pose_smoother,
             self.object_tracker,
@@ -1206,8 +1238,6 @@ class PipelineRunner:
             self.pose_smoother.reset()
         if self.object_tracker is not None:
             self.object_tracker.reset()
-        if self.tracker is not None and hasattr(self.tracker, "reset"):
-            self.tracker.reset()
         if hasattr(self.args, "_cached_object_result"):
             delattr(self.args, "_cached_object_result")
         self.last_frame_time = time.perf_counter()
@@ -1265,8 +1295,8 @@ def command_detect(args: argparse.Namespace) -> int:
     return 0
 
 
-def command_demo(args: argparse.Namespace) -> int:
-    """Run the recommended low-clutter detector setup with short command options."""
+def command_run(args: argparse.Namespace) -> int:
+    """Run the project's normal live session with the demo-tuned defaults."""
 
     args = apply_live_command_defaults(args)
     return command_detect(args)
@@ -1792,280 +1822,115 @@ def build_parser() -> argparse.ArgumentParser:
             setattr(namespace, "_explicit_detection_args", explicit)
             super().__call__(parser, namespace, values, option_string=option_string)
 
-    def add_mode_argument(command_parser: argparse.ArgumentParser) -> None:
-        """Add the project-wide execution preset argument to a command parser."""
-
-        command_parser.add_argument(
-            "--mode",
-            choices=mode_choices,
-            help=(
-                "Execution preset: vision=body pose only, dumbbells=body+dumbbell model, "
-                "full=body+dumbbells+sensors with tracking and mirror."
-            ),
-        )
-
     parser = argparse.ArgumentParser(
         prog="python -m ironquest",
         description="Unified Iron Quest 3D camera, pose, sensor-fusion, and dataset prototype.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    demo = subparsers.add_parser("full", aliases=["demo", "run"], help="Run the unified live detector with body, dumbbells, and sensors.")
-    demo.add_argument("--pose-weights", dest="model", default=DETECT_DEFAULTS["model"], action=TrackExplicitAction, help="Pose model path/name.")
-    demo.add_argument("--source", default="0", action=TrackExplicitAction, help="Camera index, video path, image path, or stream URL.")
-    demo.add_argument("--object-model", "--object-weights", dest="object_model", type=Path, action=TrackExplicitAction, help="Optional trained object detector. Demo defaults to the combined dumbbell weights in full mode.")
-    demo.add_argument("--object-conf", type=float, default=0.20, help="Raw object detector confidence threshold.")
-    demo.add_argument("--object-frame-stride", type=int, default=2, help="Run dumbbell/weight YOLO every N frames; cached boxes are reused between runs.")
-    demo.add_argument("--object-track-hold-frames", type=int, default=4, help="Keep a tracked dumbbell prediction for this many missed frames.")
-    demo.add_argument("--object-track-smoothing", type=float, default=0.55, help="Blend tracked object boxes across frames.")
-    demo.add_argument("--object-track-max-center-distance", type=float, default=160.0, help="Maximum center distance for matching a detection to an active object track.")
-    demo.add_argument("--dumbbell-conf", type=float, default=0.30, help="Minimum confidence for the dumbbell class.")
-    demo.add_argument("--weight-conf", type=float, default=0.50, help="Minimum confidence for the weight class.")
-    demo.add_argument("--min-object-area-ratio", type=float, default=0.0015)
-    demo.add_argument("--max-object-area-ratio", type=float, default=0.12)
-    demo.add_argument("--wearable-json", type=Path, action=TrackExplicitAction, help="Optional JSON file with smartwatch/wristband data.")
-    demo.add_argument(
-        "--fitquest-worker-url",
-        action=TrackExplicitAction,
-        help="Stable FitQuest Worker URL used to pull Garmin data into the local wearable JSON file.",
-    )
-    demo.add_argument(
-        "--garmin-bridge",
-        action=TrackExplicitBooleanOptionalAction,
-        default=DETECT_DEFAULTS["garmin_bridge"],
-        help="Start the Garmin Venu 3 BLE heart-rate bridge in the background for the one-command run path.",
-    )
-    demo.add_argument(
-        "--garmin-connectiq-bridge",
-        action=TrackExplicitBooleanOptionalAction,
-        default=DETECT_DEFAULTS["garmin_connectiq_bridge"],
-        help="Start the Garmin Connect IQ HTTP telemetry receiver in the background.",
-    )
-    demo.add_argument(
-        "--garmin-connectiq-host",
-        default=DETECT_DEFAULTS["garmin_connectiq_host"],
-        action=TrackExplicitAction,
-        help="Host/interface for the Garmin Connect IQ HTTP receiver.",
-    )
-    demo.add_argument(
-        "--garmin-connectiq-port",
-        type=int,
-        default=DETECT_DEFAULTS["garmin_connectiq_port"],
-        action=TrackExplicitAction,
-        help="TCP port for Garmin Connect IQ telemetry from the phone/watch app.",
-    )
-    demo.add_argument(
-        "--wearable-stale-seconds",
-        type=float,
-        default=10.0,
-        action=TrackExplicitAction,
-        help="Mark --wearable-json data stale when the file has not changed for this many seconds.",
-    )
-    demo.add_argument(
-        "--calibration-seconds",
-        type=float,
-        default=DETECT_DEFAULTS["calibration_seconds"],
-        help="Seconds used to auto-calibrate each user's comfortable signal range.",
-    )
-    demo.add_argument(
-        "--esp32-side",
-        choices=["left", "right"],
-        default=DETECT_DEFAULTS["esp32_side"],
-        help="Hand wearing the ESP32+IMU gym glove.",
-    )
-    demo.add_argument(
-        "--esp32-transport",
-        choices=ESP32_TRANSPORT_CHOICES,
-        default=DETECT_DEFAULTS["esp32_transport"],
-        action=TrackExplicitAction,
-        help="ESP32 telemetry transport. auto listens to USB serial and Wi-Fi UDP together.",
-    )
-    demo.add_argument(
-        "--wearable-side",
-        choices=["left", "right"],
-        default=DETECT_DEFAULTS["wearable_side"],
-        help="Hand wearing the Garmin smartwatch.",
-    )
-    demo.add_argument("--esp32-port", default="auto", help="Optional ESP32 serial port, for example COM4 or auto.")
-    demo.add_argument("--esp32-baud", type=int, default=115200, help="ESP32 serial baud rate.")
-    demo.add_argument("--esp32-udp-host", default=DETECT_DEFAULTS["esp32_udp_host"], help="Local host/IP for the UDP listener.")
-    demo.add_argument("--esp32-udp-port", type=int, default=DETECT_DEFAULTS["esp32_udp_port"], help="Local UDP port for ESP32 Wi-Fi telemetry.")
-    demo.add_argument("--display-width", type=int, default=1100)
-    demo.add_argument("--panel-width", type=int, default=520)
-    demo.add_argument("--ui-detail", choices=["simple", "standard", "debug"], default="simple", action=TrackExplicitAction)
-    demo.add_argument("--device", default="auto", help="Inference device: auto, cpu, cuda:0, 0, or mps.")
-    demo.add_argument(
-        "--fullscreen",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Launch the OpenCV monitor fullscreen with aspect-ratio letterboxing.",
-    )
-    demo.add_argument(
-        "--pose-track",
-        action=TrackExplicitBooleanOptionalAction,
-        default=False,
-        help="Use Ultralytics tracking for smoother person continuity. Disabled by default for speed.",
-    )
-    demo.add_argument("--mirror", action=TrackExplicitBooleanOptionalAction, default=True)
-    demo.add_argument("--jsonl", type=Path, help="Save one JSON payload per frame.")
-    demo.add_argument("--print-json", action="store_true", help="Print payloads to the terminal.")
-    demo.add_argument("--no-show", action="store_true")
-    demo.add_argument(
-        "--web",
-        action="store_true",
-        help="Publish the live sensor-fusion stream to the FitQuest browser client.",
-    )
-    demo.add_argument("--web-host", default="127.0.0.1", help="Local host for the FitQuest browser gateway.")
-    demo.add_argument("--web-port", type=int, default=8787, help="Local port for the FitQuest browser gateway.")
-    demo.add_argument("--max-frames", type=int)
-    demo.set_defaults(func=command_demo)
+    def add_detection_arguments(
+        command_parser: argparse.ArgumentParser,
+        defaults: dict[str, object],
+    ) -> None:
+        """Define the shared live-pipeline options on one command parser.
 
-    detect = subparsers.add_parser("detect", help="Run camera/video movement detection.")
-    add_mode_argument(detect)
-    detect.add_argument("--model", "--pose-weights", dest="model", default="yolo26n-pose.pt", action=TrackExplicitAction, help="YOLO pose model path/name.")
-    detect.add_argument("--source", default="0", action=TrackExplicitAction, help="Camera index, video path, image path, or stream URL.")
-    detect.add_argument("--imgsz", type=int, default=640, help="Inference image size.")
-    detect.add_argument("--conf", type=float, default=0.20, help="YOLO confidence threshold.")
-    detect.add_argument(
-        "--pose-track",
-        action=TrackExplicitBooleanOptionalAction,
-        default=False,
-        help="Use Ultralytics tracking for smoother person continuity. Disabled by default for speed.",
+        ``run`` and ``detect`` drive the exact same ``PipelineRunner``; they
+        differ only in a handful of defaults (see ``DETECT_COMMAND_DEFAULTS``).
+        Defining the flags once here keeps the two commands from drifting apart,
+        which is what previously left ``detect`` unable to auto-detect the ESP32
+        serial port while ``run`` could.
+        """
+
+        add = command_parser.add_argument
+
+        # Vision models and camera source
+        add("--mode", choices=mode_choices, action=TrackExplicitAction, help=(
+            "Execution preset: vision=body pose only, dumbbells=body+dumbbell model, "
+            "full=body+dumbbells+sensors."
+        ))
+        add("--model", "--pose-weights", dest="model", default=defaults["model"], action=TrackExplicitAction, help="YOLO pose model path/name.")
+        add("--source", default=defaults["source"], action=TrackExplicitAction, help="Camera index, video path, image path, or stream URL.")
+        add("--imgsz", type=int, default=defaults["imgsz"], help="Pose inference image size.")
+        add("--conf", type=float, default=defaults["conf"], help="YOLO pose confidence threshold.")
+        add("--device", default=defaults["device"], help="Inference device: auto, cpu, cuda:0, 0, or mps.")
+
+        # Pose stability
+        add("--pose-track", action=TrackExplicitBooleanOptionalAction, default=defaults["pose_track"], help="Use Ultralytics tracking for smoother person continuity. Disabled by default for speed.")
+        add("--pose-smoothing", type=float, default=defaults["pose_smoothing"], help="Blend visible joints across frames. Use 1.0 for raw YOLO keypoints.")
+        add("--pose-hold-frames", type=int, default=defaults["pose_hold_frames"], help="Keep a recently visible joint for this many frames during brief occlusion.")
+        add("--pose-joint-conf", type=float, default=defaults["pose_joint_conf"], help="Minimum keypoint confidence for limb context.")
+        add("--analysis-window", type=int, default=defaults["analysis_window"], help="Recent frame window used for open-ended motion primitives.")
+
+        # Dumbbell / weight detector
+        add("--object-model", "--object-weights", dest="object_model", type=Path, action=TrackExplicitAction, help="Optional dumbbell/weight detector, for example runs/.../weights/best.pt.")
+        add("--object-imgsz", type=int, default=defaults["object_imgsz"], help="Object detector image size.")
+        add("--object-conf", type=float, default=defaults["object_conf"], help="Raw object detector confidence threshold.")
+        add("--object-frame-stride", type=int, default=defaults["object_frame_stride"], help="Run dumbbell/weight YOLO every N frames; cached boxes are reused between runs.")
+        add("--object-track-hold-frames", type=int, default=defaults["object_track_hold_frames"], help="Keep a tracked dumbbell prediction for this many missed frames.")
+        add("--object-track-smoothing", type=float, default=defaults["object_track_smoothing"], help="Blend tracked object boxes across frames.")
+        add("--object-track-max-center-distance", type=float, default=defaults["object_track_max_center_distance"], help="Maximum center distance for matching a detection to an active object track.")
+        add("--dumbbell-conf", type=float, default=defaults["dumbbell_conf"], help="Minimum confidence for the dumbbell class.")
+        add("--weight-conf", type=float, default=defaults["weight_conf"], help="Minimum confidence for the weight class.")
+        add("--min-object-area-ratio", type=float, default=defaults["min_object_area_ratio"], help="Ignore object boxes smaller than this frame-area ratio to reduce tiny false positives.")
+        add("--max-object-area-ratio", type=float, default=defaults["max_object_area_ratio"], help="Ignore object boxes larger than this frame-area ratio to reject body-region false positives.")
+        add("--require-object-body-match", action=argparse.BooleanOptionalAction, default=defaults["require_object_body_match"], help="Only accept dumbbell candidates that are near a visible wrist or forearm.")
+        add("--max-wrist-distance", type=float, default=defaults["max_wrist_distance"], help="Maximum pixel distance for a dumbbell to count as near a wrist.")
+        add("--max-forearm-distance", type=float, default=defaults["max_forearm_distance"], help="Maximum pixel distance for a dumbbell to count as near a forearm segment.")
+
+        # Calibration and hardware sides
+        add("--calibration-seconds", type=float, default=defaults["calibration_seconds"], help="Seconds used to auto-calibrate each user's comfortable signal range.")
+        add("--esp32-side", choices=["left", "right"], default=defaults["esp32_side"], help="Hand wearing the ESP32+IMU gym glove.")
+        add("--wearable-side", choices=["left", "right"], default=defaults["wearable_side"], help="Hand wearing the Garmin smartwatch.")
+
+        # ESP32 / IMU transport
+        add("--esp32-transport", choices=ESP32_TRANSPORT_CHOICES, default=defaults["esp32_transport"], action=TrackExplicitAction, help="ESP32 telemetry transport. auto listens to USB serial and Wi-Fi UDP together.")
+        add("--esp32-port", default=defaults["esp32_port"], help="ESP32 serial port, for example COM4, or auto to detect it.")
+        add("--esp32-baud", type=int, default=defaults["esp32_baud"], help="ESP32 serial baud rate.")
+        add("--esp32-udp-host", default=defaults["esp32_udp_host"], help="Local host/IP for the UDP listener.")
+        add("--esp32-udp-port", type=int, default=defaults["esp32_udp_port"], help="Local UDP port for ESP32 Wi-Fi telemetry.")
+
+        # Garmin wearable sources
+        add("--wearable-json", type=Path, action=TrackExplicitAction, help="Optional JSON file with the latest smartwatch/wristband sample.")
+        add("--wearable-stale-seconds", type=float, default=defaults["wearable_stale_seconds"], action=TrackExplicitAction, help="Mark --wearable-json data stale when the file has not changed for this many seconds.")
+        add("--fitquest-worker-url", action=TrackExplicitAction, help="Stable FitQuest Worker URL used to pull Garmin data into the local wearable JSON file.")
+        add("--garmin-bridge", action=TrackExplicitBooleanOptionalAction, default=defaults["garmin_bridge"], help="Start the Garmin Venu 3 BLE heart-rate bridge in the background.")
+        add("--garmin-connectiq-bridge", action=TrackExplicitBooleanOptionalAction, default=defaults["garmin_connectiq_bridge"], help="Start the Garmin Connect IQ HTTP telemetry receiver in the background.")
+        add("--garmin-connectiq-host", default=defaults["garmin_connectiq_host"], action=TrackExplicitAction, help="Host/interface for the Garmin Connect IQ HTTP receiver.")
+        add("--garmin-connectiq-port", type=int, default=defaults["garmin_connectiq_port"], action=TrackExplicitAction, help="TCP port for Garmin Connect IQ telemetry from the phone/watch app.")
+
+        # OpenCV monitor
+        add("--display-width", type=int, default=defaults["display_width"], help="Preview window frame width in pixels.")
+        add("--panel-width", type=int, default=defaults["panel_width"], help="Right dashboard panel width in pixels.")
+        add("--ui-detail", choices=["simple", "standard", "debug"], default=defaults["ui_detail"], action=TrackExplicitAction, help="Initial HUD mode: simple/standard start clean; debug starts with the raw overlay. Press d to toggle.")
+        add("--fullscreen", action=argparse.BooleanOptionalAction, default=defaults["fullscreen"], help="Launch the OpenCV monitor fullscreen with aspect-ratio letterboxing.")
+        add("--mirror", action=TrackExplicitBooleanOptionalAction, default=defaults["mirror"], help="Mirror only the preview; analysis keeps real anatomical left/right.")
+        add("--no-show", action="store_true", help="Do not open the OpenCV preview window.")
+
+        # Browser client
+        add("--web", action="store_true", help="Publish the live sensor-fusion stream to the FitQuest browser client.")
+        add("--web-host", default="127.0.0.1", help="Local host for the FitQuest browser gateway.")
+        add("--web-port", type=int, default=8787, help="Local port for the FitQuest browser gateway.")
+
+        # Output
+        add("--jsonl", type=Path, help="Save one JSON payload per frame.")
+        add("--print-json", action="store_true", help="Print payloads to the terminal.")
+        add("--max-frames", type=int, help="Stop after N frames.")
+
+    live = subparsers.add_parser(
+        "run",
+        aliases=["full", "demo"],
+        help="Run the unified live detector with body, dumbbells, sensors, and the browser client.",
     )
-    detect.add_argument(
-        "--pose-smoothing",
-        type=float,
-        default=0.55,
-        help="Blend visible joints across frames. Use 1.0 for raw YOLO keypoints.",
+    add_detection_arguments(live, DETECT_DEFAULTS)
+    live.set_defaults(func=command_run)
+
+    detect = subparsers.add_parser(
+        "detect",
+        help="Run the same pipeline with neutral defaults for camera/video debugging.",
     )
-    detect.add_argument(
-        "--pose-hold-frames",
-        type=int,
-        default=2,
-        help="Keep a recently visible joint for this many frames during brief occlusion.",
-    )
-    detect.add_argument(
-        "--object-model",
-        "--object-weights",
-        dest="object_model",
-        type=Path,
-        action=TrackExplicitAction,
-        help="Optional dumbbell/weight detector, for example runs/.../weights/best.pt.",
-    )
-    detect.add_argument("--object-imgsz", type=int, default=960, help="Object detector image size.")
-    detect.add_argument("--object-conf", type=float, default=0.20, help="Object detector confidence threshold.")
-    detect.add_argument("--object-frame-stride", type=int, default=2, help="Run dumbbell/weight YOLO every N frames; cached boxes are reused between runs.")
-    detect.add_argument("--object-track-hold-frames", type=int, default=4, help="Keep a tracked dumbbell prediction for this many missed frames.")
-    detect.add_argument("--object-track-smoothing", type=float, default=0.55, help="Blend tracked object boxes across frames.")
-    detect.add_argument("--object-track-max-center-distance", type=float, default=160.0, help="Maximum center distance for matching a detection to an active object track.")
-    detect.add_argument("--dumbbell-conf", type=float, default=0.30, help="Minimum confidence for the dumbbell class.")
-    detect.add_argument("--weight-conf", type=float, default=0.50, help="Minimum confidence for the weight class.")
-    detect.add_argument(
-        "--min-object-area-ratio",
-        type=float,
-        default=0.0015,
-        help="Ignore object boxes smaller than this frame-area ratio to reduce tiny false positives.",
-    )
-    detect.add_argument(
-        "--max-object-area-ratio",
-        type=float,
-        default=0.12,
-        help="Ignore object boxes larger than this frame-area ratio to reject body-region false positives.",
-    )
-    detect.add_argument(
-        "--require-object-body-match",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Only accept dumbbell candidates that are near a visible wrist or forearm.",
-    )
-    detect.add_argument("--pose-joint-conf", type=float, default=0.25, help="Minimum keypoint confidence for limb context.")
-    detect.add_argument(
-        "--max-wrist-distance",
-        type=float,
-        default=90.0,
-        help="Maximum pixel distance for a dumbbell to count as near a wrist.",
-    )
-    detect.add_argument(
-        "--max-forearm-distance",
-        type=float,
-        default=70.0,
-        help="Maximum pixel distance for a dumbbell to count as near a forearm segment.",
-    )
-    detect.add_argument(
-        "--analysis-window",
-        type=int,
-        default=12,
-        help="Recent frame window used for open-ended motion primitives.",
-    )
-    detect.add_argument(
-        "--calibration-seconds",
-        type=float,
-        default=DETECT_DEFAULTS["calibration_seconds"],
-        help="Seconds used to auto-calibrate each user's comfortable signal range.",
-    )
-    detect.add_argument(
-        "--esp32-side",
-        choices=["left", "right"],
-        default=DETECT_DEFAULTS["esp32_side"],
-        help="Hand wearing the ESP32+IMU gym glove.",
-    )
-    detect.add_argument(
-        "--esp32-transport",
-        choices=ESP32_TRANSPORT_CHOICES,
-        default=DETECT_DEFAULTS["esp32_transport"],
-        help="ESP32 telemetry transport. auto listens to USB serial and Wi-Fi UDP together.",
-    )
-    detect.add_argument(
-        "--wearable-side",
-        choices=["left", "right"],
-        default=DETECT_DEFAULTS["wearable_side"],
-        help="Hand wearing the Garmin smartwatch.",
-    )
-    detect.add_argument("--esp32-port", help="Optional ESP32 serial port, for example COM4 or auto.")
-    detect.add_argument("--esp32-baud", type=int, default=115200, help="ESP32 serial baud rate.")
-    detect.add_argument("--esp32-udp-host", default=DETECT_DEFAULTS["esp32_udp_host"], help="Local host/IP for the UDP listener.")
-    detect.add_argument("--esp32-udp-port", type=int, default=DETECT_DEFAULTS["esp32_udp_port"], help="Local UDP port for ESP32 Wi-Fi telemetry.")
-    detect.add_argument(
-        "--wearable-json",
-        type=Path,
-        help="Optional JSON file with the latest smartwatch/wristband sample.",
-    )
-    detect.add_argument(
-        "--fitquest-worker-url",
-        help="Stable FitQuest Worker URL used to pull Garmin data into the local wearable JSON file.",
-    )
-    detect.add_argument(
-        "--wearable-stale-seconds",
-        type=float,
-        default=10.0,
-        help="Mark --wearable-json data stale when the file has not changed for this many seconds.",
-    )
-    detect.add_argument("--jsonl", type=Path, help="Save one JSON payload per frame.")
-    detect.add_argument("--print-json", action="store_true", help="Print payloads to the terminal.")
-    detect.add_argument("--no-show", action="store_true", help="Do not open the OpenCV preview window.")
-    detect.add_argument("--display-width", type=int, default=960, help="Preview window frame width in pixels.")
-    detect.add_argument("--panel-width", type=int, default=520, help="Right dashboard panel width in pixels.")
-    detect.add_argument("--device", default="auto", help="Inference device: auto, cpu, cuda:0, 0, or mps.")
-    detect.add_argument(
-        "--fullscreen",
-        action=argparse.BooleanOptionalAction,
-        default=True,
-        help="Launch the OpenCV monitor fullscreen with aspect-ratio letterboxing.",
-    )
-    detect.add_argument(
-        "--ui-detail",
-        choices=["simple", "standard", "debug"],
-        default="simple",
-        help="Initial HUD mode: simple/standard start clean; debug starts with the raw overlay. Press d to toggle.",
-    )
-    detect.add_argument(
-        "--mirror",
-        action=TrackExplicitBooleanOptionalAction,
-        default=False,
-        help="Mirror only the preview; analysis keeps real anatomical left/right.",
-    )
-    detect.add_argument("--max-frames", type=int, help="Stop after N frames.")
+    add_detection_arguments(detect, DETECT_COMMAND_DEFAULTS)
     detect.set_defaults(func=command_detect)
+
 
     export_pose = subparsers.add_parser("export-pose", help="Export YOLO26 pose for deployment experiments.")
     export_pose.add_argument("--model", default="yolo26n-pose.pt", help="Pose model path/name.")
@@ -2159,7 +2024,11 @@ def build_parser() -> argparse.ArgumentParser:
     validate_object.set_defaults(func=command_validate_object_detector)
 
     capture = subparsers.add_parser("capture-motion-data", help="Record images/video/JSONL for project-specific training data.")
-    add_mode_argument(capture)
+    capture.add_argument(
+        "--mode",
+        choices=mode_choices,
+        help="Execution preset: vision=body pose only, dumbbells=body+dumbbell model, full=body+dumbbells+sensors.",
+    )
     capture.add_argument("--label", required=True, help="Human label for this session, for example right_overhead_left_front.")
     capture.add_argument("--session", help="Optional folder name. Defaults to timestamp plus label.")
     capture.add_argument("--out", type=Path, default=Path("data/captures"), help="Root folder for captured sessions.")

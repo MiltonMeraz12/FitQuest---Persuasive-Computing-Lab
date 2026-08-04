@@ -2,16 +2,16 @@ import Toybox.Application;
 import Toybox.Lang;
 import Toybox.WatchUi;
 
-class IronQuestSafeApp extends Application.AppBase {
+class FitQuestTelemetryApp extends Application.AppBase {
     private var _view;
 
     public function initialize() {
         AppBase.initialize();
-        _view = new $.IronQuestSafeView();
+        _view = new $.FitQuestTelemetryView();
     }
 
     public function getInitialView() as [Views] or [Views, InputDelegates] {
-        return [_view, new $.IronQuestSafeDelegate(_view)];
+        return [_view, new $.FitQuestTelemetryDelegate(_view)];
     }
 
     public function onStart(state as Dictionary?) as Void {

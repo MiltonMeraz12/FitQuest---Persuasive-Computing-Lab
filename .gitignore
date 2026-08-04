@@ -37,6 +37,9 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
+# Blender rewrites this autosave on every save of the case model
+*.blend1
+
 # Ultralytics / YOLO generated outputs
 runs/*
 !runs/.gitkeep

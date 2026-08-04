@@ -43,4 +43,4 @@ The web game should be demonstrated separately as a lightweight browser client. 
 
 ## Advanced Reference
 
-Only use [Command Reference](07_COMMAND_REFERENCE.md) for debugging, data capture, or maintenance.
+Only use [Command Reference](04_COMMAND_REFERENCE.md) for debugging, data capture, or maintenance.

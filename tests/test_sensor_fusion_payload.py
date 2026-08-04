@@ -487,6 +487,44 @@ def test_game_control_payload_has_sensor_fusion_sections_without_removed_axes() 
     assert payload["events"] == []
 
 
+def test_game_control_payload_exposes_upper_arm_angle_and_torso_hinge_signals() -> None:
+    """These two new signals let the browser tell curl/hammer curl (upper
+    arm close to the torso) apart from overhead triceps extension (upper
+    arm raised away from it) and bent-over row (torso hinged forward),
+    instead of all of them collapsing onto the same arm_extension value."""
+
+    motion = {
+        "status": "ok",
+        "sides": {
+            "left": {"visible": True, "arm_extension": 0.5, "upper_arm_angle_signal": 0.85, "shoulder_angle": 152.0},
+            "right": {"visible": True, "arm_extension": 0.5, "upper_arm_angle_signal": 0.1, "shoulder_angle": 12.0},
+        },
+        "body": {
+            "vertical_delta": 0.0,
+            "jump_candidate": False,
+            "torso_hinge_signal": 0.62,
+            "torso_hinge_deg": 41.0,
+        },
+        "signal_metrics": {"calibration": {"state": "tracking"}, "sides": {}, "bilateral": {}},
+    }
+    movement = {"pose_confidence": 0.7, "object_detection": {"status": "not_run"}, "limbs": {"sides": {}}}
+
+    payload = build_game_control_payload(motion, movement, None, None)
+
+    assert payload["axes"]["left_upper_arm_angle_signal"] == 0.85
+    assert payload["axes"]["right_upper_arm_angle_signal"] == 0.1
+    assert payload["axes"]["torso_hinge_signal"] == 0.62
+    assert payload["arm_signals"]["left"]["pose"]["upper_arm_angle_signal"] == 0.85
+    # The browser's hard posture gates read these raw degrees rather than
+    # the calibrated signals above -- see the comment in
+    # fitquest_game.html's posturePrecondition() explaining why the
+    # calibrated version can have an unstable, near-degenerate span for
+    # exercises (like curl) that deliberately keep the upper arm still.
+    assert payload["arm_signals"]["left"]["pose"]["upper_arm_angle_deg"] == 152.0
+    assert payload["arm_signals"]["right"]["pose"]["upper_arm_angle_deg"] == 12.0
+    assert payload["body_posture"]["body"]["torso_hinge_deg"] == 41.0
+
+
 def test_game_control_payload_marks_imu_motion_bursts() -> None:
     motion = {
         "status": "ok",
@@ -607,3 +645,64 @@ def test_event_debouncer_reports_imu_burst_once_per_rising_edge() -> None:
     assert "IMU_MOTION_BURST" not in second["events"]
     assert "IMU_MOTION_BURST" not in third["events"]
     assert "IMU_MOTION_BURST" in fourth["events"]
+
+
+def test_forearm_signals_normalise_pitch_into_elevation_and_grip() -> None:
+    """The IMU case rides a forearm armband, so its pitch is the forearm's
+    own elevation against gravity. Normalising it here is what lets the
+    browser separate exercises a single 2D camera cannot: curl, press, row
+    and triceps extension all show a bent elbow, but the forearm travels
+    completely differently in each."""
+
+    from ironquest.game_controls import _forearm_signals
+
+    hanging = _forearm_signals({"pitch": -90.0, "roll": 3.0})
+    horizontal = _forearm_signals({"pitch": 0.0, "roll": 3.0})
+    overhead = _forearm_signals({"pitch": 90.0, "roll": 3.0})
+
+    assert hanging["elevation"] == 0.0
+    assert horizontal["elevation"] == 0.5
+    assert overhead["elevation"] == 1.0
+    assert hanging["mount"] == "forearm_armband"
+
+    # Grip is the one thing the camera provably cannot see, and it is the
+    # only difference between a curl and a hammer curl.
+    assert _forearm_signals({"pitch": -45.0, "roll": 8.0})["grip"] == "neutral"
+    assert _forearm_signals({"pitch": -45.0, "roll": 80.0})["grip"] == "rotated"
+
+    # Missing orientation must degrade to None rather than a misleading 0.0,
+    # so the browser can tell "sensor says level" from "no sensor reading".
+    absent = _forearm_signals({})
+    assert absent["elevation"] is None
+    assert absent["grip"] is None
+
+
+def test_game_control_payload_exposes_forearm_posture() -> None:
+    motion = {
+        "status": "ok",
+        "sides": {
+            "left": {"visible": True, "arm_extension": 0.5},
+            "right": {"visible": True, "arm_extension": 0.5},
+        },
+        "body": {"vertical_delta": 0.0, "jump_candidate": False},
+        "signal_metrics": {"calibration": {"state": "tracking"}, "sides": {}, "bilateral": {}},
+    }
+    movement = {"pose_confidence": 0.7, "object_detection": {"status": "not_run"}, "limbs": {"sides": {}}}
+    esp32 = {
+        "status": "connected",
+        "latest": {
+            "device_id": "esp32_0",
+            "orientation_euler_deg": {"pitch": 45.0, "roll": 4.0, "yaw": 10.0},
+            "sample_interval_ms": 66.0,
+        },
+    }
+
+    payload = build_game_control_payload(motion, movement, esp32, None)
+
+    forearm = payload["esp32_glove"]["forearm"]
+    assert forearm["elevation"] == 0.75
+    assert forearm["grip"] == "neutral"
+    assert forearm["mount"] == "forearm_armband"
+    # Also surfaced as a flat normalized axis, the same way every other
+    # cross-sensor signal in this payload is.
+    assert payload["axes"]["forearm_elevation"] == 0.75

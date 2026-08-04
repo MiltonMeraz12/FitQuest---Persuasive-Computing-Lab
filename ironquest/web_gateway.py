@@ -37,6 +37,19 @@ def _json_default(value: Any) -> Any:
     return str(value)
 
 
+# The browser renders this preview inside a ~290px-wide card, so encoding it
+# at 960px was ~3x oversampling: it cost encode time on the publishing thread
+# and decode time in the browser for detail no one could see, which showed up
+# as the camera view visibly lagging the user's real movement. 640px still
+# comfortably exceeds the display size (so it stays sharp on HiDPI screens)
+# at roughly a third of the pixel count. Quality 72 is likewise well above
+# what is distinguishable at that scale. This only affects the preview image;
+# the detection pipeline still runs on the full-resolution frame, so accuracy
+# is untouched.
+PREVIEW_MAX_WIDTH = 640
+PREVIEW_JPEG_QUALITY = 72
+
+
 class WebStream:
     """Thread-safe latest-value stream used by SSE and MJPEG clients."""
 
@@ -66,13 +79,17 @@ class WebStream:
             try:
                 preview = frame
                 height, width = preview.shape[:2]
-                if width > 960:
-                    scale = 960.0 / float(width)
-                    preview = cv2.resize(preview, (960, max(1, int(height * scale))))
+                if width > PREVIEW_MAX_WIDTH:
+                    scale = PREVIEW_MAX_WIDTH / float(width)
+                    preview = cv2.resize(
+                        preview,
+                        (PREVIEW_MAX_WIDTH, max(1, int(height * scale))),
+                        interpolation=cv2.INTER_AREA,
+                    )
                 ok, encoded = cv2.imencode(
                     ".jpg",
                     preview,
-                    [int(cv2.IMWRITE_JPEG_QUALITY), 82],
+                    [int(cv2.IMWRITE_JPEG_QUALITY), PREVIEW_JPEG_QUALITY],
                 )
                 if ok:
                     encoded_frame = encoded.tobytes()
@@ -209,9 +226,6 @@ class _GatewayRequestHandler(BaseHTTPRequestHandler):
 
         if path in {"/", "/fitquest_game.html"}:
             self._send_file(self.server.web_root / "fitquest_game.html")
-            return
-        if path == "/demo_game_control.jsonl":
-            self._send_file(self.server.web_root / "demo_game_control.jsonl")
             return
         if path.startswith("/vendor/"):
             self._serve_vendor_file(path[len("/vendor/") :])

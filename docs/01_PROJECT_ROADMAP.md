@@ -44,7 +44,7 @@ Build and document a system that produces synchronized frame-level signals from:
 
 - Passing CLI and test suite after the cleanup.
 - JSONL examples containing `body_posture`, `dumbbells`, `arm_signals`, `esp32_glove`, `wearable_watch`, `signal_metrics`, and `signal_log`.
-- Updated `docs/05_SENSORS_AND_MATERIALS.md` with the wearable decision.
+- Updated `docs/08_SENSORS_AND_MATERIALS.md` with the wearable decision.
 - Updated UI that clearly separates camera, ESP32, and Garmin readiness.
 - A small capture set with the real project dumbbells.
 - A simple web-based game prototype with a clear input-to-action mapping, such as movement signals controlling navigation, an attack, a shield, or a target interaction.

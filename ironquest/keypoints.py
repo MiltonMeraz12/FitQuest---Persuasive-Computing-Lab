@@ -8,7 +8,8 @@ hard-coded numeric indexes scattered throughout the project.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from time import time
+from typing import Any, Iterable
 
 import numpy as np
 
@@ -262,3 +263,57 @@ def extract_primary_pose(result) -> PoseCandidate | None:
         conf=conf_np[best_idx] if conf_np is not None else None,
         box_confidence=box_confidence,
     )
+
+
+def count_visible_joints(pose: PoseCandidate) -> int:
+    """Count keypoints with a non-zero coordinate and positive confidence."""
+
+    count = 0
+    for point, confidence in zip(pose.xy, pose.conf, strict=False):
+        if confidence > 0 and (point[0] != 0 or point[1] != 0):
+            count += 1
+    return count
+
+
+def pose_confidence(pose: PoseCandidate) -> float:
+    """Average confidence across visible keypoints."""
+
+    values = [
+        float(confidence)
+        for point, confidence in zip(pose.xy, pose.conf, strict=False)
+        if confidence > 0 and (point[0] != 0 or point[1] != 0)
+    ]
+    if not values:
+        return 0.0
+    return sum(values) / len(values)
+
+
+def pose_stream_state(pose: PoseCandidate | None) -> dict[str, Any]:
+    """Return the middleware liveness record for one pose frame.
+
+    This deliberately carries no exercise semantics. Iron Quest 3D interprets
+    movement in ``motion_analysis`` and ``game_controls``; the pipeline only
+    needs to know here whether a usable pose arrived, how much of the body is
+    visible, and how confident those joints are.
+    """
+
+    if pose is None:
+        visible_joints = 0
+        confidence = 0.0
+        movement_state = "no_person_detected"
+    else:
+        visible_joints = count_visible_joints(pose)
+        confidence = pose_confidence(pose)
+        movement_state = "tracking_pose" if visible_joints else "required_joints_not_visible"
+
+    valid = visible_joints > 0
+    return {
+        "timestamp": round(time(), 3),
+        "valid": valid,
+        "detection_mode": "middleware",
+        "movement_state": movement_state,
+        "phase": "streaming" if valid else "waiting",
+        "visible_joints": visible_joints,
+        "pose_confidence": round(confidence, 3),
+        "confidence": round(confidence, 3),
+    }

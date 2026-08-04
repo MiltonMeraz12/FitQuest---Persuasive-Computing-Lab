@@ -40,7 +40,13 @@ def test_web_gateway_serves_client_and_health_endpoint() -> None:
 
         assert health["status"] == "ok"
         assert health["stream"] == "waiting"
-        assert "SENSOR-FUSION WORKOUT" in html
+        # Assert on the product name, not the tagline underneath it. The
+        # tagline is editorial copy that gets reworded (it has already gone
+        # from "SENSOR-FUSION WORKOUT" to the project's official title), and
+        # a smoke test for "did the gateway serve the client" should not
+        # fail because someone rephrased a subtitle.
+        assert "FITQUEST" in html
+        assert 'id="avatar3d"' in html
     finally:
         gateway.close()
 

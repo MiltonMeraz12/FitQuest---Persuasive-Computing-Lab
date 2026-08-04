@@ -122,7 +122,7 @@ class ESP32Telemetry:
     Preferred firmware-side shape for the BNO08X prototype:
 
     ``{"device_id":"esp32_0","timestamp_ms":12345,
-    "mount":"right_gym_glove",
+    "mount":"right_forearm_armband",
     "orientation_euler_deg":{"pitch":4.1,"roll":-2.0,"yaw":91.5},
     "quaternion":{"w":0.99,"x":0.01,"y":0.02,"z":0.03},
     "accel_mps2":{"x":0,"y":0,"z":9.81},

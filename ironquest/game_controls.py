@@ -248,6 +248,17 @@ def _arm_signals(
                 "height_signal": pose.get("height_signal"),
                 "reach_signal": pose.get("reach_signal"),
                 "range_utilization": pose.get("range_utilization"),
+                "upper_arm_angle_signal": pose.get("upper_arm_angle_signal"),
+                # Raw (uncalibrated) degrees alongside the normalized
+                # signal: "is the upper arm near the torso" is a fixed
+                # anatomical fact, not something that benefits from
+                # per-user calibration the way elbow-bend range does, and
+                # early in a session (or for exercises like curl that
+                # deliberately keep the upper arm still) the calibrated
+                # bounds can still have a near-degenerate span, making the
+                # normalized 0..1 value unstable. The browser's hard
+                # posture gates use this raw value instead.
+                "upper_arm_angle_deg": pose.get("shoulder_angle"),
                 "motion_speed": pose.get("motion_speed"),
                 "motion_direction": pose.get("motion_direction"),
             },
@@ -317,13 +328,13 @@ def _esp32_glove(esp32_payload: dict[str, Any], mounted_side: str) -> dict[str, 
     angular_delta = _optional_float(latest.get("angular_delta_dps", latest.get("gyro_delta_dps")))
     orientation_delta = _optional_float(latest.get("orientation_delta_deg"))
     sample_interval_ms = _optional_float(latest.get("sample_interval_ms"))
-    gyro_magnitude = _vector_magnitude(latest.get("gyro_dps"))
+    gyro_magnitude = vector_magnitude(latest.get("gyro_dps"))
     motion_intensity = (
-        _imu_motion_intensity(motion_delta, angular_delta, orientation_delta, gyro_magnitude)
+        imu_motion_intensity(motion_delta, angular_delta, orientation_delta, gyro_magnitude)
         if has_live_sample
         else None
     )
-    motion_state = _imu_motion_state(motion_intensity) if motion_intensity is not None else (
+    motion_state = imu_motion_state(motion_intensity) if motion_intensity is not None else (
         "stale" if status == "stale" else "waiting"
     )
     return {
@@ -335,10 +346,15 @@ def _esp32_glove(esp32_payload: dict[str, Any], mounted_side: str) -> dict[str, 
         "remote": esp32_payload.get("remote"),
         "mounted_side": mounted_side,
         "device_id": latest.get("device_id"),
-        "mount": latest.get("mount", "gym_glove"),
+        "mount": latest.get("mount", "forearm_armband"),
         "timestamp_ms": latest.get("timestamp_ms"),
         "orientation_euler_deg": latest.get("orientation_euler_deg")
         or {"pitch": None, "roll": None, "yaw": None},
+        "forearm": _forearm_signals(
+            latest.get("orientation_euler_deg")
+            if isinstance(latest.get("orientation_euler_deg"), dict)
+            else {}
+        ),
         "quaternion": latest.get("quaternion"),
         "accel_mps2": latest.get("accel_mps2"),
         "gyro_dps": latest.get("gyro_dps"),
@@ -353,7 +369,51 @@ def _esp32_glove(esp32_payload: dict[str, Any], mounted_side: str) -> dict[str, 
         "sample_rate_hz": None if not sample_interval_ms or sample_interval_ms <= 0 else round(1000.0 / sample_interval_ms, 2),
         "sequence": latest.get("sequence"),
         "sample_age_seconds": esp32_payload.get("sample_age_seconds"),
-        "source": "ESP32 USB/Wi-Fi JSON from gym glove IMU",
+        "source": "ESP32 USB/Wi-Fi JSON from forearm armband IMU",
+    }
+
+
+# The IMU case is strapped to a forearm armband, so its pitch axis tracks the
+# forearm's own elevation against gravity. That single fact makes the sensor a
+# real exercise discriminator rather than just a "was there movement" flag,
+# because the project's exercises differ sharply in how the FOREARM travels:
+#
+#   curl / hammer curl  forearm sweeps ~150deg, starting hanging (low)
+#   press               forearm stays HIGH the whole rep (racked -> overhead)
+#   bent-over row       forearm stays near-vertical; the ELBOW travels, not it
+#   triceps extension   forearm folds from overhead back behind the head
+#
+# So "large excursion starting low" (curl) and "small excursion staying high"
+# (press) are physically distinguishable in a way a single 2D camera cannot
+# resolve -- the camera sees a bent elbow in both cases.
+#
+# Mounting caveat: which way the case is rotated on the strap sets the
+# absolute pitch offset. Absolute elevation below is therefore a best-effort
+# convenience value; the browser's per-rep validation deliberately keys off
+# the *excursion* (a difference, so any constant mount offset cancels) rather
+# than trusting the absolute band alone.
+FOREARM_GRIP_NEUTRAL_ROLL_MAX_DEG = 38.0
+
+
+def _forearm_signals(orientation: dict[str, Any]) -> dict[str, Any]:
+    """Derive forearm posture from a forearm-mounted IMU's Euler angles."""
+
+    pitch = _optional_float(orientation.get("pitch"))
+    roll = _optional_float(orientation.get("roll"))
+    elevation = None
+    if pitch is not None:
+        # -90deg (pointing straight down) -> 0.0, 0deg (horizontal) -> 0.5,
+        # +90deg (straight up) -> 1.0.
+        elevation = _clamp01((pitch + 90.0) / 180.0)
+    grip = None
+    if roll is not None:
+        grip = "neutral" if abs(roll) <= FOREARM_GRIP_NEUTRAL_ROLL_MAX_DEG else "rotated"
+    return {
+        "mount": "forearm_armband",
+        "pitch_deg": pitch,
+        "roll_deg": roll,
+        "elevation": None if elevation is None else round(elevation, 4),
+        "grip": grip,
     }
 
 
@@ -466,9 +526,12 @@ def _axes(
         "right_height_signal": _side_axis(sides, "right", "height_signal"),
         "left_range_utilization": _side_axis(sides, "left", "range_utilization"),
         "right_range_utilization": _side_axis(sides, "right", "range_utilization"),
+        "left_upper_arm_angle_signal": _side_axis(sides, "left", "upper_arm_angle_signal"),
+        "right_upper_arm_angle_signal": _side_axis(sides, "right", "upper_arm_angle_signal"),
         "left_wrist_speed": _side_axis(sides, "left", "motion_speed"),
         "right_wrist_speed": _side_axis(sides, "right", "motion_speed"),
         "symmetry_score": _safe_float(bilateral.get("symmetry_score")),
+        "torso_hinge_signal": _safe_float(motion_analysis.get("body", {}).get("torso_hinge_signal")),
         "body_vertical_delta": _safe_float(motion_analysis.get("body", {}).get("vertical_delta")),
         "pose_confidence": _safe_float(movement_payload.get("pose_confidence", movement_payload.get("confidence"))),
         "imu_pitch_deg": _safe_float(orientation.get("pitch")),
@@ -476,6 +539,9 @@ def _axes(
         "imu_yaw_deg": _safe_float(orientation.get("yaw")),
         "imu_motion_intensity": _safe_float(esp32_glove.get("motion_intensity")),
         "imu_rotation_intensity": _safe_float(esp32_glove.get("rotation_intensity")),
+        "forearm_elevation": _safe_float(
+            (esp32_glove.get("forearm") or {}).get("elevation")
+        ),
         "stability_index": _safe_float(esp32_glove.get("stability_index")),
         "exertion_level": _safe_float(user_state.get("exertion_level")),
     }
@@ -560,7 +626,7 @@ def _clamp01(value: float) -> float:
     return max(0.0, min(1.0, float(value)))
 
 
-def _vector_magnitude(vector: Any) -> float | None:
+def vector_magnitude(vector: Any) -> float | None:
     """Return the Euclidean magnitude of an ``{"x","y","z"}`` payload vector."""
 
     if not isinstance(vector, dict):
@@ -571,7 +637,7 @@ def _vector_magnitude(vector: Any) -> float | None:
         return None
 
 
-def _imu_motion_intensity(
+def imu_motion_intensity(
     motion_delta_mps2: float | None,
     angular_delta_dps: float | None,
     orientation_delta_deg: float | None,
@@ -599,7 +665,7 @@ def _imu_motion_intensity(
     return round(_clamp01(max(accel_score, gyro_score, orientation_score, rotation_speed_score)), 3)
 
 
-def _imu_motion_state(motion_intensity: float) -> str:
+def imu_motion_state(motion_intensity: float) -> str:
     """Convert normalized IMU movement into a stable dashboard label."""
 
     if motion_intensity < 0.08:

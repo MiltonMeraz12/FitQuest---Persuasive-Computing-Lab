@@ -104,6 +104,78 @@ def test_partial_pose_does_not_start_calibration() -> None:
     assert payload["signal_metrics"]["calibration"]["state"] == "waiting_for_pose"
 
 
+def test_upper_arm_angle_signal_distinguishes_arm_at_side_from_overhead() -> None:
+    """shoulder_angle (hip-shoulder-elbow) is the upper-arm-to-torso angle;
+    curl/hammer curl keep it low (arm close to the body) while overhead
+    triceps extension keeps it high (arm raised away from the body) even
+    though both reuse the same elbow-bend (arm_extension) signal."""
+
+    analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
+    at_side = _pose(left_wrist=(100.0, 205.0), right_wrist=(220.0, 205.0))
+    overhead = _pose(left_wrist=(100.0, 20.0), right_wrist=(220.0, 205.0))
+    overhead.xy[COCO_KEYPOINTS["left_elbow"]] = (100.0, 20.0)
+
+    for pose in (at_side, overhead, at_side):
+        payload = analyzer.update(pose)
+    payload = analyzer.update(overhead)
+
+    assert payload["sides"]["left"]["upper_arm_angle_signal"] == 1.0
+
+
+def test_torso_hinge_signal_reports_forward_lean() -> None:
+    """A body-wide (not per-side) signal so bent-over row can require a
+    hinged torso instead of only reusing the elbow-bend signal curl uses."""
+
+    upright_analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
+    upright = _pose(left_wrist=(100.0, 150.0), right_wrist=(220.0, 150.0))
+    upright_payload = upright_analyzer.update(upright)
+    assert upright_payload["body"]["torso_hinge_deg"] == 0.0
+
+    bent_analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
+    bent = _pose(left_wrist=(100.0, 150.0), right_wrist=(220.0, 150.0))
+    # Shift both shoulders forward (in x) relative to the hips to simulate a
+    # forward hinge -- the shoulder-hip line is no longer vertical.
+    bent.xy[COCO_KEYPOINTS["left_shoulder"]] = (160.0, 100.0)
+    bent.xy[COCO_KEYPOINTS["right_shoulder"]] = (280.0, 100.0)
+    bent_payload = bent_analyzer.update(bent)
+
+    assert bent_payload["body"]["torso_hinge_deg"] > 20.0
+    assert 0.0 <= bent_payload["body"]["torso_hinge_signal"] <= 1.0
+
+
+def test_calibration_quality_flags_a_barely_moving_warm_up() -> None:
+    """Calibration can technically "complete" (timer + sample-count gates)
+    even if the user barely moved -- quality should say so instead of
+    silently producing a near-degenerate 0.0/1.0-saturated signal."""
+
+    analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
+    payload = {}
+    for index in range(8):
+        jitter = 0.3 * (index % 2)
+        payload = analyzer.update(_pose(left_wrist=(100.0 + jitter, 205.0 + jitter), right_wrist=(265.0, 155.0)))
+
+    calibration = payload["signal_metrics"]["calibration"]
+    assert calibration["state"] == "tracking"
+    assert calibration["sides"]["left"]["quality"] == "insufficient"
+
+
+def test_calibration_quality_is_good_for_a_wide_range_of_motion() -> None:
+    analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
+    poses = [
+        _pose(left_wrist=(100.0, 210.0), right_wrist=(270.0, 150.0)),
+        _pose(left_wrist=(120.0, 190.0), right_wrist=(260.0, 160.0)),
+        _pose(left_wrist=(140.0, 170.0), right_wrist=(250.0, 170.0)),
+        _pose(left_wrist=(150.0, 150.0), right_wrist=(240.0, 180.0)),
+        _pose(left_wrist=(130.0, 180.0), right_wrist=(250.0, 170.0)),
+        _pose(left_wrist=(110.0, 205.0), right_wrist=(265.0, 155.0)),
+    ]
+    payload = {}
+    for pose in poses:
+        payload = analyzer.update(pose)
+
+    assert payload["signal_metrics"]["calibration"]["sides"]["left"]["quality"] == "good"
+
+
 def test_reacquisition_resets_calibration_after_sustained_visibility_loss() -> None:
     analyzer = MotionAnalyzer(window=6, min_confidence=0.25, calibration_seconds=0.0)
     for _ in range(6):

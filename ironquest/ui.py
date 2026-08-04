@@ -20,6 +20,7 @@ import cv2
 import numpy as np
 
 from .body_context import extract_object_detections
+from .game_controls import imu_motion_intensity, imu_motion_state, vector_magnitude
 from .keypoints import COCO_KEYPOINTS, PoseCandidate, is_visible
 
 
@@ -447,7 +448,7 @@ def format_imu_signals(esp32_glove: dict[str, Any], axes: dict[str, Any]) -> dic
         rotation_intensity = clamp(safe_float(esp32_glove.get("angular_delta_dps")) / 120.0, 0.0, 1.0)
     state = esp32_glove.get("motion_state")
     if not state or state == "unknown":
-        state = estimate_imu_motion_state(motion_intensity)
+        state = imu_motion_state(motion_intensity)
     return {
         "state": state,
         "transport": transport,
@@ -553,24 +554,20 @@ def format_wearable_signals(wearable: dict[str, Any], game_control: dict[str, An
 
 
 def estimate_imu_motion_intensity(esp32_glove: dict[str, Any]) -> float:
-    """Estimate IMU intensity from older payloads that predate this field."""
+    """Estimate IMU intensity from older payloads that predate this field.
 
-    motion_delta = safe_float(esp32_glove.get("motion_delta_mps2"), default=0.0) / 8.0
-    angular_delta = safe_float(esp32_glove.get("angular_delta_dps"), default=0.0) / 180.0
-    orientation_delta = safe_float(esp32_glove.get("orientation_delta_deg"), default=0.0) / 24.0
-    return round(clamp(max(motion_delta, angular_delta, orientation_delta), 0.0, 1.0), 3)
+    This defers to ``game_controls.imu_motion_intensity`` so the HUD can never
+    drift from the runtime signal again. An earlier copy of the formula lived
+    here and silently missed the raw-gyro term added to the runtime, which made
+    the monitor under-report real reps while the browser reported them fine.
+    """
 
-
-def estimate_imu_motion_state(motion_intensity: float) -> str:
-    """Mirror runtime IMU state labels for display fallback."""
-
-    if motion_intensity < 0.08:
-        return "steady"
-    if motion_intensity < 0.28:
-        return "small_motion"
-    if motion_intensity < 0.72:
-        return "active"
-    return "burst"
+    return imu_motion_intensity(
+        optional_float(esp32_glove.get("motion_delta_mps2")),
+        optional_float(esp32_glove.get("angular_delta_dps")),
+        optional_float(esp32_glove.get("orientation_delta_deg")),
+        vector_magnitude(esp32_glove.get("gyro_dps")),
+    )
 
 
 def operator_state(payload: dict[str, Any]) -> str:

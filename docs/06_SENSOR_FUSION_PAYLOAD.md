@@ -41,6 +41,19 @@ At session start, the first few seconds run in `calibrating` mode. The user move
 
 This keeps the pipeline accessible without changing model weights or editing source code for each user.
 
+`calibration.quality` (and per-side `calibration.sides.<side>.quality`) reports `good`, `limited`, or `insufficient` based on how much of a range the observed elbow-angle and height spans actually covered during the warm-up window -- calibration can technically finish (the timer and sample-count gates pass) even if the user barely moved, which otherwise silently produces a near-degenerate, saturation-prone signal. `calibration.quality_note` is a short human-readable explanation of the same thing. The browser's Calibrate button watches this live (`elapsed_seconds`/`target_seconds`/`state`/`quality`) instead of closing on a fixed timer.
+
+## Upper-Arm Angle and Torso Hinge
+
+Two additional per-side/body-wide signals exist specifically to stop exercises that share the same elbow-bend (`arm_extension`) signal from being confused with each other (a plain curl and an overhead triceps extension both bend the elbow through a similar range; only the upper arm's position relative to the torso tells them apart):
+
+- `upper_arm_angle_signal` (calibrated, per side, in `axes.left_upper_arm_angle_signal` / `axes.right_upper_arm_angle_signal` and `arm_signals.<side>.pose.upper_arm_angle_signal`) -- `0.0` means the upper arm hangs close to the torso (curl/hammer curl), `1.0` means it is raised away from it, up to genuinely overhead (triceps extension/press).
+- `upper_arm_angle_deg` (raw, uncalibrated, in `arm_signals.<side>.pose.upper_arm_angle_deg`) -- the same measurement in degrees (0 = arm at the side, 180 = arm overhead), from the hip-shoulder-elbow angle.
+- `torso_hinge_signal` (calibrated, body-wide, in `axes.torso_hinge_signal` and `body_posture.body.torso_hinge_signal`) -- `0.0` is upright, increasing toward `1.0` with a forward hinge (bent-over row).
+- `torso_hinge_deg` (raw, in `body_posture.body.torso_hinge_deg`) -- the same measurement in degrees, from the hip-midpoint-to-shoulder-midpoint line's angle from vertical.
+
+The browser's rep-counting hard gates (see `posturePrecondition()` in `web/fitquest_game.html`) read the **raw degree** fields, not the calibrated 0..1 signals: whether an arm is near the torso or overhead is a fixed anatomical fact, not something that should need per-user calibration, and an exercise that deliberately keeps the upper arm still (curl) can leave the calibrated signal's session-wide span near-degenerate early in a session, which made the calibrated version unstable enough to false-trigger during a plain curl before other exercises had widened its calibration bounds. The calibrated signals remain useful for cross-user comparison in `signal_log`/the research paper; they are just not what gates a repetition.
+
 ## Main Sections
 
 | Section | Meaning |
@@ -138,7 +151,7 @@ df = pd.read_json("runs/validate/sensor_fusion.jsonl", lines=True)
 signals = pd.json_normalize(df["signal_log"])
 ```
 
-Useful columns include `left_arm_extension`, `right_arm_extension`, `symmetry_score`, `heart_rate_bpm`, `exertion_level`, `intensity_zone`, `stability_index`, `imu_motion_delta_mps2`, `imu_motion_intensity`, `imu_rotation_intensity`, `imu_motion_state`, and `imu_sample_rate_hz`.
+Useful columns include `left_arm_extension`, `right_arm_extension`, `symmetry_score`, `heart_rate_bpm`, `exertion_level`, `intensity_zone`, `stability_index`, `imu_motion_delta_mps2`, `imu_motion_intensity`, `imu_rotation_intensity`, `imu_motion_state`, `imu_sample_rate_hz`, `left_upper_arm_angle_signal`, `right_upper_arm_angle_signal`, and `torso_hinge_signal`.
 
 ## Current Limits
 
@@ -147,3 +160,4 @@ Useful columns include `left_arm_extension`, `right_arm_extension`, `symmetry_sc
 - IMU values need stable mounting and calibration before they can be treated as reliable controls.
 - Heart rate is an intensity/context signal, not a hard stop.
 - The web game is a proof of concept; it should not be presented as a complete fitness product.
+- Curl vs. hammer curl (a wrist-grip-rotation difference) can only be hard-verified by the ESP32 glove on whichever side it is mounted -- with one glove on one wrist by design, the other arm's grip cannot be checked by any current sensor and keeps counting from the camera's elbow-bend signal alone.

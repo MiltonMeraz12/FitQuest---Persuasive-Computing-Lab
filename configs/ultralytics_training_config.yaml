@@ -3,10 +3,11 @@
 # This is the project-level training source of truth after the June 2026 pivot.
 # Only body-pose and dumbbell-detection profiles remain active for this scope.
 #
-# Use:
+# The CLI reads these profiles directly, so this file is the only place a
+# hyperparameter needs to change:
 #
-#   ironquest_env\Scripts\python.exe tools\train_ultralytics_profile.py --profile dumbbell_detection
-#   ironquest_env\Scripts\python.exe tools\train_ultralytics_profile.py --profile body_pose
+#   ironquest_env\Scripts\python.exe -m ironquest train-combined-dumbbell-detector --device 0
+#   ironquest_env\Scripts\python.exe -m ironquest train-body-pose --device 0
 #
 # Body pose and dumbbell detection stay separate because their outputs are
 # different: COCO body pose has 17 body joints, while dumbbells are object boxes.

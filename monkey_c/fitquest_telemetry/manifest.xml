@@ -1,7 +1,7 @@
 <iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
     <iq:application
-        entry="IronQuestSmokeApp"
-        id="31c7c9f6c38444f2b2e9d6a93bf57909"
+        entry="FitQuestTelemetryApp"
+        id="70f5e1f1beec454fb014da23f0405f79"
         launcherIcon="@Drawables.LauncherIcon"
         minSdkVersion="5.2.0"
         name="@Strings.AppName"
@@ -9,6 +9,10 @@
         <iq:products>
             <iq:product id="venu3"/>
         </iq:products>
+        <iq:permissions>
+            <iq:uses-permission id="Communications"/>
+            <iq:uses-permission id="Sensor"/>
+        </iq:permissions>
         <iq:languages>
             <iq:language>eng</iq:language>
         </iq:languages>

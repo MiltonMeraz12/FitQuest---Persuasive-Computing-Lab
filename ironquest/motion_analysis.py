@@ -30,6 +30,15 @@ class MotionAnalysisConfig:
     calibration_seconds: float = 7.0
     calibration_min_samples: int = 6
     calibration_min_span: float = 1e-3
+    # A calibration window a user barely moved through (e.g. stood still)
+    # still "completes" once the timer/sample-count gates pass, but its
+    # bounds are near-degenerate, so normalise() saturates to 0.0/1.0
+    # almost immediately afterward. These spans are the minimum observed
+    # range that counts as a meaningful warm-up rather than a near-static
+    # one; below them the calibration is technically "tracking" but its
+    # quality is reported as limited/insufficient so the UI can say so.
+    calibration_good_elbow_span_deg: float = 35.0
+    calibration_good_height_span: float = 0.18
     direction_threshold: float = 0.08
     elbow_extended_angle: float = 150.0
     elbow_bent_angle: float = 85.0
@@ -227,6 +236,8 @@ class BodyMotion:
     vertical_speed: float | None = None
     position: str = "unknown"
     build_ratio: float | None = None
+    torso_hinge_deg: float | None = None
+    torso_hinge_signal: float | None = None
 
     def as_payload(self) -> dict[str, Any]:
         """Convert body motion into the detector payload."""
@@ -241,6 +252,9 @@ class BodyMotion:
             payload["vertical_speed"] = round(self.vertical_speed, 3)
         if self.build_ratio is not None:
             payload["build_ratio"] = round(self.build_ratio, 3)
+        if self.torso_hinge_deg is not None:
+            payload["torso_hinge_deg"] = round(self.torso_hinge_deg, 2)
+        payload["torso_hinge_signal"] = None if self.torso_hinge_signal is None else round(self.torso_hinge_signal, 3)
         return payload
 
 
@@ -285,6 +299,7 @@ class SideMotion:
     height_signal: float | None
     reach_signal: float | None
     range_utilization: float | None
+    upper_arm_angle_signal: float | None
     height_zone: str
     reach_zone: str
     elbow_state: str
@@ -310,6 +325,7 @@ class SideMotion:
             "height_signal": None if self.height_signal is None else round(self.height_signal, 3),
             "reach_signal": None if self.reach_signal is None else round(self.reach_signal, 3),
             "range_utilization": None if self.range_utilization is None else round(self.range_utilization, 3),
+            "upper_arm_angle_signal": None if self.upper_arm_angle_signal is None else round(self.upper_arm_angle_signal, 3),
             "height_zone": self.height_zone,
             "reach_zone": self.reach_zone,
             "elbow_state": self.elbow_state,
@@ -351,6 +367,8 @@ class MotionAnalyzer:
             ),
             calibration_min_samples=config.calibration_min_samples,
             calibration_min_span=config.calibration_min_span,
+            calibration_good_elbow_span_deg=config.calibration_good_elbow_span_deg,
+            calibration_good_height_span=config.calibration_good_height_span,
             direction_threshold=config.direction_threshold,
             elbow_extended_angle=config.elbow_extended_angle,
             elbow_bent_angle=config.elbow_bent_angle,
@@ -391,9 +409,11 @@ class MotionAnalyzer:
                 "elbow_angle": CalibrationFeature(),
                 "height_score": CalibrationFeature(),
                 "reach_x": CalibrationFeature(),
+                "shoulder_angle": CalibrationFeature(),
             }
             for side in SIDES
         }
+        self.body_calibration_bounds: dict[str, CalibrationFeature] = {"torso_hinge": CalibrationFeature()}
         self.side_calibration_samples = {side: 0 for side in SIDES}
         self.side_history = {side: deque(maxlen=self.window) for side in SIDES}
         self.angle_history = {side: deque(maxlen=self.window) for side in SIDES}
@@ -536,6 +556,7 @@ class MotionAnalyzer:
                 height_signal=None,
                 reach_signal=None,
                 range_utilization=None,
+                upper_arm_angle_signal=None,
                 height_zone="unknown",
                 reach_zone="unknown",
                 elbow_state="unknown",
@@ -576,7 +597,7 @@ class MotionAnalyzer:
         # lets range-of-motion signals keep expanding instead of clamping at
         # 0.0/1.0 for the rest of the session once a user moves beyond what
         # they happened to demonstrate in the first few seconds.
-        self._update_calibration(side, elbow_angle, height_score, reach_x)
+        self._update_calibration(side, elbow_angle, height_score, reach_x, shoulder_angle)
         direction = _direction_from_delta(delta, self.config.direction_threshold)
         tokens = self._side_tokens(side, height_zone, reach_zone, elbow_state, loaded, direction)
         if elbow_angle is not None:
@@ -586,6 +607,12 @@ class MotionAnalyzer:
         height_signal = self._normalise_signal(side, "height_score", height_score)
         reach_signal = self._normalise_signal(side, "reach_x", reach_x)
         range_utilization = self._range_utilization(side, angle_range)
+        # Low = upper arm hangs close to the torso (curl/hammer curl rest
+        # position); high = upper arm raised away from the torso, up to
+        # genuinely overhead (triceps extension). Lets rep validation tell
+        # those exercise families apart instead of relying on elbow-bend
+        # (arm_extension) alone, which looks identical for all of them.
+        upper_arm_angle_signal = self._normalise_signal(side, "shoulder_angle", shoulder_angle)
 
         return SideMotion(
             side=side,
@@ -599,6 +626,7 @@ class MotionAnalyzer:
             height_signal=height_signal,
             reach_signal=reach_signal,
             range_utilization=range_utilization,
+            upper_arm_angle_signal=upper_arm_angle_signal,
             height_zone=height_zone,
             reach_zone=reach_zone,
             elbow_state=elbow_state,
@@ -646,12 +674,14 @@ class MotionAnalyzer:
         elbow_angle: float | None,
         height_score: float | None,
         reach_x: float | None,
+        shoulder_angle: float | None,
     ) -> None:
         """Record per-user signal bounds during the calibration phase."""
 
         self.calibration_bounds[side]["elbow_angle"] = self.calibration_bounds[side]["elbow_angle"].update(elbow_angle)
         self.calibration_bounds[side]["height_score"] = self.calibration_bounds[side]["height_score"].update(height_score)
         self.calibration_bounds[side]["reach_x"] = self.calibration_bounds[side]["reach_x"].update(reach_x)
+        self.calibration_bounds[side]["shoulder_angle"] = self.calibration_bounds[side]["shoulder_angle"].update(shoulder_angle)
         self.side_calibration_samples[side] += 1
 
     def _finish_calibration_if_ready(self, timestamp: float) -> None:
@@ -721,6 +751,9 @@ class MotionAnalyzer:
                 "range_utilization": None
                 if signal.range_utilization is None
                 else round(signal.range_utilization, 3),
+                "upper_arm_angle_signal": None
+                if signal.upper_arm_angle_signal is None
+                else round(signal.upper_arm_angle_signal, 3),
                 "movement_speed": round(signal.motion_speed, 4),
                 "loaded": signal.loaded,
             }
@@ -748,15 +781,48 @@ class MotionAnalyzer:
             ),
         }
 
+    def _side_calibration_quality(self, side: str) -> str:
+        """Classify how meaningful one side's observed calibration range is.
+
+        "tracking" only means the timer/sample-count gates passed, not that
+        the user actually moved through a useful range -- someone standing
+        still during calibration gets near-zero elbow/height spans, which
+        then makes normalise() saturate to 0.0/1.0 almost immediately. This
+        gives the browser a way to say so instead of silently mis-tracking.
+        """
+
+        if self.calibration_state != "tracking":
+            return "pending"
+        elbow_span = self.calibration_bounds[side]["elbow_angle"].span
+        height_span = self.calibration_bounds[side]["height_score"].span
+        if elbow_span is None or height_span is None:
+            return "insufficient"
+        if elbow_span >= self.config.calibration_good_elbow_span_deg and height_span >= self.config.calibration_good_height_span:
+            return "good"
+        if elbow_span >= self.config.calibration_good_elbow_span_deg * 0.4 or height_span >= self.config.calibration_good_height_span * 0.4:
+            return "limited"
+        return "insufficient"
+
     def _calibration_payload(self, timestamp: float) -> dict[str, Any]:
         """Return the current calibration state and observed per-side bounds."""
 
         elapsed = self._calibration_elapsed(timestamp)
+        side_quality = {side: self._side_calibration_quality(side) for side in SIDES}
+        quality_rank = {"pending": -1, "insufficient": 0, "limited": 1, "good": 2}
+        overall_quality = min(side_quality.values(), key=lambda quality: quality_rank[quality]) if self.calibration_state == "tracking" else "pending"
+        quality_note = {
+            "pending": "Calibration is still in progress.",
+            "insufficient": "Range of motion during calibration was very small -- recalibrate while moving through a fuller, comfortable range for more accurate rep detection.",
+            "limited": "Calibration captured a limited range of motion -- recalibrate with fuller movements if reps feel too easy or too hard to trigger.",
+            "good": "Calibration captured a good range of motion for both arms.",
+        }[overall_quality]
         return {
             "state": self.calibration_state,
             "elapsed_seconds": round(elapsed, 2),
             "target_seconds": round(self.config.calibration_seconds, 2),
             "complete": self.calibration_state == "tracking",
+            "quality": overall_quality,
+            "quality_note": quality_note,
             "instruction": (
                 "Move into view so both arm chains can be acquired."
                 if self.calibration_state == "waiting_for_pose"
@@ -767,6 +833,7 @@ class MotionAnalyzer:
             "sides": {
                 side: {
                     "samples": self.side_calibration_samples[side],
+                    "quality": side_quality[side],
                     "bounds": {
                         name: feature.as_payload()
                         for name, feature in self.calibration_bounds[side].items()
@@ -829,8 +896,16 @@ class MotionAnalyzer:
         """Estimate whole-body vertical motion for jump-like game actions."""
 
         position = self._infer_body_position(pose, torso_scale)
+        torso_hinge_deg = self._torso_hinge_deg(pose)
+        self._update_body_calibration(torso_hinge_deg)
+        torso_hinge_signal = self._normalise_body_signal("torso_hinge", torso_hinge_deg)
         if len(self.body_history) < 2:
-            return BodyMotion(position=position, build_ratio=build_ratio)
+            return BodyMotion(
+                position=position,
+                build_ratio=build_ratio,
+                torso_hinge_deg=torso_hinge_deg,
+                torso_hinge_signal=torso_hinge_signal,
+            )
         first_time, first_center = self.body_history[0]
         current_time, current_center = self.body_history[-1]
         elapsed = max(current_time - first_time, 1e-6)
@@ -849,7 +924,43 @@ class MotionAnalyzer:
             jump_candidate=delta_y > self.config.jump_delta_threshold and speed > self.config.jump_speed_threshold,
             position=position,
             build_ratio=build_ratio,
+            torso_hinge_deg=torso_hinge_deg,
+            torso_hinge_signal=torso_hinge_signal,
         )
+
+    def _torso_hinge_deg(self, pose: PoseCandidate) -> float | None:
+        """Estimate forward torso lean from the hip-to-shoulder line vs vertical.
+
+        0 degrees is upright; larger values mean a more forward-hinged torso,
+        the posture a bent-over row requires (as opposed to a curl or press,
+        which keep the torso upright). This is a 2D camera estimate: it
+        reports lean magnitude regardless of direction, and a user turned
+        sideways to the camera can read as more hinged than they really are.
+        """
+
+        shoulders = [get_point(pose, "shoulder", side, self.min_confidence) for side in SIDES]
+        hips = [get_point(pose, "hip", side, self.min_confidence) for side in SIDES]
+        visible_shoulders = [point for point in shoulders if point is not None]
+        visible_hips = [point for point in hips if point is not None]
+        if not visible_shoulders or not visible_hips:
+            return None
+        shoulder_mid = np.mean(visible_shoulders, axis=0)
+        hip_mid = np.mean(visible_hips, axis=0)
+        vector = shoulder_mid - hip_mid
+        vertical_component = max(float(-vector[1]), 1e-6)
+        horizontal_component = abs(float(vector[0]))
+        return float(np.degrees(np.arctan2(horizontal_component, vertical_component)))
+
+    def _update_body_calibration(self, torso_hinge_deg: float | None) -> None:
+        """Record the session's observed torso-hinge range, same widen-only rule as per-side bounds."""
+
+        self.body_calibration_bounds["torso_hinge"] = self.body_calibration_bounds["torso_hinge"].update(torso_hinge_deg)
+
+    def _normalise_body_signal(self, key: str, value: float | None) -> float | None:
+        """Normalize a body-wide (not per-side) signal using the current session bounds."""
+
+        feature = self.body_calibration_bounds[key]
+        return feature.normalise(value, self.config.calibration_min_span)
 
     def _infer_body_position(self, pose: PoseCandidate, torso_scale: float) -> str:
         """Infer a seated/standing state from visible lower-body geometry.

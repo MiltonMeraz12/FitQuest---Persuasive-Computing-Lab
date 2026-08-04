@@ -10,7 +10,7 @@ import Toybox.WatchUi;
 const IRONQUEST_SAFE_ENDPOINT = "https://fitquest-garmin.merazmilton9.workers.dev/garmin";
 const WATCH_PAGE_COUNT = 3;
 
-class IronQuestSafeView extends WatchUi.View {
+class FitQuestTelemetryView extends WatchUi.View {
     private var _sent;
     private var _lastCode;
     private var _message;
@@ -280,10 +280,10 @@ class IronQuestSafeView extends WatchUi.View {
     }
 }
 
-class IronQuestSafeDelegate extends WatchUi.BehaviorDelegate {
+class FitQuestTelemetryDelegate extends WatchUi.BehaviorDelegate {
     private var _view;
 
-    public function initialize(view as IronQuestSafeView) {
+    public function initialize(view as FitQuestTelemetryView) {
         BehaviorDelegate.initialize();
         _view = view;
     }
