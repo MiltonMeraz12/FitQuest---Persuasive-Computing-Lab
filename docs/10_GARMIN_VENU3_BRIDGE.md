@@ -40,7 +40,20 @@ There is one Connect IQ app:
 monkey_c/fitquest_telemetry/
 ```
 
-It starts its Timer from the View's `onShow()` (the correct lifecycle hook) and posts to the permanent Cloudflare Worker endpoint, so it does not need rebuilding every time a tunnel restarts. It sends heart rate, optional RR intervals, accelerometer, gyroscope, and location fields when the device exposes them.
+It starts its Timer from the View's `onShow()` (the correct lifecycle hook) and posts to the permanent Cloudflare Worker endpoint, so it does not need rebuilding every time a tunnel restarts.
+
+**What it actually sends**, at a 3-second interval and only while its view is active:
+
+| Field | Notes |
+| --- | --- |
+| `heart_rate_bpm`, `heart_rate_contact` | From `Sensor.getInfo()` when the device reports it |
+| `acceleration` (x/y/z), `acceleration_unit` | Raw three-axis, in mg |
+| `acceleration_magnitude_mg`, `watch_motion_delta_mg`, `watch_motion_state` | Derived on the watch |
+| `battery`, `battery_unit` | Device battery |
+| `device`, `device_name`, `provider`, `sample_type`, `source`, `activity_state` | Identity and provenance |
+| `sequence`, `sent_count`, `sample_interval_ms`, `endpoint_mode`, `last_http_code` | Transmission state |
+
+The wearable schema on the Python and Worker sides also accepts `rr_intervals_ms`, `gyroscope`, `location`, `pulse_ox`, `body_battery`, and `stress`. **The current watch application does not produce any of those** — they remain available for a future revision or an alternative Garmin access path. Do not describe them as fields the system collects today.
 
 Build it with the Connect IQ SDK:
 

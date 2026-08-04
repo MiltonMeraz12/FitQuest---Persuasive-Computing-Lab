@@ -33,7 +33,7 @@ The prototype still works with YOLO pose and dumbbell detection. Keep saving det
 The runtime treats a missing wearable as missing, not as an error: the camera loop keeps running and the payload reports the wearable path as stale. Inspect whatever a bridge last wrote with:
 
 ```powershell
-.\ironquest_env\Scripts\python.exe -m ironquest check-wearable --path .unsalidate\wearable_live.json --seconds 2 --stale-seconds 5
+.\ironquest_env\Scripts\python.exe -m ironquest check-wearable --path .\runs\validate\wearable_live.json --seconds 2 --stale-seconds 5
 ```
 
 The project deliberately keeps no mock heart-rate generator: every wearable number in a capture comes from the real watch, so nothing simulated can reach the paper by accident.

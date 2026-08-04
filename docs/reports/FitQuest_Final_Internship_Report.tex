@@ -315,6 +315,27 @@ Camera frame
   -> OpenCV monitor / JSONL file / browser gateway
 \end{lstlisting}
 
+\subsection{Fusion model}
+\label{sec:fusionmodel}
+
+The three sensing streams run at different and independent rates: the camera
+between roughly 8 and 18\,FPS depending on scene and hardware, the inertial unit
+at approximately 15\,Hz, and the watch at one sample every 3\,s. The pipeline does
+not resample, interpolate, align clocks, or compensate for drift. On each camera
+frame it attaches the most recent available sample from each of the other two
+streams, together with that sample's timestamp and age.
+
+This is asynchronous late fusion by latest-value sampling with explicit freshness
+metadata, not temporal synchronization. The choice keeps end-to-end latency at
+camera rate and allows any stream to be absent without stalling the others, which
+matters for an interactive application. Its consequences are equally explicit:
+values combined into one payload may describe moments up to one wearable interval
+apart, and a sample remains the latest until it exceeds its staleness threshold.
+The inter-device timing error was not quantified during the internship. Heart
+rate is therefore treated as slow context rather than as a frame-level control
+signal, and the specification carries per-sensor age so that a consumer can apply
+its own freshness policy.
+
 \subsection{Runtime modules}
 
 \begin{table}[h]
@@ -432,8 +453,12 @@ The Garmin Venu 3 provides physiological and secondary motion context. It is not
 used as a primary motion sensor. Three access paths were implemented:
 
 \begin{enumerate}
-\item \textbf{Connect IQ application.} A watch application transmits heart rate,
-optional RR intervals, accelerometer, gyroscope, and location fields.
+\item \textbf{Connect IQ application.} A watch application transmits heart rate
+and contact state, three-axis acceleration with derived magnitude, delta, and
+motion state, battery level, and transmission metadata, at a 3\,s interval and
+only while its view is active. The wearable schema on the Python and relay sides
+additionally accepts RR intervals, gyroscope, and location fields, but the
+current watch application does not produce them.
 \item \textbf{Cloudflare Worker relay.} A serverless endpoint backed by a D1
 database receives the watch payload and serves the most recent sample.
 \item \textbf{Bluetooth Low Energy fallback.} Heart rate only, from the watch's
@@ -748,35 +773,84 @@ mAP@50--95 (B) & 0.744 \\
 
 \subsection{Per-class performance}
 
+Table~\ref{tab:perclass} is derived from the raw confusion matrix counts rather
+than from the normalized figure, because the normalized form is column-scaled by
+true class and is easily misread.
+
 \begin{table}[h]
 \centering
 \small
-\caption{Normalized confusion matrix: fraction correctly predicted per true class.}
-\begin{tabular}{@{}lr@{}}
+\caption{Per-class detection counts and derived rates on the validation split.}
+\label{tab:perclass}
+\begin{tabularx}{\textwidth}{@{}l r r r r r@{}}
 \toprule
-\textbf{True class} & \textbf{Correctly predicted} \\
+\textbf{Class} & \textbf{Instances} & \textbf{Predictions} & \textbf{Missed} & \textbf{Precision} & \textbf{Recall} \\
 \midrule
-\code{weight} & 0.96 \\
-\code{other} & 0.84 \\
-\code{dumbbell} & 0.83 \\
-\midrule
-Background predicted as \code{dumbbell} & 0.72 \\
+\code{dumbbell} & 2{,}153 & 2{,}091 & 361 & 0.857 & 0.832 \\
+\code{weight}   &   512   &   518   &  19 & 0.952 & 0.963 \\
+\code{other}    &   977   &   919   & 153 & 0.897 & 0.843 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
-The detector identifies dumbbells present in the frame reliably, but proposes
-dumbbells in background regions at a substantially higher rate than it misses
-those present. Reporting mAP@50 alone would therefore overstate performance in
-live operation.
+The detector produced 403 detections that matched no annotated instance. Of
+those, 289 (72\,\%) were \code{dumbbell} predictions, 91 \code{other}, and 23
+\code{weight}. This proportion is the value shown in the background column of the
+normalized confusion matrix; it describes how unmatched detections are
+distributed across classes and is not a false-positive rate over background
+regions, which would require a denominator this evaluation does not define.
 
-This measurement is the reason the runtime does not act on raw detections.
-Before a box contributes to the loaded state it must satisfy per-class confidence
-floors, frame-area ratio bounds, and a wrist-or-forearm proximity requirement.
-The filtered behaviour, rather than the aggregate metric, characterizes the
-system in operation. The difference between the two is itself a result: a
-detector with acceptable aggregate metrics may still require substantial
-geometric filtering before it can serve as an interaction signal.
+For the \code{dumbbell} class specifically, 289 of 2{,}091 predictions (13.8\,\%)
+matched no annotation, while 361 of 2{,}153 annotated instances (16.8\,\%) were
+not detected. The detector therefore fails more often by omission than by
+spurious detection, and its unmatched detections are concentrated in the
+\code{dumbbell} class.
+
+The runtime does not act on raw detections. Before a box contributes to the
+loaded state it must satisfy per-class confidence floors, frame-area ratio
+bounds, and a wrist-or-forearm proximity requirement. These filters were added in
+response to behaviour observed in live sessions rather than derived from the
+metrics above; their individual contribution has not been measured, and an
+ablation isolating each filter is identified as future work.
+
+\subsection{Threats to validity of the detector evaluation}
+\label{sec:leakage}
+
+Two properties of the merged dataset limit how far these figures generalize, and
+both were identified after the training run.
+
+An exact-duplicate audit by SHA-1 digest over all 7{,}332 images found 7{,}276
+unique digests. Forty-nine groups of byte-identical images exist, of which 24
+span more than one split. Twenty-four evaluation images are byte-identical to a
+training image: 20 of 1{,}093 validation images (1.8\,\%) and 4 of 571 test images
+(0.7\,\%).
+
+The more consequential property concerns how the splits were formed. Filenames
+retain their source prefixes, and grouping by prefix shows that 5{,}669 of 7{,}332
+images (77.3\,\%) belong to source groups whose frames appear in more than one
+split. The largest group alone contributes 2{,}121 images distributed as
+1{,}842 train, 166 validation, and 113 test. These are consecutive frames from
+continuous video, so evaluation images are frequently near-duplicates of training
+images even when they are not byte-identical.
+
+The consequence is that the reported metrics measure performance on scenes the
+model has seen rather than on unseen scenes, and should be read as an upper bound
+rather than as an estimate of generalization. The figures are retained because
+they document the model actually deployed in the system, but any comparison
+against other detectors, or any claim of generalization, requires re-partitioning
+the dataset so that all frames from one source appear in exactly one split, and
+retraining. This is stated as the first item of future work in
+Section~\ref{sec:futurework}.
+
+\subsection{Training configuration}
+
+The archived run used \code{yolo26n.pt} for 80 epochs at 640\,px on a single GPU
+with seed 0 and deterministic mode enabled, completing in approximately
+3\,h\,05\,min. The \code{dumbbell\_detection} profile currently in
+\code{configs/ultralytics\_training\_config.yaml} specifies 120 epochs; the
+archived result predates that value and was not produced with it. The
+\code{args.yaml} committed alongside the metrics records the configuration
+actually used.
 
 \subsection{Automated verification}
 
@@ -839,10 +913,14 @@ Relay worker & 176 & JavaScript \\
       updating; 3D library loaded.
 \item Watch application: compiles for the Venu 3 target with Connect IQ SDK
       9.2.0.
-\item Two full sessions with camera, inertial glove, and watch operating
-      concurrently.
+\item Two development sessions with camera, inertial glove, and watch operating
+      concurrently. These were exploratory trials; no instrumented logs were
+      retained, so they are reported as the origin of the corrections in
+      Section~\ref{sec:chronology} and not as reproducible evidence.
 \item Five recorded capture sessions processed through the offline analysis
-      pipeline.
+      pipeline. Summaries are committed under \code{docs/figures/capture\_sessions/};
+      none of the five includes wearable data, so they document camera and
+      inertial operation only.
 \end{itemize}
 
 %==============================================================================
@@ -942,8 +1020,11 @@ lab visit took place on July 20, for which a project introduction was prepared.
 
 \subsection{Week 11: correctness (July 27 -- August 3)}
 
-Two full sessions were conducted with all three sensing modalities operating
-concurrently. These identified conditions that isolated testing had not: brief
+Two development sessions were conducted with all three sensing modalities
+operating concurrently. No instrumented logs were retained from these sessions,
+so they are recorded here as the origin of the corrections rather than as
+reproducible measurements. They identified conditions that isolated testing had
+not: brief
 dumbbell occlusions invalidating the loaded state, a single stale sensor stopping
 repetition counting, and an adaptive threshold skewed by an early outlier
 repetition. Each was diagnosed and corrected; the validation design described in
@@ -1013,6 +1094,46 @@ which meant the service could be read but not rebuilt from the repository. A
 deployment configuration was added.
 
 %==============================================================================
+\section{Privacy and Security}
+\label{sec:privacy}
+
+The system handles camera imagery and heart-rate data, both of which are
+identifiable or sensitive. The current configuration is an experimental one and
+is documented here as such rather than presented as deployment-ready.
+
+\subsection{Current handling}
+
+Camera frames are processed in memory and are not written to disk during a normal
+session. The capture command writes frames and video only when explicitly
+invoked. Wearable samples are written to a local JSON file and, when the relay is
+in use, to a Cloudflare D1 record holding the most recent sample. Frame-level
+JSONL export contains derived signals and heart rate, not imagery.
+
+\subsection{Identified gaps}
+
+\begin{itemize}
+\item The relay's \code{POST /garmin} endpoint is unauthenticated unless
+      \code{FITQUEST\_SHARED\_TOKEN} is configured, and \code{GET /latest} has no
+      authentication in either configuration.
+\item The local Connect IQ receiver binds to all interfaces without
+      authentication.
+\item The inertial discovery token ships as a placeholder value.
+\item No retention or deletion policy is defined for the relay record or for
+      local capture sessions.
+\item The wearable schema accepts location fields that the system does not use.
+\end{itemize}
+
+\subsection{Requirements before participant use}
+
+Any evaluation involving participants would require, at minimum: authentication
+on both relay endpoints; removal of unused sensitive fields from the schema,
+location in particular; a stated retention and deletion policy; pseudonymized
+session identifiers; informed consent covering camera recording and physiological
+measurement; institutional ethics approval; and a decision, recorded in advance,
+about whether identifiable imagery is retained at all. None of these are in place,
+which is one reason the system has not been evaluated with participants.
+
+%==============================================================================
 \section{Limitations}
 \label{sec:limitations}
 
@@ -1020,9 +1141,14 @@ deployment configuration was added.
 \item[Single-camera depth] Body posture is estimated from one 2D camera. Depth is
 approximated from apparent scale rather than measured.
 
-\item[Detector false positives] As reported in Section~\ref{sec:results}, the
-detector proposes dumbbells in background regions at a high rate. System
-behaviour depends on geometric filtering in addition to the detector.
+\item[Detector evaluation] The reported metrics were obtained on a randomly
+partitioned dataset in which 77.3\,\% of images belong to source groups spanning
+more than one split (Section~\ref{sec:leakage}). They characterize the deployed
+model but do not establish generalization to unseen scenes.
+
+\item[Unmeasured filter contribution] The confidence, area, and proximity filters
+that gate raw detections were derived from observed behaviour rather than from
+measurement. Their individual contribution has not been isolated.
 
 \item[Single-side inertial verification] With one glove, grip-rotation
 differences on the uninstrumented arm cannot be verified by any current sensor and
@@ -1050,17 +1176,32 @@ path. It is not a fitness product.
 
 %==============================================================================
 \section{Future Work}
+\label{sec:futurework}
 
 \begin{enumerate}
+\item \textbf{Source-disjoint re-partition and retraining.} The dataset should be
+regrouped so that all frames originating from one video or capture session appear
+in exactly one split, then retrained and re-evaluated. Until this is done, the
+detector metrics in Section~\ref{sec:results} cannot support a claim of
+generalization. Reporting across several seeds would additionally give a variance
+estimate.
+
+\item \textbf{Filter ablation.} The confidence, area-ratio, body-association, and
+temporal-tracking filters should be evaluated in isolation and in combination, so
+that the contribution of each to usable detection quality is measured rather than
+assumed.
+
 \item \textbf{Participant evaluation.} The calibration mechanism is intended to
 provide cross-user transferability, and this property is currently supported by
-design rather than by measurement. An evaluation with independent participants is
-the most direct next step.
+design rather than by measurement. An evaluation with independent participants,
+with repetition counts against manual ground truth, would establish counting
+accuracy and calibration transferability together.
 
 \item \textbf{Local detector training data.} The detector was trained on general
 annotated sources. Images from the deployment setting --- the specific weights,
-camera angle, lighting, and occlusion conditions --- would address the background
-false-positive rate reported in Section~\ref{sec:results}.
+camera angle, lighting, and occlusion conditions --- together with a negative set
+containing watches, phones, bottles, and bare hands, would provide both better
+coverage and a defined denominator for measuring false positives.
 
 \item \textbf{Tempo as a published signal.} Frame and sample timing are already
 recorded; publishing tempo would complete the repetition, range, and tempo triad
@@ -1095,16 +1236,16 @@ Identifying the intermediate layer as the contribution, fixing the vision scope,
 and reducing the application to a proof of concept produced a plan that could be
 completed and validated within the available time.
 
-Three observations extend beyond the immediate project. Aggregate detector metrics
-can overstate performance in operation: the difference between an mAP@50 of 0.919
-and a background false-positive rate of 0.72 separates a detector that scores well
-from one that can serve as an interaction signal without additional filtering. In
-a multi-sensor system, permitting every sensor to reject an event produces less
-robust behaviour than treating most sensors as corroboration, since a single stale
-input should reduce confidence rather than halt the system. Finally, the
-correctness defects identified in this work were found in integrated sessions
-rather than in component testing, which indicates that automated testing, while
-necessary to prevent regression, does not replace full-system trials.
+Three observations extend beyond the immediate project. Detector metrics reported
+on a randomly partitioned dataset of video frames measure recall of scenes the
+model has already seen: 77.3\,\% of the images used here belong to source groups
+spanning more than one split, which places an upper bound on what the reported
+mAP can support. In a multi-sensor system, permitting every sensor to reject an
+event produces less robust behaviour than treating most sensors as corroboration,
+since a single stale input should reduce confidence rather than halt the system.
+Finally, the correctness defects identified in this work were found in integrated
+sessions rather than in component testing, which indicates that automated testing,
+while necessary to prevent regression, does not replace full-system trials.
 
 %==============================================================================
 \appendix

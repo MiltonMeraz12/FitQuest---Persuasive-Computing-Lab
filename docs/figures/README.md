@@ -34,22 +34,53 @@ Roboflow dumbbell sets. Classes: `dumbbell`, `weight`, `other`.
 | mAP50 (B) | 0.919 |
 | mAP50-95 (B) | 0.744 |
 
-**Per-class behavior**, from `confusion_matrix_normalized.png`:
+**Per-class behaviour**, derived from the raw counts in `confusion_matrix.png`:
 
-| True class | Correctly predicted |
-| --- | --- |
-| `weight` | 0.96 |
-| `other` | 0.84 |
-| `dumbbell` | 0.83 |
+| Class | Instances | Predictions | Missed | Precision | Recall |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `dumbbell` | 2,153 | 2,091 | 361 | 0.857 | 0.832 |
+| `weight` | 512 | 518 | 19 | 0.952 | 0.963 |
+| `other` | 977 | 919 | 153 | 0.897 | 0.843 |
 
-The honest caveat for the paper: the background column shows 0.72 of background
-regions being predicted as `dumbbell`. The detector finds real dumbbells well,
-but it is liberal — it proposes dumbbells in empty regions far more often than
-it misses real ones. That is why the runtime does not trust raw boxes: it
-applies confidence floors per class, area-ratio bounds, and a wrist/forearm
-proximity requirement before a box is allowed to mean "loaded" (see
-`ironquest/body_context.py`). Quote the filtered behavior, not the raw mAP,
-when describing what the system actually does.
+### How to read the background column
+
+The normalized matrix is **column-scaled by true class**, so each column sums to
+1. The background column therefore shows how the detector's *unmatched*
+detections distribute across classes — not a false-positive rate over background
+regions.
+
+There were 403 detections that matched no annotation: 289 `dumbbell` (0.72),
+91 `other` (0.23), 23 `weight` (0.06). The 0.72 means "72% of the false positives
+were dumbbell predictions". It does **not** mean "72% of background regions are
+detected as dumbbells" — that statement would need a denominator this evaluation
+does not define, which requires a negative set or dumbbell-free video.
+
+For `dumbbell` specifically: 289 of 2,091 predictions (13.8%) matched nothing,
+while 361 of 2,153 annotated instances (16.8%) were missed. The detector fails
+slightly more by omission than by spurious detection.
+
+### Threat to validity: split contamination
+
+A SHA-1 audit of all 7,332 images found 7,276 unique digests: 49 duplicate
+groups, 24 of which span splits. 24 evaluation images are byte-identical to a
+training image (20 of 1,093 validation, 4 of 571 test).
+
+More significantly, grouping filenames by source prefix shows **5,669 of 7,332
+images (77.3%) belong to source groups whose frames appear in more than one
+split** — these are consecutive frames from continuous video, split randomly.
+Evaluation images are therefore frequently near-duplicates of training images.
+
+**Treat these metrics as an upper bound, not as an estimate of generalization.**
+They document the model deployed in the system. Any generalization claim, or any
+comparison against another detector, needs a source-disjoint re-partition and a
+retrain first.
+
+### Training configuration
+
+`yolo26n.pt`, 80 epochs, 640 px, single GPU, seed 0, deterministic, ~3 h 05 min.
+Note that the `dumbbell_detection` profile in
+`configs/ultralytics_training_config.yaml` now specifies 120 epochs; this
+archived run predates that value. `args.yaml` records what was actually used.
 
 | File | Contents |
 | --- | --- |
