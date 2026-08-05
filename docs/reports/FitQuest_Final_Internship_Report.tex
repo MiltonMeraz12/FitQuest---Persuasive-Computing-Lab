@@ -7,8 +7,15 @@
 %  Compiles standalone with pdfLaTeX. No external images or bibliography files
 %  are required.
 %
-%  Sections 4-9 are written as paper-ready material. Sections 2, 10 and 11 are
-%  specific to the internship and would not appear in a paper.
+%  Sections 4-10 are written as paper-ready material. Sections 2, 11 and 12
+%  (context, chronology, repository consolidation) are specific to the
+%  internship and would not appear in a paper.
+%
+%  NOTE ON OVERLEAF: the visual (WYSIWYG) editor cannot preview tables that use
+%  the custom \newcolumntype{L} defined below, and shows "your table can't be
+%  displayed". This affects the editor preview only -- the tables typeset
+%  correctly in the PDF. Use the Code editor for those tables, or ignore the
+%  warning.
 %==============================================================================
 
 \documentclass[11pt,a4paper]{article}
@@ -27,7 +34,22 @@
 \usepackage{titlesec}
 \usepackage{fancyhdr}
 \usepackage{microtype}
+% [section] flushes pending floats before each new section, so a table cannot
+% drift into an unrelated section. Use the package option rather than
+% redefining \section by hand: titlesec redefines \section itself, and a manual
+% wrapper placed before \titleformat would simply be discarded.
+\usepackage[section]{placeins}
 \usepackage[hidelinks]{hyperref}
+
+% Keep tables near the text that introduces them. Without this, [h]-only floats
+% defer to the next float opportunity and can land pages away from their section.
+\renewcommand{\topfraction}{0.9}
+\renewcommand{\bottomfraction}{0.8}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{5}
 
 % ---- Layout -----------------------------------------------------------------
 \pagestyle{fancy}
@@ -134,7 +156,7 @@ vision models, inertial hardware, or wireless transports.
 
 \subsection*{Summary of outcomes}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}L{5.2cm} L{3.2cm} X@{}}
@@ -164,7 +186,7 @@ with repetition, tempo, and range-of-motion signals supporting feedback, goals,
 analytics, and exercise adherence. Table~\ref{tab:promised} compares that mandate
 with the delivered system.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Original mandate compared with the delivered system.}
@@ -214,8 +236,10 @@ paper, for which the technical sections are written to be transferable with
 minimal revision.
 
 Sections~\ref{sec:architecture} through~\ref{sec:results} contain the technical
-material. Sections~\ref{sec:chronology} and~\ref{sec:consolidation} are specific
-to the internship.
+material. Section~\ref{sec:positioning} situates the work against the lab's
+existing research. Sections~\ref{sec:chronology} and~\ref{sec:consolidation} are
+specific to the internship. Section~\ref{sec:futurework} sets out the
+improvement path for each subsystem, for the lab's consideration.
 
 \subsection{Terminology}
 
@@ -338,7 +362,7 @@ its own freshness policy.
 
 \subsection{Runtime modules}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Runtime modules and responsibilities.}
@@ -362,15 +386,73 @@ its own freshness policy.
 \end{tabularx}
 \end{table}
 
+\subsection{Network topology and connectivity requirements}
+\label{sec:network}
+
+The system is often described as running locally, which is accurate for the
+browser client but not for the system as a whole. The three sensing paths have
+different connectivity requirements, and conflating them overstates how
+self-contained the demonstration is.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Connectivity requirement of each component.}
+\label{tab:network}
+\begin{tabularx}{\textwidth}{@{}L{4.6cm} L{4.0cm} X@{}}
+\toprule
+\textbf{Component} & \textbf{Requirement} & \textbf{Notes} \\
+\midrule
+Browser client and gateway & None & Served over \code{localhost}; the 3D library is vendored, so the page renders with no external request. \\
+Camera and vision models & None & Local inference. \\
+Inertial unit over USB serial & None & Direct cable. \\
+Inertial unit over Wi-Fi UDP & Shared local network & Laptop and board must be on the same subnet, with UDP broadcast permitted between clients. \\
+Watch via Connect IQ relay & Internet on both sides & The watch posts to a Cloudflare Worker; the laptop polls the same endpoint. Both need outbound internet access. \\
+Watch via BLE fallback & None & Direct Bluetooth; heart rate only. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+In practice a mobile phone hotspot was used throughout, and it served two
+distinct roles at once. It provided the shared subnet that lets the inertial
+unit's UDP telemetry reach the laptop, and it provided the internet access that
+the Connect IQ relay path requires. This is why the hotspot, rather than the
+campus network, became the standard configuration: the campus network uses
+enterprise authentication that the board's firmware does not implement, and it
+does not reliably permit UDP broadcast between client devices.
+
+The hotspot topology also caused the problem the relay was built to solve. When
+the laptop is a hotspot client and the phone is simultaneously the gateway and
+the Garmin Connect bridge, the phone does not route the watch's request back to
+the laptop. Introducing an external HTTPS relay removed that dependency on
+local routing, at the cost of requiring internet access.
+
+Two configurations are therefore worth distinguishing:
+
+\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=3pt]
+\item[Fully offline configuration] Camera, inertial unit over USB serial, and
+watch over BLE. No network of any kind is required. Heart rate is available but
+the richer watch payload and wireless glove operation are not.
+\item[Demonstrated configuration] Camera, inertial unit over Wi-Fi UDP, and
+watch via the Connect IQ relay. Requires a shared subnet \emph{and} internet
+access. This is the configuration used for the sessions reported here.
+\end{description}
+
+The dependency on an external relay for the richest wearable path is a
+deployment limitation, not a design preference. A self-hosted relay on the same
+subnet would remove the internet requirement while keeping the HTTPS endpoint
+Connect IQ requires, and is noted as future work.
+
 \subsection{Gateway implementation}
 
 The browser gateway uses the Python standard library \code{http.server} rather
-than a web framework. The demonstration must run on a laptop without internet
-access and without an additional service. Server-Sent Events over HTTP are
-sufficient for a unidirectional payload stream at camera frame rate, and MJPEG
-over \code{multipart/x-mixed-replace} is sufficient for the preview image. A
-framework would introduce a dependency and an additional failure mode without
-providing capability the demonstration requires.
+than a web framework. The client must run on a laptop without an additional
+service, and, as Table~\ref{tab:network} records, without any external request
+of its own. Server-Sent Events over HTTP are sufficient for a unidirectional
+payload stream at camera frame rate, and MJPEG over
+\code{multipart/x-mixed-replace} is sufficient for the preview image. A framework
+would introduce a dependency and an additional failure mode without providing
+capability the demonstration requires.
 
 The preview stream is downscaled to 640\,px at JPEG quality 72. The browser
 renders it in a card approximately 290\,px wide, so encoding at full camera
@@ -385,9 +467,9 @@ to operate on the full-resolution frame, so accuracy is unaffected.
 
 \subsection{Computer vision}
 
-Two YOLO26 models run per frame. The body-pose model produces 17 COCO keypoints;
-a separately trained detector produces \code{dumbbell}, \code{weight}, and
-\code{other} boxes.
+Two YOLO26 models~\cite{ultralytics} run per frame. The body-pose model produces
+17 keypoints in the COCO topology~\cite{coco}; a separately trained detector
+produces \code{dumbbell}, \code{weight}, and \code{other} boxes.
 
 Three mechanisms address failure modes observed during testing:
 
@@ -412,7 +494,7 @@ this filtering.
 
 \subsection{Inertial subsystem}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Inertial subsystem configuration.}
@@ -501,7 +583,7 @@ vectors (pitch, roll, yaw, acceleration), and categorical labels such as
 \code{sensor\_fusion\_engine} and the schema version is
 \code{2026-08-fusion-v2}.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Sections of the \code{game\_control} payload.}
@@ -578,14 +660,17 @@ verified only on the instrumented side.
 
 The browser client demonstrates that the specification drives a functioning
 interaction. It is a single self-contained page served by the local gateway, with
-a vendored copy of the 3D library so that it operates without internet access.
+a vendored copy of the 3D library so that the page itself issues no external
+request. As Section~\ref{sec:network} records, this applies to the client only:
+the wireless inertial path requires a shared subnet and the Connect IQ relay path
+requires internet access.
 
 \subsection{Exercise library}
 
 Ten exercises are implemented across five validation modes and three arm
 patterns.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Implemented exercises, validation mode, and arm pattern.}
@@ -611,7 +696,7 @@ Sessions run in one of three modes --- coach-led, user-selected, or randomized -
 at one of four difficulty levels that determine both the repetition target and a
 strictness parameter.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Difficulty levels.}
@@ -735,7 +820,11 @@ Object position changes more slowly than pose; cost is reduced without measurabl
 \addlinespace
 Vendored 3D library &
 Library loaded from a CDN &
-The demonstration must operate without internet access. \\
+The client must render without an external request, since lab connectivity was not guaranteed. \\
+\addlinespace
+Mobile phone hotspot as the operating network &
+Campus network &
+The campus network uses enterprise authentication the board's firmware does not implement, and does not reliably permit UDP broadcast between clients. \\
 \addlinespace
 No synthetic wearable generator &
 Retaining a mock heart-rate writer &
@@ -750,7 +839,7 @@ Removes the possibility of simulated physiological values entering recorded evid
 
 The dumbbell and weight detector was trained for 80 epochs on a merged dataset.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Dataset composition and final detector metrics.}
@@ -777,7 +866,7 @@ Table~\ref{tab:perclass} is derived from the raw confusion matrix counts rather
 than from the normalized figure, because the normalized form is column-scaled by
 true class and is easily misread.
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Per-class detection counts and derived rates on the validation split.}
@@ -854,7 +943,7 @@ actually used.
 
 \subsection{Automated verification}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Test suite composition. All 62 tests pass.}
@@ -885,7 +974,7 @@ sessions, which were limited in number.
 
 \subsection{Delivered artefacts}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Delivered artefacts by language.}
@@ -924,12 +1013,127 @@ Relay worker & 176 & JavaScript \\
 \end{itemize}
 
 %==============================================================================
+\section{Positioning Relative to Existing Work in the Lab}
+\label{sec:positioning}
+
+This section situates FitQuest against the Persuasive Computing Lab's published
+work, to identify what the project adds to the group's existing capability and
+where it depends on methods the group already has. It characterizes the lab's
+published output; it does not claim knowledge of unpublished internal work.
+
+\subsection{The lab's established approach}
+
+The Persuasive Computing Lab, directed by Dr.\ Rita Orji, works at the
+intersection of persuasive technology, human--computer interaction, and digital
+health, with an emphasis on behaviour change, personalization, and
+technology for under-served populations~\cite{orji-bio,pcl}. Physical activity
+is a recurring application domain, and the group has published systematic
+reviews of persuasive strategies in mobile physical-activity
+interventions~\cite{review-pa} and of social exergames~\cite{review-exergames}.
+
+Three recent systems are directly relevant:
+
+\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=3pt]
+\item[FITPULSE] An AI-driven persuasive exergame built on wearable sensing and
+human activity recognition~\cite{fitpulse}. This is the closest antecedent to
+FitQuest within the group, and shares two of the present supervisors as authors.
+\item[AR Dancee] A mobile augmented-reality intervention promoting physical
+activity through dancing, evaluated in a 15-day study with 104
+participants~\cite{ardancee}.
+\item[CalmMe] A wearable- and AI-based application for stress monitoring and
+management~\cite{calmme}.
+\end{description}
+
+Two characteristics recur across this work. Sensing is obtained from commodity
+consumer devices through their vendor APIs --- smartphones and smartwatches ---
+rather than from purpose-built hardware. And evaluation is conducted with
+participants, over multi-day protocols, with statistical analysis of behavioural
+outcomes.
+
+\subsection{What FitQuest adds}
+
+FitQuest differs on the sensing side and is deliberately incomplete on the
+evaluation side.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{FitQuest compared with the lab's established approach.}
+\label{tab:positioning}
+\begin{tabularx}{\textwidth}{@{}L{3.4cm} L{5.0cm} X@{}}
+\toprule
+\textbf{Dimension} & \textbf{Established approach} & \textbf{FitQuest} \\
+\midrule
+Sensing hardware & Commodity phones and smartwatches via vendor APIs & Purpose-built inertial unit (ESP32-S3 + BNO08x) with a printed enclosure, plus a camera pipeline and a commodity watch \\
+\addlinespace
+Sensing modalities & Typically one dominant modality per system & Three combined: camera pose and object detection, inertial, physiological \\
+\addlinespace
+Recognition method & Human activity recognition trained on labelled sensor data & Geometric signals from body pose plus per-user calibration; no learned activity classifier \\
+\addlinespace
+Application coupling & Application and sensing developed together & Explicit versioned specification between them; the client consumes normalized signals only \\
+\addlinespace
+Delivery platform & Mobile application & Browser client served locally \\
+\addlinespace
+Evaluation & Participant studies with behavioural outcome measures & Engineering validation only; no participant study \\
+\addlinespace
+Personalization & Tailoring persuasive strategies to user characteristics & Per-session calibration of the signal range, not of persuasive content \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Three contributions follow from this comparison.
+
+First, the project produces an \textbf{instrumented sensing substrate} the group
+did not previously have. Commodity-device sensing is constrained by what a
+vendor API exposes; a purpose-built inertial unit gives direct access to
+acceleration, angular velocity, and orientation at a chosen rate and mounting
+position. The tradeoff is explicit: bespoke hardware requires assembly,
+enclosure design, and firmware maintenance that a commodity device does not.
+
+Second, the \textbf{signal specification is reusable across projects}. Because
+the browser client consumes only normalized values, a different application
+--- a rehabilitation task, an adherence monitor, a different exergame --- can be
+built against the same specification without touching the sensing code. Within a
+lab that repeatedly builds physical-activity interventions, this decoupling is
+the component most likely to be reused.
+
+Third, and conversely, \textbf{the project's principal gap is precisely the
+lab's established strength}. FitQuest has not been evaluated with participants,
+so no claim is made about engagement, adherence, or behaviour change. The
+sensible reading is complementary rather than competitive: this work supplies an
+instrumented, documented sensing layer, and the group's existing evaluation
+methodology is what would establish whether interventions built on it change
+behaviour.
+
+\subsection{Implications for the group}
+
+If the sensing layer is adopted, three practical consequences follow.
+
+\begin{enumerate}
+\item \textbf{Signal granularity increases.} Commodity smartwatch APIs report
+aggregate activity; this pipeline reports per-side arm extension, range
+utilization, bilateral symmetry, torso hinge, and stability at frame rate. That
+granularity is what would allow an intervention to respond to \emph{how} a
+movement was performed rather than only that activity occurred.
+
+\item \textbf{Hardware maintenance becomes a cost.} Firmware, enclosure
+revisions, battery handling, and mounting all require attention that commodity
+devices absorb on the researcher's behalf. This cost is worth stating before the
+approach is adopted for a study.
+
+\item \textbf{Deployment constraints tighten.} As Section~\ref{sec:network}
+records, the demonstrated configuration requires a shared subnet and internet
+access. A participant study outside a controlled space would need the
+self-hosted relay noted there, or the reduced offline configuration.
+\end{enumerate}
+
+%==============================================================================
 \section{Chronology}
 \label{sec:chronology}
 
 \subsection{Phase overview}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \caption{Internship phases.}
@@ -1158,8 +1362,20 @@ continue to be counted from the camera's elbow-bend signal alone.
 pitch offset. Absolute forearm elevation is therefore an approximate value, and
 validation relies on excursion instead.
 
-\item[Wearable latency] Heart rate is a context and intensity signal rather than a
-control or safety signal, and samples may arrive with latency.
+\item[Wearable latency and validity] Heart rate is a context and intensity signal
+rather than a control or safety signal. Samples arrive at a 3\,s interval, and
+wrist-based optical heart rate has not been validated against a reference
+instrument under the forearm movement this application involves.
+
+\item[Network dependency] The demonstrated configuration requires a shared local
+subnet for the wireless inertial path and internet access for the wearable relay
+(Section~\ref{sec:network}). Only the reduced configuration --- inertial unit over
+USB and watch over BLE --- operates with no network at all.
+
+\item[Device-frame orientation] Inertial orientation is reported in the device
+frame and has not been transformed into an anatomical frame. Pitch and roll are
+therefore not forearm joint angles, and yaw is relative because the firmware uses
+a magnetometer-free fusion mode.
 
 \item[No participant evaluation] The system has been validated technically and
 exercised in full sessions by the author. It has not been evaluated with
@@ -1175,33 +1391,218 @@ path. It is not a fitness product.
 \end{description}
 
 %==============================================================================
-\section{Future Work}
+\section{Improvement Opportunities and Future Work}
 \label{sec:futurework}
+
+The prototype reached a working state within the internship, and every subsystem
+has an identifiable path to greater accuracy or robustness. This section sets
+those paths out by subsystem, with the reasoning behind each, so that the lab can
+decide which are worth the effort for its own research objectives. The
+recommendations are offered for consideration; the priorities depend on which
+research questions the group intends to pursue.
+
+\subsection{Vision: deeper training of pose, object detection, and tracking}
+
+The vision layer currently uses a stock body-pose model and a detector trained on
+general annotated sources. It works, but it is the subsystem with the most
+accessible improvement, because improvement here requires data collection rather
+than new hardware.
 
 \begin{enumerate}
 \item \textbf{Source-disjoint re-partition and retraining.} The dataset should be
 regrouped so that all frames originating from one video or capture session appear
 in exactly one split, then retrained and re-evaluated. Until this is done, the
-detector metrics in Section~\ref{sec:results} cannot support a claim of
-generalization. Reporting across several seeds would additionally give a variance
-estimate.
+metrics in Section~\ref{sec:results} cannot support a claim of generalization.
+Reporting across several seeds would additionally give a variance estimate.
 
-\item \textbf{Filter ablation.} The confidence, area-ratio, body-association, and
-temporal-tracking filters should be evaluated in isolation and in combination, so
-that the contribution of each to usable detection quality is measured rather than
-assumed.
+\item \textbf{Domain-specific detector data.} Images captured in the deployment
+setting --- the lab's specific weights, camera placement, lighting, and occlusion
+conditions --- together with a negative set containing watches, phones, bottles,
+and bare hands, would improve coverage and provide a defined denominator for
+measuring false positives.
 
+\item \textbf{Fine-tuning the pose model.} The pose model is used as published.
+Fine-tuning on annotated frames of dumbbell exercises specifically, where arms
+cross the torso and the weight occludes the wrist, would address the failure
+mode that currently requires temporal smoothing to mask.
+
+\item \textbf{Temporal pose models.} The current pipeline estimates pose
+independently per frame and smooths afterwards. A model that consumes a frame
+sequence directly would exploit the fact that human movement is continuous, and
+would likely reduce the joint-level jitter that motivated the smoothing layer.
+
+\item \textbf{Learned activity recognition.} The system identifies exercises
+through geometric rules over calibrated signals. A classifier trained on the
+recorded \code{signal\_log} stream could recognize exercises directly and would
+extend more easily to movements not anticipated by the rules. The geometric
+signals would remain useful as interpretable features for such a model.
+
+\item \textbf{Full-body and multi-person tracking.} The pipeline selects the
+single most confident person and analyses the upper body. Extending to lower-body
+joints would support squats, lunges, and gait; handling multiple people would
+support paired or group sessions. Both are substantial changes to the association
+logic, not parameter adjustments.
+\end{enumerate}
+
+\subsection{Inertial subsystem: accuracy and methodology}
+
+The inertial unit is functional but was configured for reliable operation rather
+than for measurement accuracy. Several changes would improve it, in roughly
+increasing order of effort.
+
+\begin{enumerate}
+\item \textbf{Use the magnetometer for absolute heading.} The firmware requests
+the game rotation vector, which fuses accelerometer and gyroscope but excludes
+the magnetometer. Yaw is therefore relative and drifts over a session. Requesting
+the full rotation vector would give an absolute heading reference, at the cost of
+sensitivity to the magnetic disturbance that gym equipment and the enclosure's
+own electronics produce. Whether this trade is favourable is an empirical
+question worth testing rather than assuming.
+
+\item \textbf{Raise the sample rate.} Telemetry is published every 66\,ms
+($\approx$15\,Hz). The sensor supports considerably higher rates. A repetition
+lasting one to two seconds is described by only 15--30 samples at present, which
+is adequate for detecting that movement occurred but marginal for characterizing
+its velocity profile or identifying the sticking point within a lift.
+
+\item \textbf{Sensor-to-segment calibration.} Orientation is currently reported
+in the device frame, and the enclosure's rotation on the strap introduces an
+unknown constant offset --- which is why validation uses excursion rather than
+absolute angle. A functional calibration procedure, in which the user holds two
+or three known poses so the rotation between device frame and anatomical frame
+can be computed, would convert device-frame orientation into forearm angles that
+are comparable across sessions and users. This is the single change that would
+most improve the inertial data's analytical value.
+
+\item \textbf{Explicit orientation filtering.} The current motion intensity is a
+heuristic combination of acceleration, angular velocity, and orientation deltas.
+A complementary, Madgwick, Mahony, or Kalman filter over the raw signals would
+produce a principled orientation estimate with characterized noise behaviour,
+replacing thresholds chosen by observation.
+
+\item \textbf{Multiple inertial units per limb.} A single unit measures the
+segment it is attached to. Units on the upper arm and forearm together yield the
+elbow angle directly, without the camera and without the projection ambiguity a
+single 2D view introduces. This would also remove the single-side verification
+limitation noted in Section~\ref{sec:limitations}.
+
+\item \textbf{Reference-instrument validation.} None of the above can be
+evaluated without a ground truth. Comparison against an optical motion-capture
+system, a goniometer, or a commercial inertial suite, over a set of prescribed
+movements, would establish the accuracy of the orientation estimate rather than
+leaving it as a design assumption.
+\end{enumerate}
+
+\subsection{Wearable subsystem: accuracy and alternative access paths}
+
+The Garmin Venu 3 currently contributes heart rate and coarse wrist motion at a
+3\,s interval. Its measurement value is limited less by the device than by the
+access path chosen.
+
+\begin{enumerate}
+\item \textbf{Reduce the transmission interval.} The 3\,s interval is a value set
+in the watch application, chosen conservatively for battery and network
+behaviour. Characterizing the actual cost of a shorter interval would establish
+whether wrist motion can contribute at a rate useful for repetition-level
+corroboration rather than only session-level context.
+
+\item \textbf{Transmit the fields the schema already accepts.} The Python and
+relay schemas accept RR intervals and gyroscope data that the watch application
+does not currently produce. RR intervals in particular would allow
+heart-rate variability to be derived, which is a substantially better exertion
+indicator than instantaneous heart rate.
+
+\item \textbf{Individualized exertion bounds.} Exertion is normalized against
+default resting and maximum heart rates when the payload does not supply
+personalized values. Using each participant's measured resting rate, and an
+age-predicted or tested maximum, would make the exertion signal comparable
+between individuals rather than only within one session.
+
+\item \textbf{Post-session data at higher fidelity.} Connect IQ provides live
+data under real-time constraints. The Garmin Health API or exported activity
+files provide higher-resolution records after a session. For analysis that does
+not need to be live --- which includes most research analysis --- this is the
+better source, and it would complement rather than replace the live path.
+
+\item \textbf{Reference-instrument validation.} Wrist-based optical heart rate is
+known to degrade during movement involving the forearm, which is exactly the
+condition here. Comparison against a chest-strap electrocardiographic monitor
+during dumbbell exercise would quantify that degradation for this specific use,
+and would determine whether the heart-rate signal is fit for the exertion
+interpretation placed on it.
+
+\item \textbf{Self-hosted relay.} Replacing the external relay with a local
+HTTPS endpoint would satisfy the Connect IQ transport requirement while removing
+the internet dependency described in Section~\ref{sec:network}.
+\end{enumerate}
+
+\subsection{Physical enclosure, attachment, and placement}
+
+The enclosure reached a second printed revision and holds the electronics
+securely. Its remaining limitations concern how and where it attaches, which
+affects measurement quality directly rather than only comfort.
+
+\begin{enumerate}
+\item \textbf{Repeatable mounting orientation.} The enclosure can currently be
+strapped on at any rotation, and that rotation sets the pitch offset that forces
+validation to rely on excursion. A keyed or indexed interface --- a feature that
+permits only one mounting orientation --- would make the offset constant and
+known across sessions, and would make the sensor-to-segment calibration described
+above far simpler to apply.
+
+\item \textbf{Attachment mechanism.} The current arrangement is a strap. The
+mechanism determines how much the enclosure moves relative to the limb during
+rapid motion, and that relative movement appears in the data as acceleration the
+arm did not experience. A wider strap, a compliant backing that conforms to the
+limb, or a rigid cradle with two anchor points would each reduce it. The
+mechanism should also be quick to fit, since a study requires it to be applied
+consistently to many participants.
+
+\item \textbf{Placement on the limb.} Placement is a trade-off that has not been
+tested. A distal position near the wrist experiences the largest angular
+excursion, giving the strongest signal, but sits where soft tissue moves most and
+where the watch is also worn. A proximal position near the elbow is more stable
+but registers less of the movement. A mid-forearm position is a compromise
+adopted by default rather than by measurement. Recording the same prescribed
+movements at each position and comparing the resulting signals would settle this
+empirically.
+
+\item \textbf{Glove against armband.} Project documentation refers to both a
+glove and a forearm armband, reflecting an early intention and the current
+implementation respectively. A glove-mounted sensor is closer to the load and
+captures grip rotation more directly, which matters for distinguishing a curl
+from a hammer curl; an armband is easier to fit across hand sizes and does not
+interfere with grip. The choice should be made deliberately and the terminology
+then unified.
+
+\item \textbf{Integrated power and cable management.} The enclosure houses the
+board but power still depends on an external connection. An integrated battery
+compartment with strain relief would remove the cable as a source of both
+mechanical disturbance and session interruption.
+
+\item \textbf{Comfort and safety under load.} The enclosure has not been
+evaluated for pressure points, heat, or interference with grip during heavier
+lifting. Any participant study would need this assessed before use.
+\end{enumerate}
+
+\subsection{Evaluation and analysis}
+
+\begin{enumerate}
 \item \textbf{Participant evaluation.} The calibration mechanism is intended to
 provide cross-user transferability, and this property is currently supported by
 design rather than by measurement. An evaluation with independent participants,
-with repetition counts against manual ground truth, would establish counting
-accuracy and calibration transferability together.
+with repetition counts scored against manual annotation, would establish counting
+accuracy and calibration transferability together. This is the highest-value next
+step, and it is the step for which the lab's existing methodology is already
+suited.
 
-\item \textbf{Local detector training data.} The detector was trained on general
-annotated sources. Images from the deployment setting --- the specific weights,
-camera angle, lighting, and occlusion conditions --- together with a negative set
-containing watches, phones, bottles, and bare hands, would provide both better
-coverage and a defined denominator for measuring false positives.
+\item \textbf{Filter ablation.} The confidence, area-ratio, body-association, and
+temporal-tracking filters should be evaluated in isolation and in combination, so
+that the contribution of each is measured rather than assumed.
+
+\item \textbf{End-to-end latency measurement.} The time from physical movement to
+visible response in the browser has not been measured. For an interactive system
+this is a primary quality attribute.
 
 \item \textbf{Tempo as a published signal.} Frame and sample timing are already
 recorded; publishing tempo would complete the repetition, range, and tempo triad
@@ -1210,14 +1611,11 @@ described in the original proposal.
 \item \textbf{Longitudinal analysis.} The frame-level export format was designed
 for cross-session analysis and has not yet been applied over time.
 
-\item \textbf{Bilateral inertial sensing.} A second glove would remove the
-single-side verification limitation, at the cost of the asymmetric configuration
-the current specification handles explicitly.
-
 \item \textbf{Rehabilitation applications.} The signal set --- range utilization,
 bilateral symmetry, stability, exertion --- corresponds to measures used in
-rehabilitation assessment, which represents the most direct extension beyond
-fitness applications.
+rehabilitation assessment. Pursuing this would require the sensor-to-segment
+calibration and reference validation described above, since rehabilitation
+measures must be defensible in anatomical terms.
 \end{enumerate}
 
 %==============================================================================
@@ -1248,10 +1646,67 @@ sessions rather than in component testing, which indicates that automated testin
 while necessary to prevent regression, does not replace full-system trials.
 
 %==============================================================================
+% References are listed manually so the document compiles without a .bib file.
+% Verify volume, page, and DOI details against the publisher record before
+% submission; the CalmMe entry in particular should be completed from the lab's
+% own publication list.
+\begin{thebibliography}{9}
+
+\bibitem{orji-bio}
+R.\ Orji, ``Biography and research profile,'' Faculty of Computer Science,
+Dalhousie University. [Online]. Available: \url{https://web.cs.dal.ca/~orji/}
+
+\bibitem{pcl}
+Persuasive Computing Lab, Dalhousie University. [Online]. Available:
+\url{https://pcl.cs.dal.ca/}
+
+\bibitem{fitpulse}
+A.\ S.\ Ponce, K.\ Shrivastava, F.\ Rochin, J.\ Adekanbi, G.\ Irudayaraj,
+G.\ Ataguba, R.\ Orji, and O.\ Oyebode, ``FITPULSE: An AI-driven persuasive
+exergame using wearable sensing and human activity recognition,'' 2026,
+pp.\ 389--408.
+
+\bibitem{ardancee}
+``AR Dancee: An augmented reality-based mobile persuasive intervention for
+promoting physical activity through dancing,'' \emph{International Journal of
+Human--Computer Interaction}, vol.\ 41, no.\ 11, 2025.
+doi:\ 10.1080/10447318.2024.2384136
+
+\bibitem{review-pa}
+``Persuasive strategies and their implementations in mobile interventions for
+physical activity: A systematic review,'' \emph{International Journal of
+Human--Computer Interaction}, vol.\ 39, no.\ 12, 2023.
+doi:\ 10.1080/10447318.2022.2075573
+
+\bibitem{review-exergames}
+``Social exergames in health and wellness: A systematic review of trends,
+effectiveness, challenges, and directions for future research,''
+\emph{International Journal of Human--Computer Interaction}, vol.\ 41, no.\ 10,
+2025. doi:\ 10.1080/10447318.2024.2371686
+
+\bibitem{calmme}
+Persuasive Computing Lab, ``CalmMe: A personalized and adaptive system for
+promoting physical and mental well-being through wearable sensing and artificial
+intelligence.'' Publication details to be completed from the lab's publication
+list.
+
+\bibitem{ultralytics}
+Ultralytics, ``YOLO26 model documentation,'' version 8.4.51. [Online].
+Available: \url{https://docs.ultralytics.com/}
+
+\bibitem{coco}
+T.-Y.\ Lin, M.\ Maire, S.\ Belongie, J.\ Hays, P.\ Perona, D.\ Ramanan,
+P.\ Doll\'ar, and C.\ L.\ Zitnick, ``Microsoft COCO: Common objects in context,''
+in \emph{Proc.\ European Conference on Computer Vision (ECCV)}, 2014,
+pp.\ 740--755.
+
+\end{thebibliography}
+
+%==============================================================================
 \appendix
 \section{Repository Layout}
 
-\begin{table}[h]
+\begin{table}[htbp]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}L{3.4cm} X@{}}
