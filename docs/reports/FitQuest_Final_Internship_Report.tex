@@ -13,6 +13,12 @@
 %
 %  TABLES
 %
+%  Every table uses [H] from the float package: placed exactly where written,
+%  never floated. As ordinary floats they drifted away from the text that
+%  introduces them -- section 4.4, whose only content is a table, rendered as
+%  a heading immediately followed by 4.5. A table near a page bottom may now
+%  push to the next page and leave white space; that is the intended trade.
+%
 %  Overleaf's visual editor cannot preview tabularx tables and reports "your
 %  table can't be displayed" for each one. This was tested with plain p{} and
 %  X columns and the message persists, so it is a limitation of the editor's
@@ -31,10 +37,18 @@
 
 \documentclass[11pt,a4paper]{article}
 
+% Loaded first so its filter is active when microtype loads below. microtype
+% legitimately redefines \showhyphens; the 2025 LaTeX kernel warns about any
+% such redefinition. The filter suppresses that one message only, so the
+% compile log stays clean enough that a real warning is visible.
+\usepackage{silence}
+\WarningFilter{latex}{Command \showhyphens has changed}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[english]{babel}
 \usepackage[margin=2.5cm]{geometry}
+\usepackage{float}
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{xltabular}   % X columns inside a page-breaking table
@@ -45,22 +59,8 @@
 \usepackage{titlesec}
 \usepackage{fancyhdr}
 \usepackage{microtype}
-% [section] flushes pending floats before each new section, so a table cannot
-% drift into an unrelated section. Use the package option rather than
-% redefining \section by hand: titlesec redefines \section itself, and a manual
-% wrapper placed before \titleformat would simply be discarded.
-\usepackage[section]{placeins}
 \usepackage[hidelinks]{hyperref}
 
-% Keep tables near the text that introduces them. Without this, [h]-only floats
-% defer to the next float opportunity and can land pages away from their section.
-\renewcommand{\topfraction}{0.9}
-\renewcommand{\bottomfraction}{0.8}
-\renewcommand{\textfraction}{0.07}
-\renewcommand{\floatpagefraction}{0.75}
-\setcounter{topnumber}{3}
-\setcounter{bottomnumber}{2}
-\setcounter{totalnumber}{5}
 \setlength{\LTcapwidth}{\textwidth}  % longtable captions default to 4in
 
 % Lets TeX relax inter-word spacing slightly on paragraphs containing long
@@ -181,7 +181,7 @@ vision models, inertial hardware, or wireless transports.
 
 \subsection*{Summary of outcomes}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}L{5.2cm} L{3.2cm} Y@{}}
@@ -211,7 +211,7 @@ with repetition, tempo, and range-of-motion signals supporting feedback, goals,
 analytics, and exercise adherence. Table~\ref{tab:promised} compares that mandate
 with the delivered system.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Original mandate compared with the delivered system.}
@@ -387,7 +387,7 @@ its own freshness policy.
 
 \subsection{Runtime modules}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Runtime modules and responsibilities.}
@@ -419,7 +419,7 @@ browser client but not for the system as a whole. The three sensing paths have
 different connectivity requirements, and conflating them overstates how
 self-contained the demonstration is.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Connectivity requirement of each component.}
@@ -519,7 +519,7 @@ this filtering.
 
 \subsection{Inertial subsystem}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Inertial subsystem configuration.}
@@ -545,7 +545,10 @@ wireless sketch is a strict superset, the serial-only variant was removed during
 final consolidation.
 
 Two implementation details address observed instability. The board calls
-\code{WiFi.disconnect(true)} before each reconnection attempt, which avoids a
+% \allowbreak gives TeX a break point inside an otherwise unbreakable code
+% span. Without it this line overflows: moving the whole token to the next
+% line would leave a gap too large for any amount of \emergencystretch.
+\code{WiFi.\allowbreak disconnect(true)} before each reconnection attempt, which avoids a
 documented ESP32 Wi-Fi library failure pattern following a dropped connection.
 The laptop broadcasts a discovery packet so that the board can reacquire the
 laptop address after a network change, which was necessary because the testing
@@ -608,7 +611,7 @@ vectors (pitch, roll, yaw, acceleration), and categorical labels such as
 \code{sensor\_fusion\_engine} and the schema version is
 \code{2026-08-fusion-v2}.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Sections of the \code{game\_control} payload.}
@@ -695,7 +698,7 @@ requires internet access.
 Ten exercises are implemented across five validation modes and three arm
 patterns.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Implemented exercises, validation mode, and arm pattern.}
@@ -721,7 +724,7 @@ Sessions run in one of three modes --- coach-led, user-selected, or randomized -
 at one of four difficulty levels that determine both the repetition target and a
 strictness parameter.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Difficulty levels.}
@@ -867,7 +870,7 @@ Removes the possibility of simulated physiological values entering recorded evid
 
 The dumbbell and weight detector was trained for 80 epochs on a merged dataset.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Dataset composition and final detector metrics.}
@@ -894,7 +897,7 @@ Table~\ref{tab:perclass} is derived from the raw confusion matrix counts rather
 than from the normalized figure, because the normalized form is column-scaled by
 true class and is easily misread.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Per-class detection counts and derived rates on the validation split.}
@@ -973,7 +976,7 @@ actually used.
 
 \subsection{Automated verification}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Test suite composition. All 62 tests pass. Module names omit the
@@ -1005,7 +1008,7 @@ sessions, which were limited in number.
 
 \subsection{Delivered artefacts}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Delivered artefacts by language.}
@@ -1086,7 +1089,7 @@ outcomes.
 FitQuest differs on the sensing side and is deliberately incomplete on the
 evaluation side.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{FitQuest compared with the lab's established approach.}
@@ -1164,7 +1167,7 @@ self-hosted relay noted there, or the reduced offline configuration.
 
 \subsection{Phase overview}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \caption{Internship phases.}
@@ -1737,7 +1740,7 @@ pp.\ 740--755.
 \appendix
 \section{Repository Layout}
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \small
 \begin{tabularx}{\textwidth}{@{}L{3.4cm} Y@{}}
