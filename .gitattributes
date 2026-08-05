@@ -1,0 +1,22 @@
+# Language statistics
+#
+# GitHub reported this repository as 80% G-code because of a single 3 MB
+# sliced print file, and inflated JavaScript with a vendored library. Both are
+# artefacts rather than project source, so they are excluded from the language
+# breakdown. The reported languages then reflect what is actually written here.
+hardware/esp32_case/*.gcode  linguist-generated=true
+web/vendor/**                linguist-vendored=true
+docs/figures/**              linguist-documentation=true
+
+# Binary and generated files: never apply end-of-line conversion or attempt a
+# textual diff.
+*.gcode  -text
+*.blend  binary
+*.blend1 binary
+*.stl    binary
+*.pptx   binary
+*.png    binary
+*.jpg    binary
+*.pt     binary
+*.prg    binary
+*.iq     binary

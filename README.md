@@ -1,91 +1,175 @@
-# Iron Quest 3D (FitQuest)
+# FitQuest
 
-Iron Quest 3D is a **universal sensor-fusion engine for physical interaction**, plus a small browser game that proves the complete sensor-to-action path. It converts camera, dumbbell, ESP32/IMU, and wearable data into a normalized JSON signal contract, then demonstrates those signals through a live web client.
+**A sensor-fusion engine for physical interaction.** FitQuest converts camera,
+inertial, and physiological measurements into a single normalized signal
+specification, and drives a browser application from it to demonstrate the
+complete path from physical movement to interaction.
 
-Built as a Mitacs Globalink research project at Dalhousie University's Persuasive Computing Lab, for a research paper due August 7, 2026.
+Built during a Mitacs Globalink Research Internship at the
+[Persuasive Computing Lab](https://pcl.cs.dal.ca/), Faculty of Computer Science,
+Dalhousie University, May–August 2026. The project was originally proposed as
+*IronQuest 3D — Smart Dumbbell Fitness Gaming Platform*, which remains the
+repository name.
 
-## Run It
+📄 **[Final Internship Report](docs/reports/FitQuest_Final_Internship_Report.tex)**
+— architecture, engineering decisions, results, limitations, and future work.
 
-```powershell
-.\run_ironquest.bat
-```
+---
 
-That is the whole daily workflow. The launcher starts the camera and sensor pipeline, publishes the local browser gateway, and opens the FitQuest client automatically. The technical OpenCV monitor stays available beside it for diagnostics.
+## What it does
 
-Before a session, enable heart-rate broadcast on the Garmin Venu 3:
+Three sensing modalities are combined into one payload that clients consume
+without knowing anything about the hardware behind it:
 
-```text
-Settings > Watch Sensors > Wrist Heart Rate > Broadcast Heart Rate
-```
-
-Close the OpenCV monitor with `q`; press `d` to toggle the telemetry panel.
-
-## What It Does
-
-- YOLO body-pose tracking for upper-body posture and movement primitives.
-- YOLO dumbbell/weight object detection linked to body-side context.
-- ESP32-S3 + BNO08x IMU glove telemetry over USB serial and Wi-Fi UDP simultaneously.
-- Garmin Venu 3 context through a Connect IQ watch app, a Cloudflare Worker relay, and a BLE fallback.
-- Dynamic per-user auto-calibration, so different people produce the same 0.0-1.0 signal contract without code changes.
-- Bilateral symmetry, arm extension, range utilization, stability index, exertion level, and intensity zones.
-- Sensor-fusion payloads plus flat `signal_log` records written to JSONL for later analysis and paper figures.
-- A browser game that consumes `game_control`, prescribes exercises, validates each repetition against camera + IMU + watch evidence, and animates a 3D avatar.
-
-Out of scope: complex game development, multiplayer, production platform features, rule-based gym rep counting, and any vision model beyond body pose plus dumbbell/weight detection.
-
-## Frame Payload
-
-Each analyzed frame produces:
-
-| Section | Contents |
+| Source | Contributes |
 | --- | --- |
-| `motion_analysis` | Body posture, calibration state, normalized arm signals, symmetry, load tokens. |
-| `object_detection` | Accepted dumbbell/weight boxes. |
-| `limbs` | Left/right dumbbell association. |
-| `wearable` | Garmin heart-rate and physiology context. |
-| `esp32` | ESP32/IMU glove telemetry. |
-| `game_control` | The paper-facing sensor-fusion contract, with asymmetric hardware fusion. |
-| `signal_log` | Flat Pandas-friendly signal record. |
+| Camera + YOLO26 | 17-keypoint body pose; dumbbell/weight detection associated to left or right limb |
+| ESP32-S3 + BNO08x | Forearm orientation, motion intensity, stability, at ~15 Hz over USB and Wi-Fi |
+| Garmin Venu 3 | Heart rate, derived exertion level and intensity zone, wrist motion state |
 
-Clients read `game_control`, never raw YOLO output.
+On top of that contract sits a browser client with ten exercises, three session
+modes, four difficulty levels, per-repetition multi-sensor validation, and an
+animated 3D avatar.
 
-## Repository Layout
+**Per-user calibration** is what makes the signals transferable: a short warm-up
+window records each person's comfortable range, so comparable effort maps to
+comparable normalized values across users of different height, limb length, and
+mobility — with no retraining and no per-user code.
 
-| Path | Contents |
+**Out of scope**, deliberately: complex game development, multiplayer,
+production platform features, repetition counting from fixed joint-angle
+thresholds, and any vision model beyond body pose plus dumbbell detection.
+
+## Hardware
+
+| Item | Notes |
 | --- | --- |
-| `ironquest/` | Runtime package: CLI, pipeline, sensors, motion analysis, payload, HUD, web gateway. |
-| `web/` | FitQuest browser client. |
-| `tools/` | Bridges started by the runtime, plus an offline stream simulator. |
-| `tests/` | Regression tests. |
-| `firmware/` | ESP32-S3 sketches. |
-| `monkey_c/` | Garmin Connect IQ watch app. |
-| `hardware/` | Glove case model and print files. |
-| `cloudflare/` | Worker relaying Garmin samples. |
-| `configs/` | Ultralytics training profiles. |
-| `docs/` | Technical documentation and dated supervisor reports. |
+| Webcam | Any USB or built-in camera |
+| ESP32-S3 DevKitC-1 | I²C to the IMU on `GPIO8`/`GPIO9` |
+| BNO08x IMU | Address `0x4B`; housed in the printed enclosure under `hardware/` |
+| Power source | USB from the laptop, or a power bank for untethered use |
+| Garmin Venu 3 | Optional; heart rate and wrist motion context |
+| Shared network | Required only for the wireless inertial path and the wearable relay |
 
-## Setup
+The system degrades gracefully: a missing sensor reduces the corroborating
+evidence available, it does not stop the session.
+
+## Quick start
 
 ```powershell
 python -m venv ironquest_env
 .\ironquest_env\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-Run the tests:
+Then, for a normal session:
+
+```powershell
+.\run_ironquest.bat
+```
+
+That single command starts the camera and sensor pipeline, publishes the local
+browser gateway, and opens the client. The OpenCV monitor stays available
+alongside it for diagnostics — close it with `q`, toggle its telemetry panel
+with `d`.
+
+Before a session, enable heart-rate broadcast on the watch:
+`Settings > Watch Sensors > Wrist Heart Rate > Broadcast Heart Rate`.
+
+**No hardware to hand?** Exercise the browser client against a synthetic stream:
+
+```powershell
+.\ironquest_env\Scripts\python.exe -m tools.simulate_game_control_stream
+```
+
+Every value it produces is generated locally. It is for interface testing only,
+never for evidence.
+
+## The payload
+
+Each analyzed frame produces:
+
+| Section | Contents |
+| --- | --- |
+| `motion_analysis` | Body posture, calibration state, normalized arm signals, symmetry, load tokens |
+| `object_detection` | Accepted dumbbell/weight boxes |
+| `limbs` | Left/right dumbbell association |
+| `wearable` | Heart rate and physiological context |
+| `esp32` | Inertial glove telemetry |
+| `game_control` | The sensor-fusion specification, schema `2026-08-fusion-v2` |
+| `signal_log` | Flat, Pandas-friendly record for analysis |
+
+Clients read `game_control`, never raw model output. That separation is what
+allows a different application — a rehabilitation task, an adherence monitor,
+another game — to be built against the same signals without touching the
+sensing code.
+
+```python
+import pandas as pd
+df = pd.read_json("runs/validate/sensor_fusion.jsonl", lines=True)
+signals = pd.json_normalize(df["signal_log"])
+```
+
+## Repository layout
+
+| Path | Contents |
+| --- | --- |
+| `ironquest/` | Runtime package: CLI, pipeline, sensors, motion analysis, payload, HUD, gateway |
+| `web/` | Browser client and vendored 3D library |
+| `tools/` | Wearable bridges and the offline stream simulator |
+| `tests/` | Regression suite — 62 tests, no hardware required |
+| `firmware/` | ESP32-S3 sketches |
+| `monkey_c/` | Garmin Connect IQ watch application |
+| `hardware/` | Enclosure model, STL, and print files |
+| `cloudflare/` | Relay worker and its deployment configuration |
+| `configs/` | Ultralytics training profiles |
+| `docs/` | Technical documentation, evidence figures, and dated reports |
+
+## Verification
 
 ```powershell
 .\ironquest_env\Scripts\python.exe -m pytest tests\ -q
 ```
 
+The suite exercises the signal specification rather than the hardware, so it
+runs in about six seconds with nothing attached. Detector metrics and the
+figures behind them are committed under
+[`docs/figures/`](docs/figures/README.md), together with the caveats that limit
+what they support.
+
 ## Documentation
 
 Start with the [Documentation Index](docs/00_DOCUMENTATION_INDEX.md).
 
-- [Project Roadmap](docs/01_PROJECT_ROADMAP.md) — scope, deadline, deliverables
-- [System Architecture](docs/02_SYSTEM_ARCHITECTURE.md) — runtime layers and data flow
-- [Run and Demo Guide](docs/03_RUN_AND_DEMO.md) — what a healthy run looks like
-- [Command Reference](docs/04_COMMAND_REFERENCE.md) — every CLI command
-- [Sensor-Fusion Payload](docs/06_SENSOR_FUSION_PAYLOAD.md) — the `game_control` contract
-- [Web Game Implementation](docs/07_WEB_GAME_IMPLEMENTATION.md) — browser client and gateway
-- [ESP32/IMU Hardware](docs/09_ESP32_IMU_HARDWARE.md) — wiring, firmware, wireless transport
-- [Garmin Venu 3 Bridge](docs/10_GARMIN_VENU3_BRIDGE.md) — watch app and troubleshooting
+| Document | Covers |
+| --- | --- |
+| [Project Roadmap](docs/01_PROJECT_ROADMAP.md) | Scope, deadline, deliverables |
+| [System Architecture](docs/02_SYSTEM_ARCHITECTURE.md) | Runtime layers and frame-level data flow |
+| [Run and Demo Guide](docs/03_RUN_AND_DEMO.md) | What a healthy run looks like |
+| [Command Reference](docs/04_COMMAND_REFERENCE.md) | Every CLI command and option |
+| [Code Reference](docs/05_CODE_REFERENCE.md) | What each module is responsible for |
+| [Sensor-Fusion Payload](docs/06_SENSOR_FUSION_PAYLOAD.md) | The `game_control` specification |
+| [Web Game Implementation](docs/07_WEB_GAME_IMPLEMENTATION.md) | Browser client and gateway |
+| [ESP32/IMU Hardware](docs/09_ESP32_IMU_HARDWARE.md) | Wiring, bring-up, firmware, wireless transport |
+| [Garmin Venu 3 Bridge](docs/10_GARMIN_VENU3_BRIDGE.md) | Watch app, relay, and troubleshooting |
+
+Weekly supervisor reports are under [`docs/reports/`](docs/reports/).
+
+## Status and limitations
+
+The system has been validated technically and exercised in full sessions with
+all three sensing modalities. It has **not** been evaluated with independent
+participants, so no claim is made about usability, engagement, or adherence.
+The detector metrics were obtained on a randomly partitioned dataset and should
+be read as an upper bound rather than as evidence of generalization. The browser
+client is a proof of concept, not a fitness product.
+
+Section 14 of the report states the limitations in full; Section 15 sets out the
+improvement path for each subsystem.
+
+## Author
+
+Milton Estuardo Torres Meraz
+[ORCID 0009-0005-3217-9935](https://orcid.org/0009-0005-3217-9935)
+Universidad Autónoma de San Luis Potosí — Intelligent Systems Engineering
+
+Supervised by Dr. Rita Orji, Dr. Fidelia Orji, and Dr. Grace Ataguba.
