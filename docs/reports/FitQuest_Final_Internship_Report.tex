@@ -542,6 +542,7 @@ Telemetry interval & 66\,ms ($\approx$15\,Hz) \\
 Transports & USB serial and Wi-Fi UDP, published concurrently \\
 Telemetry and discovery ports & 4210 and 4211 \\
 Mount & Right forearm armband, configurable \\
+Power & USB, from the laptop when tethered or from a carried power bank when wireless \\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -606,6 +607,26 @@ the printer profile used.
 The enclosure fixes the sensor orientation relative to the forearm. The rotation
 at which the enclosure sits on the strap determines an absolute pitch offset;
 Section~\ref{sec:browser} describes how repetition validation accommodates this.
+
+\subsection{Power}
+\label{sec:power}
+
+Wireless operation is not simply a matter of selecting the Wi-Fi transport. The
+board draws its power over USB, so running untethered from the laptop requires a
+separate supply travelling with the user. Sessions to date have used a USB power
+bank, carried in a pocket or clipped to clothing, with a cable running to the
+forearm unit.
+
+This works but leaves the arrangement incomplete in two respects. The cable is
+still a tether, now to the user's own pocket rather than to the laptop, and it
+remains a source of mechanical disturbance and of session interruption if it
+pulls loose. And the power bank was chosen for availability rather than fit: it
+is larger and heavier than the task requires.
+
+The enclosure currently has no provision for carrying a supply. Section
+\ref{sec:futurework} sets out the options --- a compartment sized for a small
+power bank, or a battery holder integrated into the enclosure --- as the change
+that would make the wireless path genuinely self-contained.
 
 %==============================================================================
 \section{Signal Specification}
@@ -1416,6 +1437,11 @@ subnet for the wireless inertial path and internet access for the wearable relay
 (Section~\ref{sec:network}). Only the reduced configuration --- inertial unit over
 USB and watch over BLE --- operates with no network at all.
 
+\item[Carried power supply] The inertial unit draws power over USB, so wireless
+operation requires a power bank carried by the user and cabled to the forearm
+(Section~\ref{sec:power}). The enclosure has no provision for a supply, and no
+power budget or session-duration figure has been measured.
+
 \item[Device-frame orientation] Inertial orientation is reported in the device
 frame and has not been transformed into an anatomical frame. Pitch and roll are
 therefore not forearm joint angles, and yaw is relative because the firmware uses
@@ -1619,10 +1645,30 @@ from a hammer curl; an armband is easier to fit across hand sizes and does not
 interfere with grip. The choice should be made deliberately and the terminology
 then unified.
 
-\item \textbf{Integrated power and cable management.} The enclosure houses the
-board but power still depends on an external connection. An integrated battery
-compartment with strain relief would remove the cable as a source of both
-mechanical disturbance and session interruption.
+\item \textbf{Onboard power.} This is the change that would most improve the
+practical usability of the wireless path. The enclosure houses the board but not
+a supply, so untethered operation currently depends on a USB power bank carried
+separately with a cable to the forearm (Section~\ref{sec:power}). Two options
+are worth evaluating, and they trade against each other:
+
+\begin{itemize}
+\item A compartment sized for a \emph{small} power bank, mounted on the same
+strap. This keeps a standard, replaceable, rechargeable part and needs no
+charging circuit in the design, at the cost of bulk on the arm. The compartment
+should be dimensioned against a specific model rather than generically, since
+capacity, thickness, and connector position vary widely.
+\item An integrated battery holder --- AA/AAA cells with a boost converter, or a
+LiPo cell with a charging and protection circuit. This is the smaller and better
+balanced result, and the only one that removes the external cable entirely, but
+it adds electronics to design, a charging path to provide, and lithium handling
+and safety considerations that a commercial power bank has already solved.
+\end{itemize}
+
+Either option requires strain relief at the connector, since the cable is
+currently both a mechanical disturbance in the signal and a session-interruption
+risk if it pulls loose. Whichever is chosen, session duration should be measured
+rather than assumed: the board transmits continuously over Wi-Fi, which is the
+dominant draw, and no power budget has been established.
 
 \item \textbf{Comfort and safety under load.} The enclosure has not been
 evaluated for pressure points, heat, or interference with grip during heavier
