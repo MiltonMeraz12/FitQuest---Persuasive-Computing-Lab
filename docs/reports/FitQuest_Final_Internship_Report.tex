@@ -110,6 +110,10 @@
 %==============================================================================
 
 \begin{titlepage}
+% The titlepage environment resets the page counter on exit, so this page and
+% the contents page would both claim the anchor page.1 and pdfTeX would report
+% a duplicate destination. Suppressing the anchor here avoids the collision.
+\hypersetup{pageanchor=false}
 \centering
 \vspace*{2cm}
 
@@ -157,6 +161,7 @@
 \vfill
 {\large August 2026\par}
 \end{titlepage}
+\hypersetup{pageanchor=true}
 
 %==============================================================================
 \tableofcontents
