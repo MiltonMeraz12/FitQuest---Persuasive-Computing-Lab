@@ -11,10 +11,19 @@
 %  (context, chronology, repository consolidation) are specific to the
 %  internship and would not appear in a paper.
 %
-%  TABLES: every table uses only standard column specifiers (p{}, l, r, X) so
-%  that Overleaf's visual editor can preview them. Ragged-right is applied per
-%  table with \raggedright rather than through a custom \newcolumntype, which
-%  the visual editor cannot interpret.
+%  TABLES
+%
+%  Overleaf's visual editor cannot preview tabularx tables and reports "your
+%  table can't be displayed" for each one. This was tested with plain p{} and
+%  X columns and the message persists, so it is a limitation of the editor's
+%  table preview, not of this file. It has no effect on the PDF. Edit tables
+%  in the Code editor.
+%
+%  Column types L{width} and Y are ragged-right. Justified text in a narrow
+%  column produces the loose lines LaTeX reports as underfull hboxes, so
+%  ragged-right is the correct setting here. It must be applied through the
+%  column preamble: a \raggedright placed before the table has no effect,
+%  because each p/X cell runs \@arrayparboxrestore and resets \rightskip.
 %
 %  The design-decisions table uses xltabular, not longtable: it needs both an
 %  X column and page breaking, and plain longtable does not support X.
@@ -52,6 +61,11 @@
 \setcounter{topnumber}{3}
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{5}
+\setlength{\LTcapwidth}{\textwidth}  % longtable captions default to 4in
+
+% Lets TeX relax inter-word spacing slightly on paragraphs containing long
+% unbreakable code spans, instead of reporting them as overfull.
+\setlength{\emergencystretch}{1.5em}
 
 % ---- Layout -----------------------------------------------------------------
 \pagestyle{fancy}
@@ -70,6 +84,11 @@
 % ---- Helpers ----------------------------------------------------------------
 % Do not name these \partial or \0 -- LaTeX already defines those.
 \newcommand{\code}[1]{\texttt{\small #1}}
+% Ragged-right columns. Justified text in narrow table columns produces the
+% loose, badly spaced lines LaTeX reports as underfull hboxes.
+%   L{width} - fixed width      Y - flexible width (tabularx/xltabular)
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcommand{\done}{Delivered}
 \newcommand{\halfdone}{Partial}
 
@@ -126,9 +145,14 @@
 \textbf{Home institution} & Universidad Autónoma de San Luis Potosí, Mexico \\[2pt]
 \textbf{Internship start} & May 18, 2026 \\[2pt]
 \textbf{Maximum duration} & 12 weeks \\[2pt]
-\textbf{Project deadline} & August 7, 2026 \\[2pt]
-\textbf{Source repository} & \small\url{https://github.com/MiltonMeraz12/FitQuest---Persuasive-Computing-Lab} \\
+\textbf{Project deadline} & August 7, 2026 \\
 \end{tabular}
+
+\vspace{0.6cm}
+% The repository URL sits below the table rather than inside it: an l column
+% cannot wrap, and the URL is wider than the space left beside the labels.
+{\small\textbf{Source repository}\\[2pt]
+\url{https://github.com/MiltonMeraz12/FitQuest---Persuasive-Computing-Lab}\par}
 
 \vfill
 {\large August 2026\par}
@@ -160,8 +184,7 @@ vision models, inertial hardware, or wireless transports.
 \begin{table}[htbp]
 \centering
 \small
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{5.2cm} p{3.2cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{5.2cm} L{3.2cm} Y@{}}
 \toprule
 \textbf{Dimension} & \textbf{Result} & \textbf{Evidence} \\
 \midrule
@@ -193,8 +216,7 @@ with the delivered system.
 \small
 \caption{Original mandate compared with the delivered system.}
 \label{tab:promised}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{4.4cm} p{2.1cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{4.4cm} L{2.1cm} Y@{}}
 \toprule
 \textbf{Original element} & \textbf{Status} & \textbf{Delivered form} \\
 \midrule
@@ -370,8 +392,7 @@ its own freshness policy.
 \small
 \caption{Runtime modules and responsibilities.}
 \label{tab:modules}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{3.6cm} r p{2.6cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{3.9cm} r L{2.6cm} Y@{}}
 \toprule
 \textbf{Module} & \textbf{Lines} & \textbf{Layer} & \textbf{Responsibility} \\
 \midrule
@@ -403,8 +424,7 @@ self-contained the demonstration is.
 \small
 \caption{Connectivity requirement of each component.}
 \label{tab:network}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{4.6cm} p{4.0cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{4.6cm} L{4.0cm} Y@{}}
 \toprule
 \textbf{Component} & \textbf{Requirement} & \textbf{Notes} \\
 \midrule
@@ -503,8 +523,7 @@ this filtering.
 \centering
 \small
 \caption{Inertial subsystem configuration.}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{4.6cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{4.6cm} Y@{}}
 \toprule
 \textbf{Parameter} & \textbf{Value} \\
 \midrule
@@ -593,8 +612,7 @@ vectors (pitch, roll, yaw, acceleration), and categorical labels such as
 \centering
 \small
 \caption{Sections of the \code{game\_control} payload.}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{3.4cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{3.4cm} Y@{}}
 \toprule
 \textbf{Section} & \textbf{Contents} \\
 \midrule
@@ -681,8 +699,7 @@ patterns.
 \centering
 \small
 \caption{Implemented exercises, validation mode, and arm pattern.}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{5.4cm} p{2.6cm} p{2.8cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{5.4cm} L{2.6cm} L{2.8cm} Y@{}}
 \toprule
 \textbf{Exercise} & \textbf{Mode} & \textbf{Arm pattern} & \textbf{Primary signal} \\
 \midrule
@@ -769,7 +786,7 @@ together with the alternatives considered and the reasons for rejecting them.
 % This table carries its caption inside the environment (longtable style), so
 % ragged-right is set per column rather than before the environment, which would
 % also un-centre the caption.
-\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.9cm} >{\raggedright\arraybackslash}p{4.6cm} >{\raggedright\arraybackslash}X@{}}
+\begin{xltabular}{\textwidth}{@{}L{3.9cm} L{4.6cm} Y@{}}
 \caption{Design decisions, alternatives considered, and rationale.}\\
 \toprule
 \textbf{Decision} & \textbf{Alternative rejected} & \textbf{Rationale} \\
@@ -959,22 +976,22 @@ actually used.
 \begin{table}[htbp]
 \centering
 \small
-\caption{Test suite composition. All 62 tests pass.}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{5.6cm} r X@{}}
+\caption{Test suite composition. All 62 tests pass. Module names omit the
+common \code{test\_} prefix.}
+\begin{tabularx}{\textwidth}{@{}L{6.0cm} r Y@{}}
 \toprule
 \textbf{Module} & \textbf{Tests} & \textbf{Coverage} \\
 \midrule
-\code{test\_sensor\_fusion\_payload.py} & 20 & Payload structure, inertial bridges, wearable normalization, event debouncing \\
-\code{test\_cli\_detection\_defaults.py} & 10 & Command defaults and explicit-flag precedence \\
-\code{test\_signal\_motion\_analysis.py} & 8 & Calibration behaviour and normalized signals \\
-\code{test\_web\_gateway.py} & 6 & Client serving, SSE, control queue, path-traversal guard \\
-\code{test\_garmin\_connectiq\_http\_bridge.py} & 4 & Heart-rate sanitization \\
-\code{test\_object\_temporal\_tracking.py} & 4 & Detector dropout hold and box smoothing \\
-\code{test\_fitquest\_worker\_pull.py} & 3 & Relay polling and atomic writes \\
-\code{test\_ui\_sensor\_labels.py} & 3 & Sensor status labelling \\
-\code{test\_body\_context.py} & 2 & Dumbbell-to-limb association \\
-\code{test\_capture\_analysis.py} & 2 & Offline session quality reporting \\
+\code{sensor\_fusion\_payload.py} & 20 & Payload structure, inertial bridges, wearable normalization, event debouncing \\
+\code{cli\_detection\_defaults.py} & 10 & Command defaults and explicit-flag precedence \\
+\code{signal\_motion\_analysis.py} & 8 & Calibration behaviour and normalized signals \\
+\code{web\_gateway.py} & 6 & Client serving, SSE, control queue, path-traversal guard \\
+\code{garmin\_connectiq\_http\_bridge.py} & 4 & Heart-rate sanitization \\
+\code{object\_temporal\_tracking.py} & 4 & Detector dropout hold and box smoothing \\
+\code{fitquest\_worker\_pull.py} & 3 & Relay polling and atomic writes \\
+\code{ui\_sensor\_labels.py} & 3 & Sensor status labelling \\
+\code{body\_context.py} & 2 & Dumbbell-to-limb association \\
+\code{capture\_analysis.py} & 2 & Offline session quality reporting \\
 \midrule
 \textbf{Total} & \textbf{62} & \\
 \bottomrule
@@ -1074,8 +1091,7 @@ evaluation side.
 \small
 \caption{FitQuest compared with the lab's established approach.}
 \label{tab:positioning}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{3.4cm} p{5.0cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{3.4cm} L{5.0cm} Y@{}}
 \toprule
 \textbf{Dimension} & \textbf{Established approach} & \textbf{FitQuest} \\
 \midrule
@@ -1152,8 +1168,7 @@ self-hosted relay noted there, or the reduced offline configuration.
 \centering
 \small
 \caption{Internship phases.}
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{2.6cm} p{3.4cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{2.6cm} L{3.4cm} Y@{}}
 \toprule
 \textbf{Period} & \textbf{Phase} & \textbf{Principal outcome} \\
 \midrule
@@ -1725,8 +1740,7 @@ pp.\ 740--755.
 \begin{table}[htbp]
 \centering
 \small
-\raggedright
-\begin{tabularx}{\textwidth}{@{}p{3.4cm} X@{}}
+\begin{tabularx}{\textwidth}{@{}L{3.4cm} Y@{}}
 \toprule
 \textbf{Path} & \textbf{Contents} \\
 \midrule
