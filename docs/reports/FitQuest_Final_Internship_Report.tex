@@ -11,11 +11,13 @@
 %  (context, chronology, repository consolidation) are specific to the
 %  internship and would not appear in a paper.
 %
-%  NOTE ON OVERLEAF: the visual (WYSIWYG) editor cannot preview tables that use
-%  the custom \newcolumntype{L} defined below, and shows "your table can't be
-%  displayed". This affects the editor preview only -- the tables typeset
-%  correctly in the PDF. Use the Code editor for those tables, or ignore the
-%  warning.
+%  TABLES: every table uses only standard column specifiers (p{}, l, r, X) so
+%  that Overleaf's visual editor can preview them. Ragged-right is applied per
+%  table with \raggedright rather than through a custom \newcolumntype, which
+%  the visual editor cannot interpret.
+%
+%  The design-decisions table uses xltabular, not longtable: it needs both an
+%  X column and page breaking, and plain longtable does not support X.
 %==============================================================================
 
 \documentclass[11pt,a4paper]{article}
@@ -26,7 +28,7 @@
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{booktabs}
 \usepackage{tabularx}
-\usepackage{longtable}
+\usepackage{xltabular}   % X columns inside a page-breaking table
 \usepackage{array}
 \usepackage{enumitem}
 \usepackage{xcolor}
@@ -68,7 +70,6 @@
 % ---- Helpers ----------------------------------------------------------------
 % Do not name these \partial or \0 -- LaTeX already defines those.
 \newcommand{\code}[1]{\texttt{\small #1}}
-\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 \newcommand{\done}{Delivered}
 \newcommand{\halfdone}{Partial}
 
@@ -159,7 +160,8 @@ vision models, inertial hardware, or wireless transports.
 \begin{table}[htbp]
 \centering
 \small
-\begin{tabularx}{\textwidth}{@{}L{5.2cm} L{3.2cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{5.2cm} p{3.2cm} X@{}}
 \toprule
 \textbf{Dimension} & \textbf{Result} & \textbf{Evidence} \\
 \midrule
@@ -191,7 +193,8 @@ with the delivered system.
 \small
 \caption{Original mandate compared with the delivered system.}
 \label{tab:promised}
-\begin{tabularx}{\textwidth}{@{}L{4.4cm} L{2.1cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{4.4cm} p{2.1cm} X@{}}
 \toprule
 \textbf{Original element} & \textbf{Status} & \textbf{Delivered form} \\
 \midrule
@@ -367,7 +370,8 @@ its own freshness policy.
 \small
 \caption{Runtime modules and responsibilities.}
 \label{tab:modules}
-\begin{tabularx}{\textwidth}{@{}L{3.6cm} r L{2.6cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{3.6cm} r p{2.6cm} X@{}}
 \toprule
 \textbf{Module} & \textbf{Lines} & \textbf{Layer} & \textbf{Responsibility} \\
 \midrule
@@ -399,7 +403,8 @@ self-contained the demonstration is.
 \small
 \caption{Connectivity requirement of each component.}
 \label{tab:network}
-\begin{tabularx}{\textwidth}{@{}L{4.6cm} L{4.0cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{4.6cm} p{4.0cm} X@{}}
 \toprule
 \textbf{Component} & \textbf{Requirement} & \textbf{Notes} \\
 \midrule
@@ -498,7 +503,8 @@ this filtering.
 \centering
 \small
 \caption{Inertial subsystem configuration.}
-\begin{tabularx}{\textwidth}{@{}L{4.6cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{4.6cm} X@{}}
 \toprule
 \textbf{Parameter} & \textbf{Value} \\
 \midrule
@@ -587,7 +593,8 @@ vectors (pitch, roll, yaw, acceleration), and categorical labels such as
 \centering
 \small
 \caption{Sections of the \code{game\_control} payload.}
-\begin{tabularx}{\textwidth}{@{}L{3.4cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{3.4cm} X@{}}
 \toprule
 \textbf{Section} & \textbf{Contents} \\
 \midrule
@@ -674,7 +681,8 @@ patterns.
 \centering
 \small
 \caption{Implemented exercises, validation mode, and arm pattern.}
-\begin{tabularx}{\textwidth}{@{}L{5.4cm} L{2.6cm} L{2.8cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{5.4cm} p{2.6cm} p{2.8cm} X@{}}
 \toprule
 \textbf{Exercise} & \textbf{Mode} & \textbf{Arm pattern} & \textbf{Primary signal} \\
 \midrule
@@ -758,7 +766,10 @@ Section~\ref{sec:sensing}.
 This section records the principal design decisions taken during the internship,
 together with the alternatives considered and the reasons for rejecting them.
 
-\begin{longtable}{@{}L{3.9cm} L{4.6cm} X@{}}
+% This table carries its caption inside the environment (longtable style), so
+% ragged-right is set per column rather than before the environment, which would
+% also un-centre the caption.
+\begin{xltabular}{\textwidth}{@{}>{\raggedright\arraybackslash}p{3.9cm} >{\raggedright\arraybackslash}p{4.6cm} >{\raggedright\arraybackslash}X@{}}
 \caption{Design decisions, alternatives considered, and rationale.}\\
 \toprule
 \textbf{Decision} & \textbf{Alternative rejected} & \textbf{Rationale} \\
@@ -829,7 +840,7 @@ The campus network uses enterprise authentication the board's firmware does not 
 No synthetic wearable generator &
 Retaining a mock heart-rate writer &
 Removes the possibility of simulated physiological values entering recorded evidence. \\
-\end{longtable}
+\end{xltabular}
 
 %==============================================================================
 \section{Results and Validation}
@@ -871,7 +882,9 @@ true class and is easily misread.
 \small
 \caption{Per-class detection counts and derived rates on the validation split.}
 \label{tab:perclass}
-\begin{tabularx}{\textwidth}{@{}l r r r r r@{}}
+% Plain tabular: every column has fixed content, so there is nothing for a
+% tabularx X column to absorb, and tabularx requires at least one.
+\begin{tabular}{@{}lrrrrr@{}}
 \toprule
 \textbf{Class} & \textbf{Instances} & \textbf{Predictions} & \textbf{Missed} & \textbf{Precision} & \textbf{Recall} \\
 \midrule
@@ -879,7 +892,7 @@ true class and is easily misread.
 \code{weight}   &   512   &   518   &  19 & 0.952 & 0.963 \\
 \code{other}    &   977   &   919   & 153 & 0.897 & 0.843 \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
 The detector produced 403 detections that matched no annotated instance. Of
@@ -947,7 +960,8 @@ actually used.
 \centering
 \small
 \caption{Test suite composition. All 62 tests pass.}
-\begin{tabularx}{\textwidth}{@{}L{5.6cm} r X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{5.6cm} r X@{}}
 \toprule
 \textbf{Module} & \textbf{Tests} & \textbf{Coverage} \\
 \midrule
@@ -1060,7 +1074,8 @@ evaluation side.
 \small
 \caption{FitQuest compared with the lab's established approach.}
 \label{tab:positioning}
-\begin{tabularx}{\textwidth}{@{}L{3.4cm} L{5.0cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{3.4cm} p{5.0cm} X@{}}
 \toprule
 \textbf{Dimension} & \textbf{Established approach} & \textbf{FitQuest} \\
 \midrule
@@ -1137,7 +1152,8 @@ self-hosted relay noted there, or the reduced offline configuration.
 \centering
 \small
 \caption{Internship phases.}
-\begin{tabularx}{\textwidth}{@{}L{2.6cm} L{3.4cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{2.6cm} p{3.4cm} X@{}}
 \toprule
 \textbf{Period} & \textbf{Phase} & \textbf{Principal outcome} \\
 \midrule
@@ -1709,7 +1725,8 @@ pp.\ 740--755.
 \begin{table}[htbp]
 \centering
 \small
-\begin{tabularx}{\textwidth}{@{}L{3.4cm} X@{}}
+\raggedright
+\begin{tabularx}{\textwidth}{@{}p{3.4cm} X@{}}
 \toprule
 \textbf{Path} & \textbf{Contents} \\
 \midrule
