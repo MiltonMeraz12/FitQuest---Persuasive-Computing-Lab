@@ -211,16 +211,25 @@ computing; per-user calibration; exergames.
 
 \newpage
 
-\section{Overview}
+\section{Introduction}
 
-This report documents a twelve-week Mitacs Globalink Research Internship
-conducted at the Persuasive Computing Lab, Dalhousie University. The project
-began under the title \emph{IronQuest 3D --- Smart Dumbbell Fitness Gaming
-Platform} and was renarrowed on June 23, 2026 to \emph{FitQuest}, a sensor-fusion
+The Persuasive Computing Lab at Dalhousie University studies systems intended to
+influence health and well-being behaviour. This internship was framed around
+developing a system for monitoring health and well-being, with the specific
+proposal being \emph{IronQuest 3D --- Smart Dumbbell Fitness Gaming Platform}:
+sensor-enabled dumbbells feeding a browser-based 3D game, with repetition,
+tempo, and range-of-motion signals supporting feedback, goal setting, analytics,
+and exercise adherence.
+
+Two constraints shaped what followed. The internship had a twelve-week maximum
+from a May 18, 2026 start, and the expected output was due August 7, 2026 ---
+approximately eleven weeks in. A fitness gaming platform is not a research
+contribution on that timeline; a validated sensing method can be. The project
+was therefore renarrowed on June 23, 2026 to \emph{FitQuest}, a sensor-fusion
 system that converts camera, inertial, and physiological measurements into a
-normalized signal specification, together with a browser application that
-consumes those signals to demonstrate the complete path from physical movement
-to interaction.
+normalized signal specification, with a browser application built on top of it
+to demonstrate the complete path from physical movement to interaction.
+Section~\ref{sec:scope} sets out that decision and its reasoning in full.
 
 The primary deliverable is the middleware layer rather than the application
 built upon it. The system publishes a documented, per-user calibrated payload
@@ -269,10 +278,10 @@ pose and object context, forearm inertial telemetry, and wearable physiological
 context by latest-value sampling with explicit per-sensor freshness metadata,
 and that continues to operate when any single stream is absent.
 
-\item \textbf{A versioned, documented signal specification} (\code{game\_control},
-schema \code{2026-08-fusion-v2}) that decouples interactive clients from
-sensor- and model-specific formats, together with a flat per-frame export
-format intended for offline analysis.
+\item \textbf{A versioned, documented signal specification} --- \code{game\_control},
+schema \code{2026-\allowbreak 08-\allowbreak fusion-\allowbreak v2} --- that
+decouples interactive clients from sensor- and model-specific formats, together
+with a flat per-frame export format intended for offline analysis.
 
 \item \textbf{A session-adaptive calibration and temporal filtering pipeline}
 that converts raw observations into normalized exercise-control signals, with
@@ -353,44 +362,104 @@ Physiological context & \done & Extension beyond the original scope: heart rate,
 
 \newpage
 
+\subsection{Structure of this report}
+
+This report addresses two audiences. The supervisory team requires an account of
+what was built and what it does and does not establish. A subsequent research
+paper requires technical sections written to be transferable with minimal
+revision.
+
+Sections~\ref{sec:related} through~\ref{sec:results} contain the technical
+material: related approaches, the change of scope and its reasoning, design
+goals, architecture, each sensing subsystem, the signal specification, the
+browser application, the design decisions taken, and the results obtained.
+Section~\ref{sec:positioning} situates the work against the host lab's existing
+research and Section~\ref{sec:discussion} interprets it. Sections
+\ref{sec:chronology} and~\ref{sec:consolidation} are specific to the internship.
+Section~\ref{sec:handover} is written for whoever continues the work, and
+Sections~\ref{sec:studyreqs} through~\ref{sec:futurework} state what remains
+open.
+
+\emph{On naming.} \emph{IronQuest 3D} refers to the original proposal and
+remains the repository name; \emph{FitQuest} refers to the delivered system and
+is the name used in the browser client, the watch application, and the
+presentation material. Both denote the same project at different stages of its
+scope.
+
 %==============================================================================
-\section{Introduction and Context}
+\section{Related Approaches}
+\label{sec:related}
 
-\subsection{Institutional setting}
+% NOTE FOR PAPER EXTRACTION: this section is written around approach families
+% rather than around individual citations, because only the lab's own work was
+% verified against publisher records during the internship. Before submission,
+% each family below needs representative citations from the literature.
 
-The Persuasive Computing Lab at Dalhousie University studies systems intended to
-influence health and well-being behaviour. The internship was framed around
-developing a system for monitoring health and well-being, with the specific
-proposal being IronQuest 3D: a smart-dumbbell fitness gaming platform in which
-sensor-enabled dumbbells feed a browser-based 3D game, and repetition, tempo, and
-range-of-motion signals support feedback, goal setting, analytics, and exercise
-adherence.
+Interactive exercise systems sense through one of three broad arrangements.
+Each resolves some ambiguities and leaves others open, and the pattern of what
+each cannot see motivates the arrangement used here.
 
-Two constraints shaped the work. The internship had a twelve-week maximum from a
-May 18, 2026 start date, and the expected output was a research paper due
-August 7, 2026, approximately eleven weeks after the start.
+\subsection{Camera-based sensing}
 
-\subsection{Purpose and structure of this report}
+A camera observes the whole body at once. Pose estimation yields joint positions
+without instrumenting the user, which makes setup trivial and makes the system
+usable by anyone who walks into frame. Object detection additionally identifies
+what the user is holding, which no body-worn sensor can do.
 
-This report records what was built, in what sequence, the reasoning behind the
-principal engineering decisions, the measurements obtained, and the questions
-that remain open. It addresses two audiences: the supervisory team, who require
-the internship narrative and an account of progress; and the subsequent research
-paper, for which the technical sections are written to be transferable with
-minimal revision.
+Three limitations recur. A single camera produces a 2D projection, so depth is
+inferred from apparent scale rather than measured, and movements differing
+mainly in depth are poorly separated. Self-occlusion is routine rather than
+exceptional: in dumbbell exercise the working arm passes in front of the torso
+on most repetitions. And rotation about a limb's own axis --- the difference
+between a curl and a hammer curl --- produces almost no change in joint
+positions, so it is effectively invisible.
 
-Sections~\ref{sec:architecture} through~\ref{sec:results} contain the technical
-material. Section~\ref{sec:positioning} situates the work against the lab's
-existing research. Sections~\ref{sec:chronology} and~\ref{sec:consolidation} are
-specific to the internship. Section~\ref{sec:futurework} sets out the
-improvement path for each subsystem, for the lab's consideration.
+\subsection{Body-worn inertial sensing}
 
-\subsection{Terminology}
+An inertial unit measures the segment it is attached to directly, at rates far
+above camera frame rate, and is unaffected by occlusion or lighting. Rotation
+about the limb axis, invisible to a camera, is exactly what a gyroscope
+measures well.
 
-\emph{IronQuest 3D} refers to the original proposal and remains the repository
-name. \emph{FitQuest} refers to the delivered system and is the name used in the
-browser client, the watch application, and the presentation material. Both names
-denote the same project at different stages of its scope.
+Its limitations are the complement. A unit knows its own motion and nothing
+about the rest of the body, so posture must be inferred or assumed. It cannot
+identify the object being held. Orientation expressed in the device frame is
+not a joint angle until a sensor-to-segment calibration relates the two, and
+that step is frequently skipped --- Section~\ref{sec:forearm} reports what
+skipping it cost here. Magnetometer-free fusion avoids magnetic disturbance at
+the price of a drifting, relative heading.
+
+\subsection{Commercial wearables}
+
+Consumer smartwatches provide physiological context, principally heart rate,
+with no assembly and with the reliability of a shipped product. This is the
+arrangement the host lab has used across its recent
+work~\cite{fitpulse,calmme}, and it is a sound default: the device is
+maintained by its vendor and worn by participants who already own one.
+
+The constraint is that access is bounded by what a vendor exposes. Sampling
+rate, available channels, and permitted transports are set by the platform, not
+by the study. Wrist-based optical heart rate also degrades during movement
+involving the forearm, which is the condition an upper-body exercise
+application creates.
+
+\subsection{Where this work sits}
+
+The three arrangements fail in different places, which is the argument for
+combining them: the camera supplies body context and object identity, the
+inertial unit supplies limb-axis rotation and occlusion-immune motion, and the
+wearable supplies physiological context. Combining them raises its own problem
+--- the streams run at different rates, over different transports, and fail
+independently --- and that problem, rather than any single modality, is what
+this work addresses.
+
+Two further distinctions are worth naming. Most exercise-recognition systems
+classify activity from labelled sensor data; this one derives geometric signals
+and calibrates them per user, which trades the ability to recognize unforeseen
+movements for interpretability and for not needing a training set per exercise.
+And most such systems are built as a single application; here the sensing layer
+and the application are separated by an explicit versioned specification, so
+the sensing work is reusable by a different application without modification.
 
 %==============================================================================
 \section{Change of Scope}
@@ -446,6 +515,72 @@ The following were declared out of scope in writing and remained so:
 complex game development, multiplayer functionality, production platform
 features, rule-based repetition counting from fixed joint-angle thresholds, and
 any vision model beyond the two named above.
+
+%==============================================================================
+\section{Design Goals}
+\label{sec:goals}
+
+Six goals shaped the system. They are stated here because the rest of the
+report is, in effect, an account of how each was met and where each was only
+partly met. Table~\ref{tab:goals} names the mechanism that serves each goal and
+the section that examines it.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Design goals, the mechanism serving each, and its current status.}
+\label{tab:goals}
+\begin{tabularx}{\textwidth}{@{}L{3.0cm} Y L{2.1cm}@{}}
+\toprule
+\textbf{Goal} & \textbf{Mechanism} & \textbf{Status} \\
+\midrule
+G1 --- Sensor independence for clients &
+A versioned specification carrying only normalized values; no client sees a bounding box, a quaternion, or a Bluetooth characteristic (Section~\ref{sec:contract}). &
+Met \\
+\addlinespace
+G2 --- Comparable signals across users &
+A per-session calibration window recording each user's own range, with a quality assessment that reports a degenerate window rather than hiding it (Section~\ref{sec:calibration}). &
+Met by construction, untested \\
+\addlinespace
+G3 --- Graceful degradation &
+An asymmetric evidence model: postural conditions may reject an event, sensor signals may only corroborate it (Section~\ref{sec:evidence}). &
+Met \\
+\addlinespace
+G4 --- Responsiveness at interaction rate &
+Latest-value fusion with no resampling or clock alignment, a single-frame capture buffer, and a preview sized to its display rather than to the camera (Sections~\ref{sec:fusionmodel} and~\ref{sec:network}). &
+Met, unmeasured \\
+\addlinespace
+G5 --- Operation without external services &
+Local inference, a standard-library gateway, and a vendored 3D library; the only external dependency is the wearable relay, and Section~\ref{sec:selfhost} sets out its removal. &
+Partly met \\
+\addlinespace
+G6 --- Analyzable output &
+A flat per-frame record alongside the structured payload, designed for direct loading into a dataframe (Section~\ref{sec:contract}). &
+Met \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Two of these deserve comment, because their status is the substance of the
+work rather than a caveat on it.
+
+G2 is the goal with research content and the one the internship could not
+close. The mechanism exists and behaves as designed: bounds are recorded per
+side, normalization uses them, and a window that captured too narrow a range is
+reported as such rather than silently producing a saturation-prone signal. What
+is absent is evidence that two different people performing comparable effort
+produce comparable values. That is an empirical claim, it requires
+participants, and Section~\ref{sec:studyreqs} states what testing it would take.
+Until then the correct description is a mechanism designed for
+transferability, not a demonstrated transferable measurement.
+
+G4 is met in the sense that the system is usable at interaction rate and that
+three specific latency sources were identified and removed --- a capture buffer
+returning stale frames, an oversampled preview, and per-frame object inference
+where strided inference suffices. It is unmeasured in the sense that no
+end-to-end figure exists from physical movement to visible response. For an
+interactive system that is a primary quality attribute, and its absence is a
+gap rather than an oversight in reporting.
 
 %==============================================================================
 \section{System Architecture}
@@ -668,7 +803,7 @@ Two implementation details address observed instability. The board calls
 % \allowbreak gives TeX a break point inside an otherwise unbreakable code
 % span. Without it this line overflows: moving the whole token to the next
 % line would leave a gap too large for any amount of \emergencystretch.
-\code{WiFi.\allowbreak disconnect(true)} before each reconnection attempt, which avoids a
+\code{WiFi.\allowbreak disconnect\allowbreak (true)} before each reconnection attempt, which avoids a
 documented ESP32 Wi-Fi library failure pattern following a dropped connection.
 The laptop broadcasts a discovery packet so that the board can reacquire the
 laptop address after a network change, which was necessary because the testing
@@ -774,6 +909,7 @@ vectors (pitch, roll, yaw, acceleration), and categorical labels such as
 \end{table}
 
 \subsection{Per-user calibration}
+\label{sec:calibration}
 
 At session start the system runs a calibration window, 7\,s by default, during
 which the user moves through a comfortable range. Per-side minimum and maximum
@@ -1111,7 +1247,7 @@ triceps extension's fold behind the head.
 \emph{Extended arms rendered bent.} Each mode gave the forearm a constant
 angular offset from the upper arm. The offsets look negligible as raw angles ---
 14\textdegree{} in one case --- but the swing component diverges sharply near
-vertical, where $\cos 80\textdegree = 0.17$ against $\cos 66\textdegree = 0.41$,
+vertical, where $\cos 80^{\circ} = 0.17$ against $\cos 66^{\circ} = 0.41$,
 so a small angular difference rendered as an obvious kink at the elbow. Each
 mode is now written so that when its driving signal reports the arm extended,
 the forearm angle equals the upper-arm angle. A press is the exception, because
@@ -1519,6 +1655,118 @@ self-hosted relay noted there, or the reduced offline configuration.
 \end{enumerate}
 
 %==============================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{What the fusion actually bought}
+
+The premise was that three modalities cover each other's blind spots. It is
+worth separating where that held from where it did not, because the answer is
+uneven and the uneven parts are the informative ones.
+
+It held for occlusion. The camera loses the dumbbell behind the torso on most
+repetitions, and inertial motion on that side is what justifies extending the
+grace window rather than declaring the weight set down. This is the clearest
+case of one modality covering another's known failure, and it is the reason
+sets survive realistic camera angles.
+
+It held for confidence rather than for correctness. Inertial motion and watch
+motion state raise the sensor-verified count, which is reported alongside the
+raw count. That is a genuine use --- a session where most repetitions were
+corroborated is different evidence from one where none were --- but it does not
+change what is counted.
+
+It did not hold for the ambiguity it was most expected to resolve. A single
+camera cannot distinguish curl, press, row, and triceps extension by elbow
+angle, the forearm's trajectory does distinguish them, and the design that
+exploits this was validated on paper. The signal it needs was not available
+because the orientation mapping was wrong (Section~\ref{sec:forearm}). What
+resolved those exercises instead was a camera signal: the upper arm's angle
+relative to the torso, which is visible in 2D and which the original design had
+not treated as load-bearing.
+
+That reversal is the most transferable finding here. The modality expected to
+carry the discrimination did not, a second camera-derived geometric feature
+did, and the reason was not sensor quality but an uncalibrated frame
+relationship. A system integrating a body-worn sensor should treat
+sensor-to-segment calibration as a first-class requirement rather than a
+refinement, because without it the sensor's most distinctive capability is
+unavailable regardless of how good the hardware is.
+
+\subsection{Implications for design}
+
+Four lessons generalize beyond this system.
+
+\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=5pt]
+\item[Let evidence corroborate, not veto] In a multi-sensor interactive system,
+allowing every sensor to reject an event produces worse behaviour than treating
+most as corroboration. A single stale input should reduce confidence, not halt
+the interaction. The failure mode when this is wrong is particularly bad: the
+system stops responding while every component reports itself healthy, and the
+user has no way to see why.
+
+\item[A rule is only enforceable when its evidence is observable] Rules
+conditioned on state that may be untracked must check observability first.
+Enforcing alternation using an arm the camera cannot see punishes correct
+performance for a tracking failure --- and from the user's side that is
+indistinguishable from the system being broken.
+
+\item[Every latched state needs an expiry] Two separate defects here were
+states that could be entered and never left: a limb stuck in the bent phase,
+and a stale negative for a dumbbell that had reappeared. Neither was reachable
+in component testing because each required a specific sequence that only a real
+session produces.
+
+\item[Report the mechanism's quality, not just its completion] Calibration can
+satisfy its timer and sample-count conditions while capturing a range too
+narrow to be useful. A mechanism that can complete in a degenerate state should
+report that state rather than let downstream consumers assume success. This
+generalizes to any adaptive component with an initialization phase.
+\end{description}
+
+\subsection{Where component testing was insufficient}
+
+Every correctness defect described in this report was found in a session with
+all hardware present, and none by the automated suite --- which nonetheless
+passes 62 tests and is worth keeping, because its role is preventing the return
+of defects rather than discovering them.
+
+The pattern is specific enough to act on. The defects that escaped were
+interaction defects between components that were each individually correct: a
+state machine correct in isolation but never reset by the path that dismissed
+its trigger; a duplicated formula updated in one copy and not the other, where
+both copies were internally consistent; a rule whose evidence was assumed
+present. Testing components in isolation cannot surface any of these by
+construction.
+
+What would have caught them is not more unit tests but recorded end-to-end
+sessions replayed against the pipeline. The frame-level export format already
+carries what such a replay needs, and the offline simulator already demonstrates
+that the client can be driven from a stream rather than from hardware. The
+missing piece is a corpus of recorded real sessions to replay --- which the
+participant study in Section~\ref{sec:studyreqs} would produce as a by-product.
+
+\subsection{On the scope change}
+
+The narrowing in week six is the decision the rest of the work depended on, and
+it is worth stating what made it correct rather than merely necessary.
+
+The original proposal had three deliverables whose dependencies ran in series:
+instrumented hardware, a game platform, and adherence analytics that required
+both to be operational. Attempting all three would have produced three
+incomplete components and no defensible claim. Narrowing to the intermediate
+layer produced something completable within the time available, and --- more
+importantly --- something whose value does not depend on the other two ever
+being built.
+
+The cost is equally real. The system prescribes exercise and demonstrates
+interaction, but demonstrates nothing about adherence, engagement, or behaviour
+change, which is the outcome the host lab's research is ultimately concerned
+with. This work supplies an instrumented substrate; establishing whether
+interventions built on it change behaviour requires the methodology the group
+already has and this project deliberately did not attempt.
+
+%==============================================================================
 \section{Chronology}
 \label{sec:chronology}
 
@@ -1772,7 +2020,7 @@ across places that are not obvious from the source tree.
 \centering
 \small
 \caption{Locations of runtime state and configuration.}
-\begin{tabularx}{\textwidth}{@{}L{5.4cm} Y@{}}
+\begin{tabularx}{\textwidth}{@{}L{6.5cm} Y@{}}
 \toprule
 \textbf{Location} & \textbf{Contains} \\
 \midrule
