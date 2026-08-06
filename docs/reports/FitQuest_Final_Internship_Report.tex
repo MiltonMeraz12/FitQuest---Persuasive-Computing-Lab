@@ -171,7 +171,47 @@
 \newpage
 %==============================================================================
 
-\section{Executive Summary}
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+Interactive exercise systems typically sense through one modality. Camera-based
+systems observe posture but cannot see grip rotation or measure effort;
+wearable systems measure the limb they are attached to but have no view of the
+body or of the weight being lifted. Each is limited in ways the other could
+cover, yet combining them raises a problem of its own: the streams run at
+different rates, arrive over different transports, and fail independently.
+
+FitQuest addresses that combination directly. It is a middleware layer that
+converts camera-derived body pose and object detection, inertial telemetry from
+a purpose-built forearm unit, and physiological context from a commercial
+smartwatch into a single normalized, versioned signal specification. A browser
+application consumes that specification --- and nothing else --- to prescribe
+exercises, validate repetitions against multi-sensor evidence, and provide live
+feedback, demonstrating the complete path from physical movement to interaction.
+
+Two design properties carry most of the contribution. Per-session calibration
+records each user's own range of motion, so comparable physical effort maps to
+comparable normalized values without retraining or per-user code. And the
+evidence model is deliberately asymmetric: a small set of postural conditions
+can reject a repetition, while every sensor-derived signal can only corroborate
+it. That asymmetry was not designed in advance; it came from a real session in
+which a single briefly stale sensor silently stopped the count.
+
+The system was developed over a twelve-week Mitacs Globalink Research
+Internship at the Persuasive Computing Lab, Dalhousie University. It has been
+validated technically --- 62 automated tests, five recorded capture sessions,
+and full sessions with all three modalities operating concurrently --- but not
+with independent participants. The report states throughout what that does and
+does not license anyone to claim.
+
+\vspace{0.4cm}
+\noindent\textbf{Keywords:} sensor fusion; human--computer interaction;
+exercise interaction; inertial measurement; pose estimation; wearable
+computing; per-user calibration; exergames.
+
+\newpage
+
+\section{Overview}
 
 This report documents a twelve-week Mitacs Globalink Research Internship
 conducted at the Persuasive Computing Lab, Dalhousie University. The project
@@ -187,7 +227,78 @@ built upon it. The system publishes a documented, per-user calibrated payload
 that downstream applications consume without direct knowledge of the underlying
 vision models, inertial hardware, or wireless transports.
 
-\subsection*{Summary of outcomes}
+\subsection{Research questions}
+\label{sec:rqs}
+
+The internship did not begin with formal research questions; the pivot in week
+six (Section~\ref{sec:scope}) produced them. Stated in the form the work
+actually addressed:
+
+\begin{description}[leftmargin=1.4cm,style=nextline,itemsep=4pt]
+\item[RQ1] Can camera, inertial, and wearable streams --- running at different
+and independent rates, over different transports --- be combined into a single
+signal specification stable enough to drive a real-time interactive
+application?
+
+\item[RQ2] Can a short per-session calibration make those signals comparable
+across users of differing body proportion and mobility, without retraining a
+model or writing per-user code?
+
+\item[RQ3] What evidence model does a multi-sensor system need so that a
+missing or delayed sensor degrades the interaction rather than halting it?
+
+\item[RQ4] What can a single 2D camera not resolve about dumbbell exercise
+that an inertial unit on the forearm can, and how much of that potential is
+realizable without a calibrated sensor-to-segment mapping?
+\end{description}
+
+This report answers RQ1 and RQ3 with a working system and the design reasoning
+behind it. RQ2 is answered by construction but \emph{not} by measurement: the
+calibration mechanism exists and behaves as intended, but no participant study
+has tested whether it actually produces comparable values across people.
+Section~\ref{sec:studyreqs} sets out what such a study would require. RQ4 has a
+partial and negative-leaning answer that Section~\ref{sec:forearm} reports in
+full.
+
+\subsection{Contributions}
+\label{sec:contributions}
+
+\begin{enumerate}
+\item \textbf{An asynchronous multi-modal middleware} that fuses camera-derived
+pose and object context, forearm inertial telemetry, and wearable physiological
+context by latest-value sampling with explicit per-sensor freshness metadata,
+and that continues to operate when any single stream is absent.
+
+\item \textbf{A versioned, documented signal specification} (\code{game\_control},
+schema \code{2026-08-fusion-v2}) that decouples interactive clients from
+sensor- and model-specific formats, together with a flat per-frame export
+format intended for offline analysis.
+
+\item \textbf{A session-adaptive calibration and temporal filtering pipeline}
+that converts raw observations into normalized exercise-control signals, with
+an explicit quality assessment that reports when a calibration window produced
+a range too narrow to be useful.
+
+\item \textbf{An evidence model for multi-sensor validation} that separates
+postural preconditions, which may reject an event, from sensor corroboration,
+which may only strengthen confidence --- derived from observed failure rather
+than assumed.
+
+\item \textbf{A browser-based proof of concept} implementing ten prescribed
+dumbbell exercises with per-repetition validation, graceful sensor degradation,
+and fully local operation.
+
+\item \textbf{An instrumented hardware prototype}: an ESP32-S3 and BNO08x
+forearm unit with a printed enclosure, publishing over USB serial and Wi-Fi UDP
+concurrently, with a self-recovering discovery protocol for changing networks.
+\end{enumerate}
+
+What the work does \emph{not} contribute is equally worth stating: no
+participant evaluation, no validated biomechanical measurement, and no
+demonstrated behaviour change. Section~\ref{sec:limitations} is explicit about
+each.
+
+\subsection{Summary of outcomes}
 
 \begin{table}[H]
 \centering
@@ -769,44 +880,259 @@ Fit      & 20 & 0.86 \\
 \end{tabular}
 \end{table}
 
-\subsection{Repetition validation}
+\subsection{Session flow}
 
-Validation separates two categories of evidence:
+A session is a sequence of prescribed sets, not a free-form activity. The client
+announces each exercise before its set begins, the way a coach would call out
+the next movement, and counting is suspended while that announcement card is
+showing.
 
-\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=3pt]
-\item[Postural preconditions] Conditions that must hold for a repetition to be
-counted, evaluated from raw degree measurements: whether the upper arm is
-overhead for a press, whether the torso is hinged for a row. These reject
-movements that are anatomically not the prescribed exercise.
-\item[Corroborating evidence] Additional sensor input that increases confidence
-but cannot prevent a repetition from counting. Glove stability, watch motion
-state, forearm excursion range, and grip orientation fall into this category.
+That suspension caused a defect worth recording, because it illustrates how a
+small state-machine error can be invisible in component testing and obvious in
+use. The transition flag was set when the card appeared but never cleared when
+the card auto-dismissed --- only a full session stop reset it. Repetitions
+therefore counted normally for the first exercise of a session and for none of
+the others. The timer that dismisses the card now clears the flag itself.
+
+Before a session can start, both the inertial unit and the watch must be
+reporting live data, re-checked each time the start control is pressed. There is
+deliberately no override. The rationale is evidentiary rather than technical:
+the middleware runs perfectly well without either device, but a session recorded
+without them produces data that cannot be distinguished later from a session
+where they silently failed. Requiring both at the start makes the recording
+self-describing.
+
+\subsection{The evidence model}
+\label{sec:evidence}
+
+Repetition validation separates three categories, and the separation is the
+design decision that matters most in this section.
+
+\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=4pt]
+\item[Postural preconditions --- may reject] Conditions that must hold for a
+repetition to count, evaluated from raw degree measurements: the upper arm
+genuinely overhead for a press, the torso genuinely hinged for a row, the upper
+arm near the torso for a curl. These exist because five of the ten exercises
+drive counting from the same elbow-bend signal, and nothing else distinguishes
+them. Without this, a triceps extension counts as a curl.
+
+\item[Corroboration --- may only strengthen] Inertial motion observed during
+the repetition, watch motion state, and grip orientation. These raise
+confidence and feed a ``sensor-verified'' count reported alongside the raw
+count, but cannot prevent a repetition from being awarded.
+
+\item[Advisory --- may only inform] The forearm excursion check
+(Section~\ref{sec:forearm}). It produces a message to the user and nothing else.
 \end{description}
 
-This asymmetry follows from behaviour observed in testing. When every sensor could
-reject a repetition, a single delayed or briefly stale sensor stopped counting
-without any indication to the user. Under the current design no single sensor can
-block a valid repetition; a missing sensor reduces only the available
-corroboration.
+The asymmetry came from a real session rather than from design. In the first
+implementation every sensor could veto, and one briefly stale sensor stopped
+counting entirely with no indication of why --- the set sat at 0 of 8 for its
+whole duration. Four separate corrections followed, and each generalizes beyond
+this project:
 
-Forearm-based validation uses the \emph{excursion} of forearm elevation rather
-than its absolute value, so that the constant pitch offset introduced by
-enclosure rotation (Section~\ref{sec:sensing}) cancels.
+\begin{enumerate}
+\item \textbf{A global early-return became a scoped one.} The alternation rule
+tested whether both sides were in the bent phase, so a single mis-tracked arm
+--- one session had the left arm pinned at an extension of 0.23 while it hung
+motionless --- blocked \emph{both} arms indefinitely. It now fires only when
+both sides entered that phase within 700\,ms of each other: genuinely
+concurrent work, not merely concurrent state.
 
-An earlier adaptive-threshold implementation tracked each side's lifetime minimum
-and maximum for the current exercise and only widened. A single unusually wide or
-shallow early repetition therefore skewed the threshold for the remainder of the
-set. The current implementation uses a 6-second rolling window, so thresholds
-follow the recent range.
+\item \textbf{Every latched state needs a release.} A side whose extension
+dropped below the threshold and never recovered stayed bent forever. A 9-second
+timeout, longer than any plausible repetition, releases it.
+
+\item \textbf{A rule is only enforceable when its evidence is observable.} If
+the opposite arm has shown no phase activity for 12 seconds it is untracked, and
+the user may be alternating perfectly without the camera seeing it. Rejecting
+repetitions then punishes correct form for a tracking failure, so an
+unobservable partner disables the rule rather than blocking on it.
+
+\item \textbf{A stale negative must expire.} Once a side was marked unloaded,
+every subsequent unresolved frame returned that same negative, so the interface
+reported the dumbbell out of view while the detector was reporting accepted
+dumbbells in frame. A stale negative now reverts to unknown when the scene
+shows dumbbells again.
+\end{enumerate}
+
+\subsection{Adaptive thresholds}
+
+Repetition thresholds adapt to the range the user is actually producing rather
+than to fixed values, because the same nominal movement spans very different
+signal ranges between people and between exercises.
+
+The first implementation tracked each side's lifetime minimum and maximum for
+the current exercise and only ever widened. One unusually wide or unusually
+shallow early repetition therefore skewed the threshold for the rest of the set;
+in a real session this manifested as repetitions ceasing to count after the
+first few, or requiring an exaggerated motion. The current implementation uses a
+6-second rolling window, so the thresholds follow the recent range and forget an
+outlier within seconds. Difficulty contributes a strictness parameter that
+tightens how much of the observed span a repetition must traverse.
+
+\subsection{Alternation as an enforced property}
+
+Six of the ten exercises alternate arms. Until a real session exposed it, that
+was a label rather than a rule: a repetition was awarded to any side completing
+a down-up transition. Curling both arms together therefore scored two
+repetitions from one movement, and eight consecutive repetitions on the same arm
+completed an ``alternating'' set. Two rules now apply, subject to the
+observability condition above: simultaneous work on both sides resolves no
+repetition, and a resolving repetition must come from the side opposite the
+previous one, with the first repetition of a set unconstrained.
 
 \subsection{Occlusion tolerance}
 
-A dumbbell that briefly disappears behind the torso must not invalidate the loaded
-state. The client applies a graded grace period whose duration depends on the
-available corroborating evidence: a declared dumbbell weight extends it, glove
-motion extends it further, and postures known to be occlusion-prone extend it
-further still. This complements the temporal object tracking described in
-Section~\ref{sec:sensing}.
+A dumbbell passing behind the torso is lost by the detector for two or three
+frames routinely. Treating that as the weight having been set down would end a
+set mid-repetition, so the loaded state is tri-state rather than boolean:
+observed, within a grace window, or genuinely absent --- plus a fourth case,
+never observed at all, which is distinct from observed-and-lost.
+
+The grace window is graded by the corroborating evidence available. A weight
+declared at setup extends it, because that is an explicit statement from the
+user that a weight is in hand. Inertial motion on that side extends it further.
+Postures known to occlude extend it further still. The user-facing status
+distinguishes the tiers: \emph{confirmed} while the detector sees it,
+\emph{recovering} while the grace window runs, and an explicit out-of-view
+message only once the window expires.
+
+That last distinction mattered: a resting arm's dumbbell leaving frame used to
+mask the active arm's dumbbell genuinely being gone, because the message
+required both sides to be missing. The message is now keyed to whichever side is
+currently working.
+
+Counting requires the loaded state to be positively true. Only the explicit
+negative used to block, so a session in which a dumbbell was never detected at
+all counted every repetition. A weight declared at setup remains sufficient on
+its own, which is what carries a set through the occlusions this design exists
+to tolerate.
+
+\subsection{The forearm signal: a negative result}
+\label{sec:forearm}
+
+This subsection reports a component that does not work as designed, because the
+reason is more useful than the outcome.
+
+A single 2D camera physically cannot distinguish a curl, a press, a row, and an
+overhead triceps extension by elbow angle: all four present a bent elbow. The
+forearm, however, travels completely differently in each. An inertial unit
+strapped to the forearm should therefore resolve the ambiguity, and the pitch
+axis of the enclosure was intended to measure forearm elevation against gravity,
+normalized so that 0 is hanging, 0.5 is horizontal, and 1 is vertical.
+
+The client accumulates that elevation across each repetition and evaluates three
+features: the \emph{span} it traversed, the \emph{trough} it reached, and the
+\emph{peak}. Span is a difference, so any constant offset from how the enclosure
+is rotated on the strap cancels out of it; trough and peak are offset-sensitive
+and are used only as coarse bands. A confusion matrix over the four movements'
+characteristic ranges confirmed that span alone is insufficient --- a span
+threshold of 0.18 for a curl also accepts a press, a row, and a triceps
+extension, because all of them move a great deal --- and that adding trough and
+peak, with the curl span floor raised to 0.32, makes all sixteen cells correct
+while still accepting a half-range curl.
+
+The design is sound. The input signal is not. Live hardware disproved the
+elevation mapping: a hanging arm reported a pitch of 88\textdegree{} and a roll
+of $-89$\textdegree, giving an elevation of 0.99 --- ``pointing straight up'' for
+an arm hanging at the side. That is both wrong for the pose and sitting in Euler
+gimbal lock, where pitch near $\pm90$\textdegree{} makes roll and yaw degenerate.
+Gating on it rejected every curl.
+
+Two conclusions follow. The immediate one is that the check can only advise: it
+labels its message a form tip rather than claiming to have blocked anything, and
+the repetition counts regardless. The more useful one is what would fix it, and
+neither option is speculative. Either record the hanging-arm orientation at
+calibration and measure every subsequent reading relative to it, which converts
+an absolute claim into a differential one; or derive elevation from the
+accelerometer's gravity vector directly, which has no gimbal-lock singularity
+because it does not pass through an Euler representation at all. The second is
+the better engineering answer and is the one Section~\ref{sec:futurework}
+recommends.
+
+\code{forearm\_elevation} is exported to \code{signal\_log} on every frame
+precisely so the mapping can be fitted against recorded sessions once such
+sessions exist. The confusion-matrix result stands as the design target.
+
+\subsection{Grip orientation, demoted}
+
+Curl and hammer curl differ by wrist rotation, which no camera in this setup can
+see and which the inertial unit's roll axis can. That check was originally a
+hard gate on the instrumented side.
+
+It is no longer. A gate is only defensible when its evidence is reliable, and
+roll shares the gimbal-lock exposure described above. Rather than delete the
+signal, it was demoted: a repetition whose grip did not match the prescribed one
+still counts, but is not marked sensor-verified. The signal keeps doing useful
+work as a quality measure instead of acting as a blunt gate on a measurement
+that cannot yet carry that weight.
+
+This is also why the interface names which sensors are corroborating the current
+exercise rather than presenting a single confidence number. With one unit on one
+wrist by design, the uninstrumented arm's grip cannot be checked at all, and the
+user should be able to see that asymmetry rather than infer it.
+
+\subsection{Camera framing guidance}
+
+The largest real-world driver of out-of-view events turned out not to be
+detection logic. In a recorded session the webcam was framed tight and high, so
+the arms --- and any dumbbell in them --- sat below the visible frame for long
+stretches. No amount of occlusion tolerance addresses a limb that is never in
+the image.
+
+The client watches for both arm chains being simultaneously invisible, requires
+that condition to persist for 4.5 seconds rather than reacting to a single bad
+frame, and then suggests once that the user reposition. A 25-second cooldown
+prevents it from firing repeatedly while the condition persists. The design
+principle is that guidance the user cannot act on is noise, and guidance
+repeated every frame is worse than none.
+
+\subsection{The avatar}
+
+The movement stage renders a low-polygon humanoid whose limb angles are computed
+from the same normalized signals that drive counting, rather than from a
+separate animation path. That is deliberate: an avatar driven independently
+would be a decoration, whereas one driven by the contract is a visualization of
+what the system believes is happening, and disagreements between the two are
+visible rather than hidden.
+
+Three rendering problems from a recorded session are worth documenting because
+each was a reasoning error rather than a coding error.
+
+\emph{Every exercise rendered as the same sideways reach.} The projection only
+ever swung a limb away from vertical into the lateral axis, so a curl, a front
+raise, and a lateral raise were geometrically identical on screen. Movements
+differ by \emph{plane}, not only by magnitude, so the projection now takes a
+plane bias per exercise: purely lateral for a lateral raise, toward the camera
+for front raises and holds, away from it for a row's backward elbow travel and a
+triceps extension's fold behind the head.
+
+\emph{Extended arms rendered bent.} Each mode gave the forearm a constant
+angular offset from the upper arm. The offsets look negligible as raw angles ---
+14\textdegree{} in one case --- but the swing component diverges sharply near
+vertical, where $\cos 80\textdegree = 0.17$ against $\cos 66\textdegree = 0.41$,
+so a small angular difference rendered as an obvious kink at the elbow. Each
+mode is now written so that when its driving signal reports the arm extended,
+the forearm angle equals the upper-arm angle. A press is the exception, because
+``extended'' there is the top of the repetition rather than the bottom, so its
+invariant is asserted at lockout.
+
+\emph{The dumbbell hung vertically like a totem pole.} The dumbbell inherited
+the forearm bone's quaternion. Aligning a bone constrains where its axis points
+but leaves its roll about that axis arbitrary --- invisible for a
+roll-symmetric cylinder, obvious for a bar with plates on the ends. The
+dumbbell now builds its own orientation, with its bar axis as the cross product
+of the forearm direction and world up, which is naturally perpendicular to the
+arm and level regardless of where the forearm points, matching how a gripped
+dumbbell actually sits.
+
+A fourth issue was environmental rather than geometric: the renderer was sized
+without accounting for device pixel ratio, which happened to be correct at a
+ratio of 1 and broke at any browser zoom step or on a high-density display. It
+is now reconciled from three independent triggers --- window resize, a resize
+observer on the mount, and a per-frame check --- so any desync self-corrects
+within one frame.
 
 %==============================================================================
 \section{Design Decisions}
@@ -1361,6 +1687,230 @@ frames to 5.6\,KB of analysis summaries before the raw media was discarded.
 The relay worker's source was committed without its deployment configuration,
 which meant the service could be read but not rebuilt from the repository. A
 deployment configuration was added.
+
+%==============================================================================
+\section{Reproduction and Handover}
+\label{sec:handover}
+
+This section exists so that someone in the lab who has never seen the project
+can bring it up, understand where its state lives, and know which parts are
+brittle. It records what is needed rather than only what was built.
+
+\subsection{What must be obtained}
+
+\begin{table}[H]
+\centering
+\small
+\caption{Accounts, credentials, and hardware required to run the system.}
+\label{tab:requirements}
+\begin{tabularx}{\textwidth}{@{}L{4.2cm} L{2.4cm} Y@{}}
+\toprule
+\textbf{Item} & \textbf{Needed for} & \textbf{Notes} \\
+\midrule
+Webcam & Vision & Any USB or built-in camera. Framing matters more than resolution: see Section~\ref{sec:browser} on why arms leaving frame is the dominant failure. \\
+\addlinespace
+ESP32-S3 DevKitC-1 & Inertial & Connected through the UART USB port, not the native USB port. \\
+\addlinespace
+BNO08x IMU & Inertial & I\textsuperscript{2}C address \code{0x4B}; confirm with the scanner sketch before flashing telemetry firmware. \\
+\addlinespace
+Arduino IDE + \code{Adafruit BNO08x} & Inertial & Board definition \code{ESP32S3 Dev Module}, \code{USB CDC On Boot} disabled. \\
+\addlinespace
+\code{wifi\_config.h} & Wireless inertial & Not in version control. Copy from \code{wifi\_config.example.h} and set SSID, password, and a private discovery token. \\
+\addlinespace
+Garmin Venu 3 & Wearable & Optional. Heart-rate broadcast must be enabled on the device for the BLE path. \\
+\addlinespace
+Connect IQ SDK + developer key & Watch app & The key is not in version control and is device-independent; generate one if absent. Builds verified against SDK 9.2.0 for the \code{venu3} target. \\
+\addlinespace
+Cloudflare account with D1 & Wearable relay & Only for the Connect IQ path. See Section~\ref{sec:selfhost} for removing this dependency. \\
+\addlinespace
+CUDA-capable GPU & Training only & Not needed to run the system; inference falls back to CPU. The archived detector run took approximately three hours on one GPU. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Bringing the system up from nothing}
+
+The order matters, because each step gives a verifiable result before the next
+one can hide a failure inside it.
+
+\begin{enumerate}
+\item \textbf{Software only.} Create the environment, install requirements, run
+the test suite. Sixty-two tests should pass in a few seconds with no hardware
+attached. If they do not, nothing downstream is worth attempting.
+
+\item \textbf{Browser client without hardware.} Run the offline simulator and
+open the printed URL. This exercises the gateway, the client, the avatar, and
+the full exercise flow against a synthetic stream. A failure here is in software,
+not in wiring.
+
+\item \textbf{Camera alone.} Start the runtime with the inertial transport
+disabled. Confirm the pose skeleton tracks and dumbbells are detected.
+
+\item \textbf{Inertial over USB.} Flash the scanner sketch first and confirm
+the sensor answers at \code{0x4B}. Only then flash telemetry firmware and read
+it with the standalone check command. Close any serial monitor first --- it
+holds the port, and the resulting failure looks like a hardware fault.
+
+\item \textbf{Inertial over Wi-Fi.} Both devices on the same subnet. This is
+where most environment-specific trouble appears; Section~\ref{sec:network}
+explains why a phone hotspot rather than the campus network became the standard
+configuration.
+
+\item \textbf{Watch.} Sideload the Connect IQ application and confirm the
+relay is receiving. The watch screen reports its own transmission state, which
+is faster to read than the laptop side.
+
+\item \textbf{Everything together.} Only now is a full session meaningful.
+\end{enumerate}
+
+\subsection{Where the state actually lives}
+
+A frequent source of confusion in systems like this is that state is scattered
+across places that are not obvious from the source tree.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Locations of runtime state and configuration.}
+\begin{tabularx}{\textwidth}{@{}L{5.4cm} Y@{}}
+\toprule
+\textbf{Location} & \textbf{Contains} \\
+\midrule
+\code{runs/validate/wearable\_live.json} & The latest wearable sample. Every wearable path converges here; the runtime does not care which bridge wrote it. \\
+\code{runs/validate/*.log} & Background bridge output. First place to look when a bridge appears not to start. \\
+\code{runs/validate/ironquest\_live.lock} & Single-instance lock, held by operating-system file locking rather than a process identifier, so an abandoned file does not block a later run. \\
+\code{runs/detect/}, \code{runs/pose/} & Training output. Excluded from version control; the evidence subset is copied to \code{docs/figures/}. \\
+\code{data/datasets/} & Training data. Excluded from version control. \\
+\code{weights/} & Base model weights. Excluded from version control. \\
+Cloudflare D1 & The single most recent wearable sample, overwritten on each post. No history is retained. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Known pitfalls}
+
+Each of these cost time during the internship and is not obvious from the code.
+
+\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=4pt]
+\item[A serial monitor holds the port] and the resulting failure is
+indistinguishable from a disconnected board.
+
+\item[Two wearable writers overwrite each other] A BLE missing-device state
+will overwrite a valid Connect IQ sample in the shared file. The BLE path is
+disabled by default for this reason; enable it only when Connect IQ is not
+running.
+
+\item[The campus network will not carry the inertial telemetry] It uses
+enterprise authentication the firmware does not implement, and does not reliably
+permit UDP broadcast between clients.
+
+\item[A Connect IQ timer started from the application lifecycle crashes]
+on Venu 3 firmware 17.05. It must be started from the view lifecycle. This is
+recorded because the crash log names a line number rather than a cause.
+
+\item[Wireless operation needs a power source] The board draws over USB; see
+Section~\ref{sec:power}.
+
+\item[The detector proposes dumbbells liberally] Raw detections are not
+trustworthy on their own and are gated geometrically. Anyone tempted to consume
+\code{object\_detection} directly should read Section~\ref{sec:results} first.
+\end{description}
+
+\subsection{Removing the external dependency}
+\label{sec:selfhost}
+
+The only component requiring infrastructure outside the lab is the wearable
+relay, and it exists for a specific reason: Connect IQ requires HTTPS, and a
+phone acting as both hotspot gateway and Garmin bridge will not route the
+watch's request back to a laptop on that hotspot.
+
+Any HTTPS endpoint reachable from the phone satisfies both conditions. A
+lab-hosted service with a valid certificate would replace the current relay
+without changes to the middleware, since the runtime reads the wearable sample
+from a local file and is indifferent to which bridge produced it. The changes
+required are the endpoint constant in the watch application, a rebuild and
+re-sideload, and a poller pointed at the new address. If the lab prefers its own
+database rather than the current single-row store, note that the relay retains
+only the most recent sample by design --- adding history is a schema decision,
+not an architectural one.
+
+%==============================================================================
+\section{Requirements for a Participant Study}
+\label{sec:studyreqs}
+
+The most valuable next step is an evaluation with independent participants, and
+the report has said so repeatedly. This section states concretely what such a
+study would need, because several of the requirements are instrumentation gaps
+in the current system rather than protocol decisions.
+
+\subsection{What the system cannot currently measure}
+
+\begin{enumerate}
+\item \textbf{Ground truth for repetitions.} The system counts, but nothing
+records what actually happened. A study needs synchronized video annotated by a
+human, or a second observer counting independently, so that counting accuracy
+can be computed rather than asserted. Frame-level export already carries a
+timestamp per record, so aligning an external annotation is a matter of
+protocol rather than of new code.
+
+\item \textbf{End-to-end latency.} The time from physical movement to visible
+response has never been measured. For an interactive system this is a primary
+quality attribute and a plausible confound: a participant reacting to a laggy
+avatar behaves differently from one reacting to a responsive one.
+
+\item \textbf{Session duration under battery.} No power budget exists
+(Section~\ref{sec:power}). A protocol cannot specify session length responsibly
+without knowing when the inertial unit stops transmitting.
+
+\item \textbf{Per-participant calibration records.} Calibration bounds are
+computed and used, but a study testing cross-user comparability --- the claim in
+RQ2 --- must retain each participant's bounds for analysis. They appear in the
+payload; they are not currently persisted separately.
+
+\item \textbf{A session identifier.} Records are per-frame and per-session in
+practice but carry no explicit participant or session key, which makes
+multi-participant analysis awkward and pseudonymization impossible.
+\end{enumerate}
+
+\subsection{Protocol elements}
+
+\begin{description}[leftmargin=1.2cm,style=nextline,itemsep=4pt]
+\item[Inclusion criteria] Prior resistance-training experience is a plausible
+covariate: the calibration window assumes the participant moves through a
+representative range, which an inexperienced participant may not do.
+
+\item[Fitting procedure] The enclosure's rotation on the strap sets an offset
+that the current system does not calibrate out (Section~\ref{sec:forearm}). Until
+that is fixed, the fitting procedure must be identical across participants and
+recorded, or the inertial data is not comparable between them.
+
+\item[Comparison conditions] The claim being tested determines these. For
+counting accuracy, camera-only against full fusion isolates what the additional
+sensors contribute. For usability, a comparison against an unassisted session,
+or against an existing application, is more informative than a single-condition
+trial.
+
+\item[Instruments] A usability scale, and a workload instrument if cognitive
+load is of interest. Neither is currently administered.
+
+\item[Adverse events] The system prescribes exercise. A protocol needs a stated
+procedure for a participant reporting discomfort, and the enclosure has not been
+assessed for pressure or interference under heavier loads.
+\end{description}
+
+\subsection{Ethics and data handling}
+
+Section~\ref{sec:privacy} lists the gaps. For a participant study specifically,
+the binding ones are institutional ethics approval, informed consent that
+covers camera recording and physiological measurement explicitly, a decision
+recorded in advance about whether identifiable imagery is retained at all, and
+authentication on the relay endpoints before any participant data passes through
+them.
+
+The strongest position is to record no identifiable imagery. The pipeline
+processes frames in memory and writes them only when capture is explicitly
+requested, so a study can be run with imagery never persisted --- which removes
+the largest category of risk at no cost to the signals under study.
 
 %==============================================================================
 \section{Privacy and Security}
