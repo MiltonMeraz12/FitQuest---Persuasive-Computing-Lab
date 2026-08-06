@@ -866,8 +866,31 @@ forearm unit.
 This works but leaves the arrangement incomplete in two respects. The cable is
 still a tether, now to the user's own pocket rather than to the laptop, and it
 remains a source of mechanical disturbance and of session interruption if it
-pulls loose. And the power bank was chosen for availability rather than fit: it
-is larger and heavier than the task requires.
+pulls loose. And the supply was chosen for availability rather than fit: the
+unit in use is rated at 20\,000\,mAh.
+
+That figure is worth converting into what it means for the design, because it
+sets the size of the mismatch. A cell rating of 20\,000\,mAh at a nominal
+3.7\,V is roughly 74\,Wh; delivered at 5\,V through a converter of typical
+efficiency, approximately 12{,}500\,mAh is available at the output. The board
+transmits continuously over Wi-Fi, which dominates its consumption, and
+datasheet-typical figures for a connected station sending small packets at this
+cadence, plus the inertial sensor and the board's own regulator and indicators,
+put the draw in the region of 150--200\,mA. That implies on the order of
+sixty hours of continuous operation.
+
+A session lasts tens of minutes. The supply is therefore oversized by roughly
+two orders of magnitude, and the consequence is not merely inelegant: a pack of
+this capacity weighs several hundred grams, and mass carried on or near the
+limb being measured is a confound in the measurement rather than only a comfort
+problem. A capacity of 1{,}000--1{,}500\,mAh would cover a full day of sessions
+at a fraction of the size and mass.
+
+These are estimates from datasheet-typical consumption, not measurements. The
+distinction matters because the design decision they inform --- what capacity
+an integrated supply should carry --- deserves a measured basis, and
+Section~\ref{sec:studyreqs} lists the missing power budget among the
+instrumentation gaps a participant study would first have to close.
 
 The enclosure currently has no provision for carrying a supply. Section
 \ref{sec:futurework} sets out the options --- a compartment sized for a small
@@ -1528,14 +1551,71 @@ Relay worker & 176 & JavaScript \\
 \item Watch application: compiles for the Venu 3 target with Connect IQ SDK
       9.2.0.
 \item Two development sessions with camera, inertial glove, and watch operating
-      concurrently. These were exploratory trials; no instrumented logs were
-      retained, so they are reported as the origin of the corrections in
-      Section~\ref{sec:chronology} and not as reproducible evidence.
+      concurrently. No instrumented payload logs were retained from these, so
+      they are reported as the origin of the corrections in
+      Section~\ref{sec:chronology} rather than as signal-level evidence. Screen
+      recordings of both exist (Section~\ref{sec:recordings}).
 \item Five recorded capture sessions processed through the offline analysis
       pipeline. Summaries are committed under \code{docs/figures/capture\_sessions/};
       none of the five includes wearable data, so they document camera and
       inertial operation only.
 \end{itemize}
+
+\subsection{Screen recording corpus}
+\label{sec:recordings}
+
+Forty-nine screen recordings totalling approximately 1.9\,GB were made across
+the internship, spanning May 29 to July 31. They were captured as working
+records rather than as an experimental dataset, but they constitute the largest
+body of evidence the project holds, and several of the corrections reported here
+were diagnosed from them rather than from logs.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Screen recording corpus by development phase.}
+\label{tab:recordings}
+\begin{tabularx}{\textwidth}{@{}L{4.6cm} L{2.4cm} Y@{}}
+\toprule
+\textbf{Series} & \textbf{Period} & \textbf{Content} \\
+\midrule
+\code{IronQuest3D\_1st}--\code{10thTape} & May 29 -- Jun 4 & Early vision pipeline and pose tracking \\
+\code{IronQuest3D\_Hands1}--\code{13} & Jun 8 -- Jun 17 & Hand, body, and dumbbell detection development \\
+\code{IronQuest3D\_V1\_1}--\code{7} & Jun 17 -- Jun 19 & First integrated runtime \\
+\code{IronQuest3D\_ESP32\_IMU\_1} & Jun 30 & Inertial bring-up \\
+\code{IronQuest3D\_ESP32\_Wearable\_1}--\code{3} & Jul 13 & First three-modality operation \\
+\code{FitQuest\_Game\_1}--\code{9} & Jul 21 -- Jul 28 & Browser client development \\
+\code{FitQuest\_Game\_Test\_1}--\code{4} & Jul 30 -- Jul 31 & Validation of the corrected client \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Their evidentiary value is specific and bounded. Video cannot substantiate
+signal-level claims, because it carries no synchronized payload: it shows what
+was displayed, not what was computed. What it does carry is what a human
+observer can see --- how many repetitions were actually performed, whether the
+prescribed movement was the one executed, when a dumbbell left frame --- and
+that is precisely the ground truth Section~\ref{sec:studyreqs} identifies as
+missing.
+
+Two findings in this report came directly from these recordings rather than from
+instrumentation. \code{FitQuest\_Game\_7} showed curl, hammer curl, and front
+raise all rendering as the same sideways reach, which exposed the missing
+movement-plane distinction in the avatar projection, and showed the dumbbell
+hanging vertically, which exposed the arbitrary roll in its orientation
+(Section~\ref{sec:browser}). The same recording showed the webcam framed tight
+and high, with the arms below frame for long stretches --- the observation that
+produced the framing guidance and reframed how much of the ``dumbbell out of
+view'' behaviour was a detection problem at all.
+
+The corpus is not in version control: 1.9\,GB of screen capture is not
+repository content, and the recordings show the developer's face and workspace,
+which raises the retention question Section~\ref{sec:privacy} discusses. They
+are retained locally and should be treated as a resource to annotate rather than
+as a result to cite. Annotating even a subset --- the four July validation
+recordings would be the natural starting point, since they exercise the
+corrected client --- would convert them into the repetition ground truth that
+counting accuracy currently cannot be computed against.
 
 %==============================================================================
 \section{Positioning Relative to Existing Work in the Lab}
@@ -2099,7 +2179,12 @@ records what actually happened. A study needs synchronized video annotated by a
 human, or a second observer counting independently, so that counting accuracy
 can be computed rather than asserted. Frame-level export already carries a
 timestamp per record, so aligning an external annotation is a matter of
-protocol rather than of new code.
+protocol rather than of new code. The recording corpus described in
+Section~\ref{sec:recordings} is the obvious starting point: annotating the four
+July validation recordings would yield a first accuracy figure without
+collecting any new data, though those recordings capture the developer rather
+than independent participants and so bound what the resulting figure can
+support.
 
 \item \textbf{End-to-end latency.} The time from physical movement to visible
 response has never been measured. For an interactive system this is a primary
