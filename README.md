@@ -79,8 +79,17 @@ browser gateway, and opens the client. The OpenCV monitor stays available
 alongside it for diagnostics — close it with `q`, toggle its telemetry panel
 with `d`.
 
-Before a session, enable heart-rate broadcast on the watch:
-`Settings > Watch Sensors > Wrist Heart Rate > Broadcast Heart Rate`.
+**Before a session, on the watch:**
+
+1. Wrist heart rate monitoring must be **on** — `Settings > Health & Wellness >
+   Heart Rate > Wrist Heart Rate`. The Connect IQ app reads the sensor's current
+   value; if wrist monitoring is off there is nothing to read.
+2. Open the **FitQuest Telemetry** app. It transmits only while its view is
+   active — closing it or letting the watch sleep stops the stream.
+
+`Broadcast Heart Rate` is a *different* setting and is **not** needed for the
+default path. It applies only to the BLE fallback, which is off unless you pass
+`--garmin-bridge`.
 
 **No hardware to hand?** Exercise the browser client against a synthetic stream:
 

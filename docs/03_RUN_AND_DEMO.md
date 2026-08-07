@@ -17,11 +17,21 @@ This starts the live project stack:
 - ESP32+IMU USB/Wi-Fi auto listener;
 - Garmin Venu 3 BLE heart-rate bridge plus wearable JSON polling.
 
-Before starting the demo, enable this on the watch:
+Before starting the demo, on the watch:
+
+1. Confirm wrist heart rate monitoring is on:
 
 ```text
-Settings > Watch Sensors > Wrist Heart Rate > Broadcast Heart Rate
+Settings > Health & Wellness > Heart Rate > Wrist Heart Rate
 ```
+
+2. Open the **FitQuest Telemetry** Connect IQ app. It transmits only while its
+   view is active.
+
+`Settings > Watch Sensors > Wrist Heart Rate > Broadcast Heart Rate` is a
+different setting, needed only for the BLE fallback (`--garmin-bridge`), which
+is disabled by default. Enabling it is harmless but does not help the Connect IQ
+path.
 
 Close the UI with `q`. Press `d` only if you want to toggle the telemetry panel.
 

@@ -122,8 +122,14 @@ before the next can hide a failure inside it:
      not carry the telemetry: enterprise authentication the firmware
      does not implement, and no UDP broadcast between clients.
 
-  5. On the watch: enable Broadcast Heart Rate, then open the FitQuest
-     Telemetry app. No rebuild needed.
+  5. On the watch, two separate things must be on:
+       a) wrist heart-rate monitoring
+            Settings > Health & Wellness > Heart Rate > Wrist Heart Rate
+          the app reads the sensor, it does not turn it on
+       b) the FitQuest Telemetry app, open and on screen
+          it transmits from its view -- closing it stops the stream
+     No rebuild needed. 'Broadcast Heart Rate' is a different setting and
+     is only for the BLE fallback (--garmin-bridge), off by default.
 
   6. Run everything:
        .\run_ironquest.bat

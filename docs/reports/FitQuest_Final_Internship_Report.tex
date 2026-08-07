@@ -2108,7 +2108,7 @@ Arduino IDE + \code{Adafruit BNO08x} & Inertial & Board definition \code{ESP32S3
 \addlinespace
 \code{wifi\_config.h} & Wireless inertial & Not in version control. Copy from \code{wifi\_config.example.h} and set SSID, password, and a private discovery token. \\
 \addlinespace
-Garmin Venu 3 & Wearable & Optional. Heart-rate broadcast must be enabled on the device for the BLE path. \\
+Garmin Venu 3 & Wearable & Optional. Wrist heart-rate monitoring must be active for the Connect IQ path, which reads the sensor's current value rather than enabling it. \code{Broadcast Heart Rate} is a separate setting, required only for the BLE path. \\
 \addlinespace
 Connect IQ SDK + developer key & Watch app & The key is not in version control and is device-independent; generate one if absent. Builds verified against SDK 9.2.0 for the \code{venu3} target. \\
 \addlinespace
@@ -2147,7 +2147,8 @@ where most environment-specific trouble appears; Section~\ref{sec:network}
 explains why a phone hotspot rather than the campus network became the standard
 configuration.
 
-\item \textbf{Watch.} Sideload the Connect IQ application and confirm the
+\item \textbf{Watch.} Confirm wrist heart-rate monitoring is active on the
+device, then sideload the Connect IQ application, open it, and confirm the
 relay is receiving. The watch screen reports its own transmission state, which
 is faster to read than the laptop side.
 
@@ -2172,7 +2173,7 @@ across places that are not obvious from the source tree.
 \code{runs/validate/ironquest\_live.lock} & Single-instance lock, held by operating-system file locking rather than a process identifier, so an abandoned file does not block a later run. \\
 \code{runs/detect/}, \code{runs/pose/} & Training output. Excluded from version control; the evidence subset is copied to \code{docs/figures/}. \\
 \code{data/datasets/} & Training data. Excluded from version control. \\
-\code{weights/} & Base model weights. Excluded from version control. \\
+\code{weights/} & Base model weights. Excluded from version control, except \code{yolo26n-pose.pt}, which is committed together with the trained detector so that a fresh clone is runnable without obtaining files separately. \\
 Cloudflare D1 & The single most recent wearable sample, overwritten on each post. No history is retained. \\
 \bottomrule
 \end{tabularx}
@@ -2198,6 +2199,17 @@ permit UDP broadcast between clients.
 \item[A Connect IQ timer started from the application lifecycle crashes]
 on Venu 3 firmware 17.05. It must be started from the view lifecycle. This is
 recorded because the crash log names a line number rather than a cause.
+
+\item[The watch application must be open and the wrist sensor active]
+Two independent conditions, and neither announces itself. The application
+transmits from its view lifecycle, so it stops when the view is dismissed or
+the watch sleeps. It also calls \code{Sensor.getInfo()} without first calling
+\code{setEnabledSensors}, so it reports whatever the watch is already
+measuring: with wrist heart-rate monitoring off, the field is simply null and
+the payload arrives without it. Both present as an absent heart rate rather
+than as an error, which is why they are recorded here. Enabling the sensor from
+the application itself would remove the second condition and is listed in
+Section~\ref{sec:futurework}.
 
 \item[Wireless operation needs a power source] The board draws over USB; see
 Section~\ref{sec:power}.
@@ -2527,6 +2539,14 @@ relay schemas accept RR intervals and gyroscope data that the watch application
 does not currently produce. RR intervals in particular would allow
 heart-rate variability to be derived, which is a substantially better exertion
 indicator than instantaneous heart rate.
+
+\item \textbf{Request the sensor rather than depend on it.} The application
+calls \code{Sensor.getInfo()} without first calling \code{setEnabledSensors},
+so it reports whatever the watch happens to be measuring already. If wrist
+heart-rate monitoring is off, heart rate is silently absent and the session
+proceeds without it. Enabling the sensor explicitly at view start would remove
+a setup precondition that currently rests on the operator remembering it, and
+would turn a silent omission into a condition the application can report.
 
 \item \textbf{Individualized exertion bounds.} Exertion is normalized against
 default resting and maximum heart rates when the payload does not supply
