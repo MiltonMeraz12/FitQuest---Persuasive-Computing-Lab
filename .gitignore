@@ -72,6 +72,19 @@ weights/*
 *.onnx
 *.engine
 *.tflite
+
+# --- Exception: the two weight files the system needs in order to run --------
+# Training output stays out of git, but a clone with no weights cannot start,
+# which turns "clone and run" into "clone, then obtain 13 MB by hand". These
+# two are committed so a fresh machine is functional immediately.
+# Git cannot re-include a file whose parent directory is excluded, hence the
+# directory-by-directory unwinding below.
+!weights/yolo26n-pose.pt
+!runs/detect/dumbbell_combined_yolo26n/
+runs/detect/dumbbell_combined_yolo26n/*
+!runs/detect/dumbbell_combined_yolo26n/weights/
+runs/detect/dumbbell_combined_yolo26n/weights/*
+!runs/detect/dumbbell_combined_yolo26n/weights/best.pt
 *.torchscript
 *.mlmodel
 *.openvino/

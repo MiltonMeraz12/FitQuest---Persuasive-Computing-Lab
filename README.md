@@ -56,10 +56,17 @@ evidence available, it does not stop the session.
 
 ## Quick start
 
+On a fresh machine, clone and run the setup script. It creates the environment,
+installs dependencies, verifies the install against the test suite, and reports
+what still needs doing by hand. It is safe to re-run.
+
 ```powershell
-python -m venv ironquest_env
-.\ironquest_env\Scripts\python.exe -m pip install -r requirements.txt
+powershell -ExecutionPolicy Bypass -File setup.ps1
 ```
+
+The model weights needed to run are committed, so a clone is functional
+immediately — no files to obtain separately. Training data is not: see
+[Data and training](#data-and-training) if you intend to retrain.
 
 Then, for a normal session:
 
@@ -123,6 +130,22 @@ signals = pd.json_normalize(df["signal_log"])
 | `cloudflare/` | Relay worker and its deployment configuration |
 | `configs/` | Ultralytics training profiles |
 | `docs/` | Technical documentation, evidence figures, and dated reports |
+
+## Data and training
+
+Two weight files are committed because a clone without them cannot start:
+
+| File | Size | Role |
+| --- | --- | --- |
+| `weights/yolo26n-pose.pt` | 7.6 MB | Body pose, 17 COCO keypoints |
+| `runs/detect/dumbbell_combined_yolo26n/weights/best.pt` | 5.2 MB | Dumbbell and weight detector |
+
+Everything else that training produces stays out of version control. To retrain
+you additionally need `data/datasets/dumbbell_combined_yolo26` (775 MB, 7,332
+images) and the base `weights/yolo26n.pt`, neither of which is in the
+repository. Metrics and the figures behind them are committed under
+[`docs/figures/`](docs/figures/README.md), together with the caveats that limit
+what they support.
 
 ## Verification
 
