@@ -390,76 +390,136 @@ scope.
 \section{Related Approaches}
 \label{sec:related}
 
-% NOTE FOR PAPER EXTRACTION: this section is written around approach families
-% rather than around individual citations, because only the lab's own work was
-% verified against publisher records during the internship. Before submission,
-% each family below needs representative citations from the literature.
+% NOTE: author lists for [10]-[17] could not be retrieved from the publisher
+% pages, which block automated access. Each is identified by title, venue, year
+% and DOI and is therefore traceable, but the author lists should be completed
+% before paper submission.
 
 Interactive exercise systems sense through one of three broad arrangements.
 Each resolves some ambiguities and leaves others open, and the pattern of what
-each cannot see motivates the arrangement used here.
+each cannot see is what motivates the arrangement used here.
 
 \subsection{Camera-based sensing}
 
-A camera observes the whole body at once. Pose estimation yields joint positions
-without instrumenting the user, which makes setup trivial and makes the system
-usable by anyone who walks into frame. Object detection additionally identifies
+A camera observes the whole body at once. Markerless pose estimation yields
+joint positions without instrumenting the user, which makes setup trivial and
+the system usable by anyone who walks into frame, at low hardware cost and with
+little post-processing~\cite{monopose}. Object detection additionally identifies
 what the user is holding, which no body-worn sensor can do.
 
-Three limitations recur. A single camera produces a 2D projection, so depth is
-inferred from apparent scale rather than measured, and movements differing
-mainly in depth are poorly separated. Self-occlusion is routine rather than
-exceptional: in dumbbell exercise the working arm passes in front of the torso
-on most repetitions. And rotation about a limb's own axis --- the difference
-between a curl and a hammer curl --- produces almost no change in joint
-positions, so it is effectively invisible.
+Three limitations recur, and the first two are quantified. Depth is the weakest
+axis of a monocular estimate: an assessment of eleven open-source monocular
+estimators against marker-based optical motion capture on an exercise dataset
+reported mean per-joint position errors of 72--122\,mm within the image plane
+against 146--249\,mm once depth is considered~\cite{monopose}. Self-occlusion is
+routine rather than exceptional --- agreement with motion capture falls
+specifically for activities with a higher degree of it~\cite{monopose} --- and in
+dumbbell exercise the working arm passes in front of the torso on most
+repetitions. Third, rotation about a limb's own axis, which is the difference
+between a curl and a hammer curl, produces almost no change in joint positions
+and is effectively invisible.
+
+Single-camera markerless estimation has nonetheless been applied to exercise
+quantification directly~\cite{exquant}, which is the approach this work builds
+on rather than departs from; the departure is in what is added alongside it.
 
 \subsection{Body-worn inertial sensing}
 
 An inertial unit measures the segment it is attached to directly, at rates far
 above camera frame rate, and is unaffected by occlusion or lighting. Rotation
-about the limb axis, invisible to a camera, is exactly what a gyroscope
-measures well.
+about the limb axis, invisible to a camera, is exactly what a gyroscope measures
+well. Gym exercise recognition from wearable inertial data is well
+established~\cite{gymimu}, as is repetition counting robust to where the device
+sits on the body~\cite{exersense}.
 
-Its limitations are the complement. A unit knows its own motion and nothing
-about the rest of the body, so posture must be inferred or assumed. It cannot
-identify the object being held. Orientation expressed in the device frame is
-not a joint angle until a sensor-to-segment calibration relates the two, and
-that step is frequently skipped --- Section~\ref{sec:forearm} reports what
-skipping it cost here. Magnetometer-free fusion avoids magnetic disturbance at
-the price of a drifting, relative heading.
+The limitations are the complement of the camera's. A unit knows its own motion
+and nothing about the rest of the body, so posture must be inferred or assumed,
+and it cannot identify the object being held.
+
+The constraint that proved decisive here is calibration. Orientation expressed
+in the device's own frame is not a joint angle until a sensor-to-segment
+calibration relates the two, and the choice of calibration method materially
+changes the result: for elbow angles, a static neutral-pose calibration showed
+interquartile ranges as large as 24.6\textdegree, against root-mean-square
+errors of 6.3\textdegree{} for manual alignment and 7.2\textdegree{} for
+functional calibration~\cite{s2s}. The same dependence holds for lower-limb
+joint angles, where functional calibration reduces between-subject variance
+arising from placement differences~\cite{s2slower}. Section~\ref{sec:forearm}
+reports what skipping this step cost in the present work. A further trade-off
+sits inside the sensor fusion itself: magnetometer-free modes avoid magnetic
+disturbance at the price of a heading that is relative and drifts.
 
 \subsection{Commercial wearables}
 
 Consumer smartwatches provide physiological context, principally heart rate,
 with no assembly and with the reliability of a shipped product. This is the
-arrangement the host lab has used across its recent
-work~\cite{fitpulse,calmme}, and it is a sound default: the device is
-maintained by its vendor and worn by participants who already own one.
+arrangement the host lab has used across its recent work~\cite{fitpulse,calmme},
+and it is a sound default: the device is maintained by its vendor and worn by
+participants who already own one.
 
-The constraint is that access is bounded by what a vendor exposes. Sampling
-rate, available channels, and permitted transports are set by the platform, not
-by the study. Wrist-based optical heart rate also degrades during movement
-involving the forearm, which is the condition an upper-body exercise
-application creates.
+Two constraints apply. Access is bounded by what a vendor exposes --- sampling
+rate, available channels, and permitted transports are set by the platform
+rather than by the study. And wrist-based optical measurement degrades under
+exactly the conditions an upper-body exercise application creates. Arm and wrist
+movement displaces the sensor against the skin and alters local blood flow,
+generating motion artefacts, with accuracy lowest during tasks combining
+substantial arm movement with moderate heart rate --- weight training among
+them~\cite{ppgvalid}. Anatomical placement compounds this: upper-arm placement
+yields the lowest error and highest agreement with reference measurement,
+followed by the forearm, with the wrist showing the greatest
+deviation~\cite{ppgplace}.
+
+This is why the present system treats heart rate as slow contextual evidence
+rather than as a control or safety signal, and why Section~\ref{sec:futurework}
+proposes validating it against a chest-strap reference before any stronger claim
+is made from it.
+
+\subsection{Combining modalities}
+
+Multi-modal approaches to exercise sensing are established. Repetition counting
+has been addressed by fusing inertial data with a second modality --- respiration
+signals from earbuds across thirty exercise types~\cite{multimodalrep} --- and
+resistance exercise has been characterized by combining an RGB camera with
+inertial units to estimate exercise type, repetition count, and
+load~\cite{rgbimu}. The general finding motivating this line of work is that
+fusion is most valuable precisely where a single modality is weakest: in
+low-amplitude movement, such as light dumbbell exercise, fused models hold
+accuracy where inertial-only models degrade.
 
 \subsection{Where this work sits}
 
 The three arrangements fail in different places, which is the argument for
 combining them: the camera supplies body context and object identity, the
 inertial unit supplies limb-axis rotation and occlusion-immune motion, and the
-wearable supplies physiological context. Combining them raises its own problem
---- the streams run at different rates, over different transports, and fail
+wearable supplies physiological context. Combining them raises a problem of its
+own --- the streams run at different rates, over different transports, and fail
 independently --- and that problem, rather than any single modality, is what
 this work addresses.
 
-Two further distinctions are worth naming. Most exercise-recognition systems
-classify activity from labelled sensor data; this one derives geometric signals
-and calibrates them per user, which trades the ability to recognize unforeseen
-movements for interpretability and for not needing a training set per exercise.
-And most such systems are built as a single application; here the sensing layer
-and the application are separated by an explicit versioned specification, so
-the sensing work is reusable by a different application without modification.
+Three distinctions separate it from the systems above.
+
+\emph{Geometric signals rather than learned classification.} Most
+exercise-recognition work classifies activity from labelled sensor
+data~\cite{gymimu,exersense,multimodalrep}. This system derives geometric
+signals and calibrates them per user, which trades the ability to recognize
+unforeseen movements for interpretability, and for not requiring a training set
+per exercise. The recorded signal stream is exported in a form that would
+support training such a classifier later, so the two approaches are compatible
+rather than exclusive.
+
+\emph{An explicit specification between sensing and application.} These systems
+are typically built as one integrated application. Here the sensing layer and
+the application are separated by a versioned specification, so the sensing work
+is reusable by a different application --- a rehabilitation task, an adherence
+monitor --- without modification.
+
+\emph{An evidence model rather than a fusion model.} Most fusion work combines
+modalities to improve a classification. The problem addressed here is what a
+system should do when one modality is late, stale, or absent, which is a
+question about the interaction rather than about the estimate.
+Section~\ref{sec:evidence} sets out the answer this work arrived at, and
+Section~\ref{sec:discussion} reports where the premise held and where it did
+not.
 
 %==============================================================================
 \section{Change of Scope}
@@ -2675,6 +2735,55 @@ T.-Y.\ Lin, M.\ Maire, S.\ Belongie, J.\ Hays, P.\ Perona, D.\ Ramanan,
 P.\ Doll\'ar, and C.\ L.\ Zitnick, ``Microsoft COCO: Common objects in context,''
 in \emph{Proc.\ European Conference on Computer Vision (ECCV)}, 2014,
 pp.\ 740--755.
+
+\bibitem{monopose}
+``Assessment of monocular human pose estimation models for clinical movement
+analysis,'' \emph{Scientific Reports}, 2025.
+doi:\ 10.1038/s41598-025-22626-7
+
+\bibitem{exquant}
+``Exercise quantification from single camera view markerless 3D pose
+estimation.'' PubMed Central: PMC10951609.
+
+\bibitem{s2s}
+A.\ Bonfiglio, D.\ Tacconi, R.\ M.\ Bongers, and E.\ Farella, ``Effects of IMU
+sensor-to-segment calibration on clinical 3D elbow joint angles estimation,''
+\emph{Frontiers in Bioengineering and Biotechnology}, vol.\ 12, 2024.
+doi:\ 10.3389/fbioe.2024.1385750
+
+\bibitem{s2slower}
+``Lower limb kinematics using inertial sensors during locomotion: Accuracy and
+reproducibility of joint angle calculations with different sensor-to-segment
+calibrations,'' \emph{Sensors}, vol.\ 20, no.\ 3, art.\ 715, 2020.
+doi:\ 10.3390/s20030715
+
+\bibitem{ppgvalid}
+``Wrist-worn and arm-worn wearables for monitoring heart rate during sedentary
+and light-to-vigorous physical activities: Device validation study,''
+\emph{JMIR Cardio}, vol.\ 9, art.\ e67110, 2025.
+
+\bibitem{ppgplace}
+``Impact of anatomical placement on the accuracy of wearable heart rate monitors
+during rest and various exercise intensities,'' \emph{Sensors}, vol.\ 26,
+no.\ 1, art.\ 176.
+
+\bibitem{gymimu}
+``Wearable IMU-based gym exercise recognition using data fusion methods,'' in
+\emph{Proc.\ 5th International Conference on Biological Information and
+Biomedical Engineering}, 2021. doi:\ 10.1145/3469678.3469705
+
+\bibitem{exersense}
+``ExerSense: Physical exercise recognition and counting algorithm from wearables
+robust to positioning,'' \emph{Sensors}, vol.\ 21, no.\ 1, art.\ 91, 2021.
+
+\bibitem{multimodalrep}
+``Multimodal sensor fusion models for real-time exercise repetition counting
+with IMU sensors and respiration data,'' \emph{Information Fusion}, 2024.
+
+\bibitem{rgbimu}
+``Estimation of one-repetition maximum, type, and repetition of resistance band
+exercise using RGB camera and inertial measurement unit sensors.'' PubMed
+Central: PMC9862694.
 
 \end{thebibliography}
 
