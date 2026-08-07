@@ -107,6 +107,8 @@ Body pose and dumbbell detection stay separate because their outputs differ: COC
 
 This uses the `dumbbell_detection` profile. The active dataset is `data/datasets/dumbbell_combined_yolo26/data.local.yaml`.
 
+Before redistributing that dataset or quoting its metrics, read [Dataset Provenance and Redistribution](15_DATASET_PROVENANCE.md). Its source licenses are unrecorded, and its random split overlaps across near-duplicate frames.
+
 ## Train Body Pose
 
 Body-pose training remains optional until the project has a local 17-point dataset. The default path uses the base weights at `weights/yolo26n-pose.pt`.

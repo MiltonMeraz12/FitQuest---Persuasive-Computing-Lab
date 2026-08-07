@@ -37,6 +37,7 @@ New to the project? Read [01_PROJECT_ROADMAP](01_PROJECT_ROADMAP.md), then [02_S
 | [12_OFFLINE_AND_PRESENTATION.md](12_OFFLINE_AND_PRESENTATION.md) | Fallbacks and guidance for live demos. |
 | [13_SENSOR_FUSION_PAPER_PLAN.md](13_SENSOR_FUSION_PAPER_PLAN.md) | Paper milestones and the evidence each one needs. |
 | [14_PROJECT_IMPROVEMENT_BACKLOG.md](14_PROJECT_IMPROVEMENT_BACKLOG.md) | Prioritized engineering backlog. |
+| [15_DATASET_PROVENANCE.md](15_DATASET_PROVENANCE.md) | Where the training data came from, its unresolved licensing, and why its metrics are an upper bound. |
 | [figures/](figures/README.md) | Committed evidence figures: detector metrics, confusion matrix, curves, and capture-session summaries. |
 
 ## Supervisor Reports
